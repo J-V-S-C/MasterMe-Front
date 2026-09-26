@@ -1,11 +1,16 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Icon } from '../lib/icons'
 
-const links = ['Espaço de Estudo', 'Mapa do Conhecimento']
+const links = [
+  { label: 'Estudar', accessibleLabel: 'Espaço de estudo', href: '/', id: 'study', icon: 'book' },
+  { label: 'Analisar', accessibleLabel: 'Mapa do conhecimento', href: '/mapa-do-conhecimento', id: 'map', icon: 'brain' },
+  { label: 'Criar', accessibleLabel: 'Projeto de prática', href: '/pratica', id: 'practice', icon: 'sparkles' },
+] as const
 
-export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' }) {
+export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'practice' }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   useEffect(() => {
     const saved = window.localStorage.getItem('theme')
@@ -20,9 +25,9 @@ export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' }) {
     window.localStorage.setItem('theme', nextTheme)
   }
   return <header className="site-header"><div className="header-content">
-    <a className="brand" href="#workspace" aria-label="Feynman, ir para espaço de estudo"><span className="brand-mark">F</span><span><strong>FEYNMAN</strong><small>ACADEMIA · RENASCENÇA</small></span></a>
-    <nav aria-label="Navegação principal">{links.map((link, index) => <a className={(index === 0 && active === 'study') || (index === 1 && active === 'map') ? 'active' : ''} href={index === 0 ? '/' : index === 1 ? '/mapa-do-conhecimento' : '#'} key={link}>{link}</a>)}</nav>
-    <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
+    <Link className="brand" href="/" aria-label="MasterMe, ir para o espaço de estudo"><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
+    <nav className="primary-nav" aria-label="Navegação principal">{links.map((link) => <Link className={active === link.id ? 'active' : ''} aria-label={link.accessibleLabel} aria-current={active === link.id ? 'page' : undefined} href={link.href} key={link.id}><span className="nav-icon"><Icon name={link.icon} /></span><span className="nav-label">{link.label}</span></Link>)}</nav>
+    <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} aria-pressed={theme === 'dark'}>
       <span className="theme-track" aria-hidden="true"><Icon name="sun" /><Icon name="moon" /><i className="theme-orbit" /></span>
     </button>
   </div></header>

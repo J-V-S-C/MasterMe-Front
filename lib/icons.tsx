@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-type IconName = 'book' | 'brain' | 'bolt' | 'check' | 'chevron' | 'document' | 'idea' | 'lock' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
+export type IconName = 'book' | 'brain' | 'bolt' | 'check' | 'chevron' | 'document' | 'idea' | 'lock' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
 
 const paths: Record<IconName, string> = {
   book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h8',

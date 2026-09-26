@@ -4,9 +4,10 @@ import './live.css'
 import './loading.css'
 import './shell.css'
 import './themes.css'
+import './practice.css'
 
 export const metadata: Metadata = {
-  title: 'Feynman — Estudo ativo',
+  title: 'MasterMe — Estudo ativo',
   description: 'Workspace de inquirição socrática.',
 }
 

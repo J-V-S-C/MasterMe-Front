@@ -1,4 +1,4 @@
-const activeMaterialKey = "socratic-game:active-material";
+const activeMaterialKey = "masterme:active-material";
 
 export function getActiveMaterialId(materialIds: string[]) {
   if (typeof window === "undefined") return "";

@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type KnowledgeNode, type Material } from "../lib/api";
 import { Icon } from "../lib/icons";
 import { LoadingSkeleton } from "./loading-skeleton";
+import { StyledSelect } from "./styled-select";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
 
 const statusText = {
-  LOCKED: "Bloqueado",
   READY: "Disponível",
-  VALIDATED: "Consolidado",
+  EXPLAINED: "Explicado",
   REVIEW: "Revisão recomendada",
 } as const;
 
@@ -51,7 +51,7 @@ export function KnowledgeMap() {
     [nodes, selectedId],
   );
   const graph = useMemo(() => graphLayout(nodes), [nodes]);
-  const validated = nodes.filter((node) => node.status === "VALIDATED").length;
+  const validated = nodes.filter((node) => node.status === "EXPLAINED").length;
   const review = nodes.filter((node) => node.status === "REVIEW").length;
   const available = nodes.filter((node) => node.status === "READY").length;
   const completion = nodes.length ? Math.round((validated / nodes.length) * 100) : 0;
@@ -85,17 +85,17 @@ export function KnowledgeMap() {
     <>
       <section className="map-hero">
         <div className="map-kicker"><Icon name="sparkles" /> CONSTELAÇÃO EPISTÊMICA · MAPA DO MATERIAL</div>
-        <div className="map-hero-title"><div><h1>Seu domínio conceitual</h1><p>O que foi consolidado pelo diálogo, o que pede revisão e os caminhos ainda velados.</p></div><label>Tratado em vigência<select value={materialId} onChange={(event) => { const id = event.target.value; saveActiveMaterialId(id); setMaterialId(id); }}>{materials.map((material) => <option value={material.id} key={material.id}>{material.title}</option>)}</select></label></div>
+        <div className="map-hero-title"><div><h1>Seu domínio conceitual</h1><p>O que foi consolidado pelo diálogo, o que pede revisão e os caminhos ainda velados.</p></div><StyledSelect label="Material em estudo" icon="book" value={materialId} options={materials.map((material) => ({ value: material.id, label: material.title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} /></div>
         <div className="map-stats">
-          <Stat value={`${validated} / ${nodes.length}`} label="Nós verificados" tone="green" />
+          <Stat value={`${validated} / ${nodes.length}`} label="Conceitos explicados" tone="green" />
           <Stat value={review} label="Pontos em alerta" tone="amber" />
-          <Stat value={`${completion}%`} label="Retenção epistêmica" tone="blue" />
-          <Stat value={available} label="Próximos passos" tone="neutral" />
+          <Stat value={`${completion}%`} label="Progresso de explicação" tone="blue" />
+          <Stat value={available} label="Disponíveis" tone="neutral" />
         </div>
       </section>
-      <section className="map-legend"><span><i className="validated" />Dominado</span><span><i className="review" />Revisitar</span><span><i className="ready" />Disponível</span><span><i className="locked" />Trancado</span><small>Selecione um ponto do astrolábio para investigar.</small></section>
+      <section className="map-legend"><span><i className="validated" />Explicado</span><span><i className="review" />Revisitar</span><span><i className="ready" />Disponível</span><small>Selecione um ponto do astrolábio para investigar.</small></section>
       <section className="map-layout">
-        <div className="graph astrolabe" aria-label="Grafo de conceitos">
+        <div className="graph astrolabe" role="region" tabIndex={0} aria-label="Mapa de conceitos interativo. Use Tab para navegar entre os conceitos.">
           <div className="graph-hint">
             Selecione um conceito para ver seu diagnóstico
           </div>
@@ -132,7 +132,7 @@ export function KnowledgeMap() {
                   role="button"
                   aria-label={`Abrir ${node.concept.name}`}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") openConcept(node);
+                    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openConcept(node); }
                   }}
                 >
                   <circle r={node.status === "REVIEW" ? 28 : 23} />
@@ -149,8 +149,8 @@ export function KnowledgeMap() {
         <Inspector node={selected} />
       </section>
       <section className="map-insights">
-        <article><span>CADEIA DE DEPENDÊNCIAS</span><h3>{review ? `${review} ponto${review > 1 ? 's' : ''} pede${review > 1 ? 'm' : ''} refinamento` : 'Nenhum ponto cego detectado'}</h3><p>{review ? 'Os conceitos em alerta merecem uma nova explicação antes de servir de base para seus sucessores.' : 'Seu mapa não tem diagnósticos pendentes neste material.'}</p></article>
-        <article><span>FUNDAMENTOS FORTES</span><h3>{validated ? `${validated} conceito${validated > 1 ? 's' : ''} consolidado${validated > 1 ? 's' : ''}` : 'Aguardando a primeira validação'}</h3><p>Uma validação exige a explicação inicial e a réplica ao teste de estresse socrático.</p></article>
+        <article><span>CADEIA DE DEPENDÊNCIAS</span><h3>{review ? `${review} ponto${review > 1 ? 's' : ''} pede${review > 1 ? 'm' : ''} refinamento` : 'Nenhum ponto cego detectado'}</h3><p>{review ? 'Os conceitos em alerta merecem uma nova explicação sem bloquear os demais conceitos.' : 'Seu mapa não tem diagnósticos pendentes neste material.'}</p></article>
+        <article><span>FUNDAMENTOS FORTES</span><h3>{validated ? `${validated} conceito${validated > 1 ? 's' : ''} consolidado${validated > 1 ? 's' : ''}` : 'Aguardando a primeira validação'}</h3><p>Uma explicação aprovada conclui o conceito; o caso-limite é opcional.</p></article>
         <article><span>PRÓXIMA INVESTIGAÇÃO</span><h3>{selected?.concept.name ?? 'Selecione um conceito'}</h3><p>{selected?.question?.text ?? 'Escolha um ponto do mapa para ver sua pergunta específica.'}</p></article>
       </section>
     </>
@@ -235,9 +235,7 @@ function Inspector({ node }: { node: KnowledgeNode | null }) {
         <p>{node.question?.text}</p>
       </section>
       <a className="exercise-link" href={`/?material=${node.concept.materialId}&concept=${node.concept.id}`}>
-        {node.status === "LOCKED"
-          ? "Pré-requisitos pendentes"
-          : "Exercitar este conceito agora"}{" "}
+        Exercitar este conceito agora{" "}
         <Icon name="chevron" />
       </a>
     </aside>

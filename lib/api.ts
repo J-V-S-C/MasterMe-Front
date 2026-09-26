@@ -4,33 +4,100 @@ export type Material = {
   content: string;
   createdAt: string;
 };
+export type EvaluationStatus = 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
 export type Attempt = {
-  stage: 'INITIAL' | 'STRESS_REPLY';
+  stage: 'INITIAL' | 'EDGE_CASE_REPLY' | 'STRESS_REPLY';
   answer: string;
   evaluation: {
-    status: 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
+    status: EvaluationStatus;
     missingPremises: string[];
     logicalBreak: string | null;
     feedback: string;
   };
   createdAt: string;
 };
+export type Concept = {
+  id: string;
+  materialId: string;
+  name: string;
+  description: string;
+  kind: 'AXIOM' | 'NODE' | 'EDGE';
+  sourceExcerpt: string;
+  fundamentalPremises: string[];
+  edgeCases: string[];
+  edgeCaseQuestion?: string;
+  prerequisiteIds: string[];
+  nextIds: string[];
+};
 export type KnowledgeNode = {
-  concept: {
-    id: string;
-    materialId: string;
-    name: string;
-    description: string;
-    kind: 'AXIOM' | 'NODE' | 'EDGE';
-    sourceExcerpt: string;
-    fundamentalPremises: string[];
-    edgeCases: string[];
-    prerequisiteIds: string[];
-    nextIds: string[];
-  };
-  status: 'LOCKED' | 'READY' | 'VALIDATED' | 'REVIEW';
+  concept: Concept;
+  status: 'READY' | 'REVIEW' | 'EXPLAINED';
+  edgeCaseStatus: EdgeCaseStatus;
   lastAttempt: Attempt | null;
-  question: { text: string } | null;
+  question: {
+    text: string;
+    targetPremise: string;
+    expectedReasoningSteps: string[];
+  };
+};
+export type EdgeCaseStatus = 'NOT_REQUESTED' | 'READY' | 'REVIEW' | 'PASSED';
+export type EdgeCaseChallenge = {
+  scenario: string;
+  edgeCaseTested: string;
+  question: string;
+};
+export type StudySession = {
+  id: string;
+  conceptId: string;
+  state: 'QUESTION_READY' | 'RETRY_INITIAL' | 'EXPLANATION_PASSED';
+  question: {
+    text: string;
+    targetPremise: string;
+    expectedReasoningSteps: string[];
+  };
+  edgeCaseStatus: EdgeCaseStatus;
+  edgeCaseChallenge: EdgeCaseChallenge | null;
+  attempts: Attempt[];
+  createdAt: string;
+  updatedAt: string;
+};
+export type ConceptConfidence = {
+  conceptId: string;
+  value: number;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ConceptPerformance = {
+  conceptId: string;
+  passedAttempts: number;
+  logicalBreaks: number;
+  incompleteAttempts: number;
+  totalInitialAttempts: number;
+  failedInitialAttempts: number;
+  weakness: number | null;
+};
+export type PracticeFocusMode =
+  | 'OVERVIEW'
+  | 'MANUAL'
+  | 'CONFIDENCE'
+  | 'PERFORMANCE'
+  | 'COMBINED';
+export type PracticeProject = {
+  id: string;
+  materialId: string;
+  title: string;
+  context: string;
+  goal: string;
+  deliverables: string[];
+  constraints: string[];
+  firstStep: string;
+  prioritizedConcepts: Array<{
+    conceptId: string;
+    name: string;
+    reason: string;
+  }>;
+  focusMode: PracticeFocusMode;
+  createdAt: string;
 };
 export type ExtractionStage =
   | 'QUEUED'
@@ -59,85 +126,168 @@ export type MaterialProcessingStatus = {
   startedAt: string | null;
   finishedAt: string | null;
 };
+export type AiUsageSummary = {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  byModel: Array<{
+    model: string;
+    requests: number;
+    successes: number;
+    inputTokens: number;
+    outputTokens: number;
+  }>;
+  byOperation: Array<{
+    operation: string;
+    requests: number;
+    successes: number;
+    inputTokens: number;
+    outputTokens: number;
+  }>;
+};
+export type UploadedMaterial = {
+  id: string;
+  title: string;
+  status: ProcessingState;
+};
 
-async function request<T>(path: string): Promise<T> {
-  const response = await fetch(`/api${path}`, { cache: 'no-store' });
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      message?: string;
-    } | null;
-    throw new Error(payload?.message ?? 'Não foi possível carregar os dados.');
+export class ApiError extends Error {
+  public constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+  ) {
+    super(message);
   }
-  return ((await response.json()) as { data: T }).data;
 }
 
-async function send<T>(path: string, body?: unknown): Promise<T> {
+async function call<T>(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+): Promise<T> {
   const response = await fetch(`/api${path}`, {
-    method: 'POST',
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    method,
+    cache: 'no-store',
+    headers:
+      body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
       message?: string;
+      code?: string;
     } | null;
-    throw new Error(
+    throw new ApiError(
       payload?.message ?? 'Não foi possível concluir a solicitação.',
+      response.status,
+      payload?.code,
     );
   }
-  return ((await response.json()) as { data: T }).data;
+  if (response.status === 204) return undefined as T;
+  const payload = (await response.json()) as { data: T };
+  return payload.data;
 }
 
-export type StudySession = {
-  id: string;
-  conceptId: string;
-  state:
-    | 'QUESTION_READY'
-    | 'RETRY_INITIAL'
-    | 'AWAITING_STRESS_REPLY'
-    | 'RETRY_STRESS'
-    | 'VALIDATED';
-  question: {
-    text: string;
-    targetPremise: string;
-    expectedReasoningSteps: string[];
-  };
-  stressTest: {
-    scenario: string;
-    edgeCaseTested: string;
-    question: string;
-  } | null;
-  attempts: Attempt[];
+const uploadTypes: Record<string, string> = {
+  pdf: 'application/pdf',
+  md: 'text/markdown',
+  markdown: 'text/markdown',
+  txt: 'text/plain',
 };
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+export function uploadMaterial(
+  file: File,
+  title: string,
+  onProgress: (percent: number | null) => void,
+): Promise<UploadedMaterial> {
+  const extension = file.name.split('.').at(-1)?.toLowerCase() ?? '';
+  const mime = uploadTypes[extension];
+  if (!mime)
+    return Promise.reject(
+      new Error('Selecione um arquivo PDF, Markdown ou TXT.'),
+    );
+  if (file.size > MAX_UPLOAD_BYTES)
+    return Promise.reject(new Error('O arquivo deve ter no máximo 15 MiB.'));
+  const data = new FormData();
+  data.append('file', new File([file], file.name, { type: mime }));
+  if (title.trim()) data.append('title', title.trim());
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/materials/upload');
+    xhr.upload.onprogress = (event) =>
+      onProgress(
+        event.lengthComputable
+          ? Math.round((event.loaded / event.total) * 100)
+          : null,
+      );
+    xhr.onerror = () =>
+      reject(new Error('Falha de conexão durante o envio do arquivo.'));
+    xhr.onload = () => {
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(xhr.responseText);
+      } catch {}
+      const payload =
+        parsed && typeof parsed === 'object'
+          ? (parsed as { data?: UploadedMaterial; message?: string })
+          : null;
+      if (xhr.status >= 200 && xhr.status < 300 && payload?.data)
+        resolve(payload.data);
+      else
+        reject(
+          new Error(payload?.message ?? 'Não foi possível enviar o arquivo.'),
+        );
+    };
+    xhr.send(data);
+  });
+}
+
 export const api = {
-  materials: () => request<Material[]>('/materials'),
+  materials: () => call<Material[]>('/materials'),
   createMaterial: (title: string, content: string) =>
-    send<Material>('/materials', { title, content }),
+    call<Material>('/materials', 'POST', { title, content }),
   extractConcepts: (materialId: string) =>
-    send<ExtractionJob>(`/materials/${materialId}/extract`),
+    call<ExtractionJob>(`/materials/${materialId}/extract`, 'POST'),
   materialStatus: (materialId: string) =>
-    request<MaterialProcessingStatus>(`/materials/${materialId}/status`),
+    call<MaterialProcessingStatus>(`/materials/${materialId}/status`),
   knowledgeMap: (id: string) =>
-    request<KnowledgeNode[]>(`/materials/${id}/knowledge-map`),
+    call<KnowledgeNode[]>(`/materials/${id}/knowledge-map`),
   startSession: (conceptId: string) =>
-    send<StudySession>(`/concepts/${conceptId}/sessions`),
+    call<StudySession>(`/concepts/${conceptId}/sessions`, 'POST'),
+  getSession: (sessionId: string) =>
+    call<StudySession>(`/sessions/${sessionId}`),
   answer: (sessionId: string, answer: string) =>
-    send<StudySession>(`/sessions/${sessionId}/answers`, { answer }),
-  stressReply: (sessionId: string, answer: string) =>
-    send<StudySession>(`/sessions/${sessionId}/stress-replies`, { answer }),
-  aiUsageToday: () =>
-    request<{
-      extractions: number;
-      validations: number;
-      isomorphicProblems: number;
-      fallbacks: number;
-    }>('/ai-usage/today'),
-  getIsomorphicProblem: (conceptId: string) =>
-    request<{ id: string; content: string; hash: string } | null>(
-      `/concepts/${conceptId}/isomorphic-problem`,
+    call<StudySession>(`/sessions/${sessionId}/answers`, 'POST', { answer }),
+  requestEdgeCase: (sessionId: string) =>
+    call<StudySession>(`/sessions/${sessionId}/edge-case`, 'POST'),
+  answerEdgeCase: (sessionId: string, answer: string) =>
+    call<StudySession>(`/sessions/${sessionId}/edge-case/answers`, 'POST', {
+      answer,
+    }),
+  confidences: (materialId: string) =>
+    call<ConceptConfidence[]>(`/materials/${materialId}/confidences`),
+  saveConfidence: (conceptId: string, value: number) =>
+    call<ConceptConfidence>(`/concepts/${conceptId}/confidence`, 'PUT', {
+      value,
+    }),
+  deleteConfidence: (conceptId: string) =>
+    call<void>(`/concepts/${conceptId}/confidence`, 'DELETE'),
+  performance: (materialId: string) =>
+    call<ConceptPerformance[]>(`/materials/${materialId}/performance`),
+  generatePracticeProject: (
+    materialId: string,
+    focusMode: PracticeFocusMode,
+    conceptIds?: string[],
+  ) =>
+    call<PracticeProject>(
+      `/materials/${materialId}/practice-projects`,
+      'POST',
+      conceptIds === undefined ? { focusMode } : { focusMode, conceptIds },
     ),
-  generateIsomorphicProblem: (conceptId: string) =>
-    send<{ id: string; content: string; hash: string }>(
-      `/concepts/${conceptId}/isomorphic-problem`,
-    ),
+  practiceProjects: (materialId: string) =>
+    call<PracticeProject[]>(`/materials/${materialId}/practice-projects`),
+  practiceProject: (id: string) =>
+    call<PracticeProject>(`/practice-projects/${id}`),
+  aiUsageToday: () => call<AiUsageSummary>('/ai-usage/today'),
 };

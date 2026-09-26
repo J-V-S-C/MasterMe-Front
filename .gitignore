@@ -1,2 +1,31 @@
+# Dependencies
 node_modules/
+
+# Next.js and build output
 .next/
+out/
+dist/
+.vercel/
+
+# Tests and TypeScript caches
+coverage/
+*.lcov
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment (keep the documented template)
+.env
+.env.*
+!.env.example
+
+# Tool and OS caches
+.cache/
+.turbo/
+.eslintcache
+.DS_Store
