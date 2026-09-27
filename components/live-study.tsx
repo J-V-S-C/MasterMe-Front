@@ -202,7 +202,7 @@ export function LiveStudy() {
 
   return <>
     <section className="study-context">
-      <div><span>DIALÉTICA SOCRÁTICA</span><h1>{material?.title ?? 'Tratado em estudo'}</h1></div>
+      <div><span>ESTUDO ATIVO</span><h1>{material?.title ?? 'Tratado em estudo'}</h1></div>
       {selected && <div className="context-node"><Icon name="idea" /><span>Nó atual: <b>{selected.concept.name}</b></span></div>}
     </section>
     <section className="live-toolbar">

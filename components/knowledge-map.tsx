@@ -231,7 +231,7 @@ function Inspector({ node }: { node: KnowledgeNode | null }) {
         <p>{gap}</p>
       </section>
       <section className="next-prompt">
-        <h3>Próximo desafio socrático</h3>
+        <h3>Próximo desafio de domínio</h3>
         <p>{node.question?.text}</p>
       </section>
       <a className="exercise-link" href={`/?material=${node.concept.materialId}&concept=${node.concept.id}`}>

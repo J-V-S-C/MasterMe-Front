@@ -10,7 +10,7 @@ import { AuthGate } from '../components/auth-gate'
 
 export const metadata: Metadata = {
   title: 'MasterMe — Estudo ativo',
-  description: 'Workspace de inquirição socrática.',
+  description: 'Workspace de estudo ativo guiado.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

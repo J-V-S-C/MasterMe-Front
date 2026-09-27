@@ -3,16 +3,17 @@ import { createSupabaseServerClient } from '../../../../lib/supabase-server'
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as { email?: string; password?: string } | null
-  if (!body?.email || !body.password || body.password.length < 8) return NextResponse.json({ message: 'Use um e-mail válido e uma senha com pelo menos 8 caracteres.' }, { status: 400 })
+  if (!body?.email || !body.email.includes('@') || !body.password || body.password.length < 8) return NextResponse.json({ message: 'Use um e-mail válido e uma senha com pelo menos 8 caracteres.' }, { status: 400 })
   try {
     const supabase = await createSupabaseServerClient()
     const { data, error } = await supabase.auth.signUp({ email: body.email.trim(), password: body.password, options: { emailRedirectTo: `${new URL(request.url).origin}/auth/callback` } })
     if (error) {
       const messages: Record<string, string> = {
-        email_address_invalid: 'Informe um endereço de e-mail válido.',
+        email_address_invalid: 'Não conseguimos usar este e-mail. Confira se existe texto antes e depois do @.',
+        validation_failed: 'Não conseguimos usar este e-mail. Confira se existe texto antes e depois do @.',
         user_already_exists: 'Já existe uma conta com este e-mail. Tente entrar.',
         weak_password: 'A senha não atende aos requisitos de segurança do projeto.',
-        over_email_send_rate_limit: 'Muitos e-mails foram solicitados. Aguarde alguns minutos e tente novamente.',
+        over_email_send_rate_limit: 'O envio de confirmação do Supabase está temporariamente limitado para este projeto. Aguarde alguns minutos e tente novamente.',
       }
       console.error('Supabase signup failed', { code: error.code, status: error.status })
       return NextResponse.json({ message: messages[error.code ?? ''] ?? 'Não foi possível criar a conta agora. Tente novamente.' }, { status: error.status === 429 ? 429 : 400 })

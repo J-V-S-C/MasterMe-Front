@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "ed7faf66-06d1-4166-a7f8-8201ab860fe8"
+      }
+    },
+    "android": {
+      "package": "com.ctgrana.app"
+    }
+  }
+}
