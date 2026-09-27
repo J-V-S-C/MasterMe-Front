@@ -198,7 +198,7 @@ export function LiveStudy() {
 
   if (loading) return <LoadingSkeleton />;
   if (error && !materials.length) return <section className="empty-state"><h1>Backend indisponível</h1><p>{error}</p></section>;
-  if (!materials.length) return <section className="onboarding"><MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error={error} /></section>;
+  if (!materials.length) return <section className="onboarding"><div className="onboarding-shell"><header className="onboarding-intro"><div className="onboarding-symbol"><Icon name="book" /></div><span className="eyebrow">Seu espaço está pronto</span><h1>Adicione o primeiro material</h1><p>O MasterMe transforma o conteúdo em um mapa de conceitos e prepara sessões de estudo ativo.</p><ol><li><strong>1</strong><span><b>Adicione</b><small>Cole um texto ou envie um arquivo.</small></span></li><li><strong>2</strong><span><b>Extraia</b><small>A IA organiza os conceitos centrais.</small></span></li><li><strong>3</strong><span><b>Explique</b><small>Responda e receba um diagnóstico.</small></span></li></ol></header><MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error={error} /></div></section>;
 
   return <>
     <section className="study-context">
