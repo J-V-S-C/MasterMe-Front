@@ -6,7 +6,8 @@ de produção é adaptada pelo vinext e executada em Cloudflare Workers.
 ## Acesso
 
 - Aplicação: <https://masterme-frontend.joaovictorcortabitart.workers.dev>
-- API: <https://masterme-api.duckdns.org>
+- API Docs: <https://masterme-api.duckdns.org/docs>
+- API Repo: <https://github.com/J-V-S-C/MasterMe-API>
 
 As chamadas para `/api/*` feitas no domínio do frontend são encaminhadas para a
 API da OCI. A URL de destino é definida pela variável `BACKEND_URL` do
