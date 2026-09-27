@@ -106,7 +106,7 @@ export type ExtractionStage =
   | 'EXTRACTING'
   | 'REDUCING'
   | 'READY';
-export type ProcessingState = 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+export type ProcessingState = 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED' | 'CANCELLED';
 export type ExtractionJob = {
   id: string;
   stage: ExtractionStage;
@@ -249,6 +249,8 @@ export const api = {
     call<Material>('/materials', 'POST', { title, content }),
   extractConcepts: (materialId: string) =>
     call<ExtractionJob>(`/materials/${materialId}/extract`, 'POST'),
+  cancelExtraction: (materialId: string) =>
+    call<{ id: string; status: 'CANCELLED' }>(`/materials/${materialId}/extract`, 'DELETE'),
   materialStatus: (materialId: string) =>
     call<MaterialProcessingStatus>(`/materials/${materialId}/status`),
   knowledgeMap: (id: string) =>

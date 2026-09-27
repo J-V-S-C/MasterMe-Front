@@ -26,6 +26,14 @@ describe('contrato HTTP do frontend', () => {
     expect(paths).toEqual(['/api/sessions/session-a/edge-case', '/api/sessions/session-a/edge-case/answers']);
   });
 
+  test('cancela a extração com DELETE', async () => {
+    const calls: Array<[string, string | undefined]> = [];
+    globalThis.fetch = (async (url: string, init?: RequestInit) => { calls.push([url, init?.method]); return new Response(JSON.stringify({ data: { id: 'job-a', status: 'CANCELLED' } }), { status: 200 }); }) as typeof fetch;
+    const result = await api.cancelExtraction('material-a');
+    expect(calls).toEqual([['/api/materials/material-a/extract', 'DELETE']]);
+    expect(result.status).toBe('CANCELLED');
+  });
+
   test('envia arquivo multipart, título e atualiza o progresso', async () => {
     let path = ''; const capture: { sent?: FormData } = {};
     class FakeXhr { upload = { onprogress: null as ((event: ProgressEvent) => void) | null }; onerror: (() => void) | null = null; onload: (() => void) | null = null; status = 202; responseText = JSON.stringify({ data: { id: 'material-a', title: 'Título', status: 'PENDING' } }); open(_method: string, url: string) { path = url; } send(body: FormData) { capture.sent = body; this.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent); this.onload?.(); } }

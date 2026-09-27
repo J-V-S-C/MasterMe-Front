@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { eventBelongsToMaterial, initialExtractionProgress, parseExtractionEvent, progressFromEvent, progressFromStatus, type ExtractionProgress } from './extraction-progress'
 
-const eventNames = ['material.queued', 'material.progress', 'material.ready', 'material.failed'] as const
+const eventNames = ['material.queued', 'material.progress', 'material.ready', 'material.failed', 'material.cancelled'] as const
 
 export function useMaterialExtraction(materialId: string, onReady: () => Promise<void>) {
   const [progress, setProgress] = useState<ExtractionProgress>(initialExtractionProgress)
   const [checking, setChecking] = useState(false)
   const [connectionLost, setConnectionLost] = useState(false)
   const [enqueueing, setEnqueueing] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const readyCallback = useRef(onReady)
   const lastStatus = useRef<ExtractionProgress['status'] | null>(null)
   const readyNotified = useRef(false)
@@ -53,6 +54,8 @@ export function useMaterialExtraction(materialId: string, onReady: () => Promise
         lastStatus.current = 'PROCESSING'
       } else if (eventName === 'material.failed') {
         lastStatus.current = 'FAILED'
+      } else if (eventName === 'material.cancelled') {
+        lastStatus.current = 'CANCELLED'
       }
       setProgress((current) => progressFromEvent(current, eventName, event))
       if (eventName === 'material.ready' && !readyNotified.current) {
@@ -97,5 +100,14 @@ export function useMaterialExtraction(materialId: string, onReady: () => Promise
     } finally { setEnqueueing(false) }
   }, [materialId])
 
-  return { progress, checking, connectionLost, enqueueing, startExtraction }
+  const cancelExtraction = useCallback(async () => {
+    setCancelling(true)
+    try {
+      await api.cancelExtraction(materialId)
+      lastStatus.current = 'CANCELLED'
+      setProgress((current) => ({ ...current, status: 'CANCELLED', error: null }))
+    } finally { setCancelling(false) }
+  }, [materialId])
+
+  return { progress, checking, connectionLost, enqueueing, cancelling, startExtraction, cancelExtraction }
 }

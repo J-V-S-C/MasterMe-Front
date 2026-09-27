@@ -42,6 +42,7 @@ export const progressFromEvent = (
   event: ExtractionEvent,
 ): ExtractionProgress => {
   if (eventName === 'material.ready') return { ...current, status: 'READY', stage: 'READY', progressPercent: 100, error: null }
+  if (eventName === 'material.cancelled') return { ...current, status: 'CANCELLED', error: null }
   if (eventName === 'material.failed') return { ...current, status: 'FAILED', error: event.message ?? 'Não foi possível extrair o contexto.' }
   if (eventName === 'material.queued') return { ...current, status: 'PENDING', stage: event.stage ?? (current.attempts > 0 || event.message ? 'RETRYING' : 'QUEUED'), progressPercent: event.progressPercent ?? 0, error: event.message ?? null }
   if (eventName === 'material.progress') return {
@@ -58,7 +59,7 @@ export const stageCopy: Record<ExtractionStage, { title: string; description: st
   QUEUED: { title: 'Extração na fila', description: 'Seu material está aguardando o início do processamento.' },
   RETRYING: { title: 'Preparando nova tentativa', description: 'O sistema vai tentar processar o material novamente.' },
   PREPARING: { title: 'Preparando o material', description: 'Estamos organizando o texto em partes analisáveis.' },
-  EXTRACTING: { title: 'Identificando conceitos', description: 'A análise está encontrando premissas, relações e casos de borda.' },
+  EXTRACTING: { title: 'Analisando o material com IA', description: 'Esta é a etapa mais demorada. A tela continuará atualizada enquanto a análise acontece.' },
   REDUCING: { title: 'Construindo as relações', description: 'Os conceitos estão sendo consolidados em um mapa coerente.' },
   READY: { title: 'Contexto extraído', description: 'Os conceitos já podem ser usados na sessão de estudo.' },
 }

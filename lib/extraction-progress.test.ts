@@ -47,4 +47,10 @@ describe('progresso da extração', () => {
     expect(failed).toMatchObject({ status: 'FAILED', error: 'Falha ao extrair.' })
     expect(retried).toMatchObject({ status: 'PENDING', stage: 'RETRYING', error: null })
   })
+
+  test('encerra o progresso ao receber cancelamento', () => {
+    const active = progressFromEvent(initialExtractionProgress, 'material.progress', { materialId: 'material-a', stage: 'EXTRACTING' })
+    const cancelled = progressFromEvent(active, 'material.cancelled', { materialId: 'material-a' })
+    expect(cancelled).toMatchObject({ status: 'CANCELLED', error: null })
+  })
 })
