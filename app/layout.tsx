@@ -5,6 +5,8 @@ import './loading.css'
 import './shell.css'
 import './themes.css'
 import './practice.css'
+import './auth.css'
+import { AuthGate } from '../components/auth-gate'
 
 export const metadata: Metadata = {
   title: 'MasterMe — Estudo ativo',
@@ -20,7 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: "try { const saved = localStorage.getItem('theme'); document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch {}" }} />
       </head>
-      <body>{children}</body>
+      <body><AuthGate>{children}</AuthGate></body>
     </html>
   )
 }

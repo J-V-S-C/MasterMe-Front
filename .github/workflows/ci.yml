@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BACKEND_URL: http://127.0.0.1:3333
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_test
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
