@@ -49,10 +49,3 @@ versão. Para impedir publicação imediata em todo push, configure reviewers ou
 outras protection rules no environment `production` do GitHub.
 
 Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
-
-## Observações do MVP
-
-- Ainda não há autenticação ou isolamento de dados por usuário.
-- O domínio `workers.dev` pode ser substituído por um domínio personalizado.
-- O processamento de materiais ocorre na API e no worker da OCI, não no Worker
-  da Cloudflare.
