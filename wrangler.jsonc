@@ -6,6 +6,9 @@
     "nodejs_compat"
   ],
   "main": "vinext/server/fetch-handler",
+  "vars": {
+    "BACKEND_URL": "https://masterme-api.duckdns.org"
+  },
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
