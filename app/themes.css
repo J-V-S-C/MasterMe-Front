@@ -457,3 +457,5 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 .primary-nav .nav-icon{display:grid;place-items:center;background:var(--high);color:var(--dim);transition:background var(--motion-fast),color var(--motion-fast),transform var(--motion-fast) var(--ease-out)}
 .primary-nav a:hover .nav-icon,.primary-nav a.active:hover .nav-icon{background:var(--accent-medium);color:var(--blue);transform:translateY(-1px) rotate(-7deg) scale(1.08)}
 @media(prefers-reduced-motion:reduce){.primary-nav a:hover .nav-icon,.primary-nav a.active:hover .nav-icon{transform:none}}
+.header-controls{display:flex;align-items:center}.header-logout{display:grid;place-items:center;width:38px;height:38px;margin:0;padding:0;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--dim)}.header-logout:hover{border-color:var(--line-soft);background:var(--card);color:var(--text)}.header-logout svg{width:18px}
+@media(max-width:980px){.header-content{grid-template-columns:auto 1fr auto auto}.header-controls{grid-column:4;grid-row:1}.theme-toggle{grid-column:3;margin-left:0}}

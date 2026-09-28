@@ -31,6 +31,6 @@ export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'p
     <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} aria-pressed={theme === 'dark'}>
       <span className="theme-track" aria-hidden="true"><Icon name="sun" /><Icon name="moon" /><i className="theme-orbit" /></span>
     </button>
-    <LogoutButton />
+    <div className="header-controls"><LogoutButton /></div>
   </div></header>
 }
