@@ -20,3 +20,7 @@ bun run typecheck
 bun test
 BACKEND_URL=https://api.seudominio.com bun run build:vinext
 ```
+
+## Promoção entre ambientes
+
+O desenvolvimento segue `branch tipada → development → main → produção`. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para nomes de branches, regras de PR e checks obrigatórios. Somente merges em `main` disparam este deploy para a Cloudflare.

@@ -56,3 +56,7 @@ Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.
+
+## Como contribuir
+
+Use branches tipadas e promova mudanças por PR de `development` para `main`. O fluxo completo está em [CONTRIBUTING.md](CONTRIBUTING.md).
