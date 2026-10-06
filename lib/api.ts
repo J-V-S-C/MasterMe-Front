@@ -130,6 +130,9 @@ export type AiUsageSummary = {
   totalRequests: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  dailyLimit: number;
+  remainingRequests: number;
+  resetsAt: string;
   byModel: Array<{
     model: string;
     requests: number;

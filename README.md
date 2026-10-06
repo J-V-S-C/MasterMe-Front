@@ -6,7 +6,6 @@ de produção é adaptada pelo vinext e executada em Cloudflare Workers.
 ## Acesso
 
 - Aplicação: <https://masterme-frontend.joaovictorcortabitart.workers.dev>
-- API Docs: <https://masterme-api.duckdns.org/docs>
 - API Repo: <https://github.com/J-V-S-C/MasterMe-API>
 
 As chamadas para `/api/*` feitas no domínio do frontend são encaminhadas para a
@@ -52,7 +51,8 @@ Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Observações do MVP
 
-- Ainda não há autenticação ou isolamento de dados por usuário.
+- A autenticação usa cookies seguros do Supabase com renovação no proxy do Next.
+- O espaço de estudo mostra o consumo e a quota diária interna de IA da conta.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.

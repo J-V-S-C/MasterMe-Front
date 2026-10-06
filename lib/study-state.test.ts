@@ -22,7 +22,7 @@ describe('estado de estudo', () => {
   });
 
   test('resume chamadas por operação sem inventar cota ou fallback', () => {
-    expect(usageCounts({ totalRequests: 5, totalInputTokens: 15, totalOutputTokens: 6, byModel: [], byOperation: [
+    expect(usageCounts({ totalRequests: 5, totalInputTokens: 15, totalOutputTokens: 6, dailyLimit: 100, remainingRequests: 95, resetsAt: '2026-10-07T00:00:00.000Z', byModel: [], byOperation: [
       { operation: 'EXTRACTION', requests: 1, successes: 1, inputTokens: 1, outputTokens: 1 },
       { operation: 'INITIAL_EVALUATION', requests: 2, successes: 1, inputTokens: 1, outputTokens: 1 },
       { operation: 'EDGE_CASE_EVALUATION', requests: 1, successes: 1, inputTokens: 1, outputTokens: 1 },
