@@ -23,6 +23,9 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   const responseHeaders = new Headers()
   const upstreamType = upstream.headers.get('content-type')
   if (upstreamType) responseHeaders.set('content-type', upstreamType)
+  responseHeaders.set('cache-control', 'no-store')
+  const retryAfter = upstream.headers.get('retry-after')
+  if (retryAfter) responseHeaders.set('retry-after', retryAfter)
   return new Response(upstream.body, { status: upstream.status, headers: responseHeaders })
 }
 

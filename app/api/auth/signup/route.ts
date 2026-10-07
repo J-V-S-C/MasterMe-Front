@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '../../../../lib/supabase-server'
 
 export async function POST(request: Request) {
+  if (Number(request.headers.get('content-length') ?? 0) > 4_096) return NextResponse.json({ message: 'Solicitação muito grande.' }, { status: 413 })
   const body = await request.json().catch(() => null) as { email?: string; password?: string } | null
-  if (!body?.email || !body.email.includes('@') || !body.password || body.password.length < 8) return NextResponse.json({ message: 'Use um e-mail válido e uma senha com pelo menos 8 caracteres.' }, { status: 400 })
+  if (!body?.email || body.email.length > 254 || !body.email.includes('@') || !body.password || body.password.length < 8 || body.password.length > 128) return NextResponse.json({ message: 'Use um e-mail válido e uma senha entre 8 e 128 caracteres.' }, { status: 400 })
   try {
     const supabase = await createSupabaseServerClient()
     const { data, error } = await supabase.auth.signUp({ email: body.email.trim(), password: body.password, options: { emailRedirectTo: `${new URL(request.url).origin}/auth/callback` } })
