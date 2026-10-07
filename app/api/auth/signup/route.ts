@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '../../../../lib/supabase-server'
-import { enforceRequestRateLimit } from '../../../../lib/request-rate-limit'
 
 export async function POST(request: Request) {
-  const limited = enforceRequestRateLimit(request, 'signup', 5, 60 * 60_000)
-  if (limited) return limited
   if (Number(request.headers.get('content-length') ?? 0) > 4_096) return NextResponse.json({ message: 'Solicitação muito grande.' }, { status: 413 })
   const body = await request.json().catch(() => null) as { email?: string; password?: string } | null
   if (!body?.email || body.email.length > 254 || !body.email.includes('@') || !body.password || body.password.length < 8 || body.password.length > 128) return NextResponse.json({ message: 'Use um e-mail válido e uma senha entre 8 e 128 caracteres.' }, { status: 400 })
