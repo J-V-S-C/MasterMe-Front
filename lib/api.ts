@@ -113,6 +113,10 @@ export type PracticeProject = {
   focusMode: PracticeFocusMode;
   createdAt: string;
 };
+export type PracticeFocusPreview = {
+  focusMode: PracticeFocusMode;
+  priorities: PracticeProject['prioritizedConcepts'];
+};
 export type ExtractionStage =
   | 'QUEUED'
   | 'RETRYING'
@@ -298,6 +302,15 @@ export const api = {
     call<void>(`/concepts/${conceptId}/confidence`, 'DELETE'),
   performance: (materialId: string) =>
     call<ConceptPerformance[]>(`/materials/${materialId}/performance`),
+  practiceFocus: (
+    materialId: string,
+    focusMode: PracticeFocusMode,
+    conceptIds?: string[],
+  ) => call<PracticeFocusPreview>(
+    `/materials/${materialId}/practice-focus`,
+    'POST',
+    conceptIds === undefined ? { focusMode } : { focusMode, conceptIds },
+  ),
   generatePracticeProject: (
     materialId: string,
     focusMode: PracticeFocusMode,

@@ -57,6 +57,10 @@ Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 - Materiais novos informam o idioma escolhido à API. Conteúdo antigo em outro
   idioma só é traduzido após confirmação explícita, pois a operação consome uma
   chamada de IA e preserva os identificadores do mapa e das sessões.
+- O mapa seleciona nós localmente e mostra o diagnóstico no mesmo contexto;
+  relações transitivas ficam ocultas por padrão para reduzir cruzamentos.
+- A prática pré-visualiza até três lacunas ativas antes de consumir IA e não
+  inclui automaticamente conceitos já dominados.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.
