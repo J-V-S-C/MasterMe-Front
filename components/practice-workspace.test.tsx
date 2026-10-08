@@ -14,7 +14,7 @@ describe('Projeto de prática', () => {
   });
   test('escolhe automaticamente o melhor sinal disponível sem expor modos técnicos', () => {
     const confidence = [{ conceptId: 'concept-a', value: 2, createdAt: '2026-01-01', updatedAt: '2026-01-01' }];
-    const performance = [{ conceptId: 'concept-a', passedAttempts: 0, logicalBreaks: 1, incompleteAttempts: 0, totalInitialAttempts: 1, failedInitialAttempts: 1, weakness: 1 }];
+    const performance = [{ conceptId: 'concept-a', passedAttempts: 0, logicalBreaks: 1, incompleteAttempts: 0, totalInitialAttempts: 1, failedInitialAttempts: 1, weakness: 1, latestStatus: 'LOGICAL_BREAK' as const, performanceNeed: 1 }];
     expect(resolveAutomaticFocusMode([], [])).toBe('OVERVIEW');
     expect(resolveAutomaticFocusMode(confidence, [])).toBe('CONFIDENCE');
     expect(resolveAutomaticFocusMode([], performance)).toBe('PERFORMANCE');

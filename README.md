@@ -53,6 +53,10 @@ Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 - A autenticação usa cookies seguros do Supabase com renovação no proxy do Next.
 - O espaço de estudo mostra o consumo e a quota diária interna de IA da conta.
+- A interface aceita `pt-BR` e `en-US`; a preferência fica somente no navegador.
+- Materiais novos informam o idioma escolhido à API. Conteúdo antigo em outro
+  idioma só é traduzido após confirmação explícita, pois a operação consome uma
+  chamada de IA e preserva os identificadores do mapa e das sessões.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.
