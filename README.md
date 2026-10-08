@@ -61,6 +61,12 @@ Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
   relações transitivas ficam ocultas por padrão para reduzir cruzamentos.
 - A prática pré-visualiza até três lacunas ativas antes de consumir IA e não
   inclui automaticamente conceitos já dominados.
+- A listagem carrega somente metadados; o texto completo é buscado para o
+  material ativo. Leituras recentes usam cache curto com ETag e são invalidadas
+  por eventos SSE após mudanças em qualquer aba.
+- O proxy apenas encaminha o token da sessão; assinatura e ownership continuam
+  sendo validados pela API. Isso evita uma consulta remota duplicada ao Supabase
+  em cada chamada sem transformar o frontend em autoridade de autenticação.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.

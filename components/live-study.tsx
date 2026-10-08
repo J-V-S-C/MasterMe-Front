@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { api, uploadMaterial, type AiUsageSummary, type KnowledgeNode, type Material, type StudySession } from "../lib/api";
+import { api, uploadMaterial, type AiUsageSummary, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
 import { stageCopy, type ExtractionProgress } from "../lib/extraction-progress";
 import { useMaterialExtraction } from "../lib/use-material-extraction";
 import { Icon } from "../lib/icons";
@@ -12,6 +12,7 @@ import { ActionButton } from "./action-button";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
 import { studyState, usageCounts } from "../lib/study-state";
 import { useI18n } from "../lib/i18n";
+import { useRealtimeRefresh } from "./realtime-provider";
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
@@ -20,7 +21,8 @@ export function LiveStudy() {
   const searchParams = useSearchParams();
   const requestedMaterialId = searchParams.get("material");
   const requestedConceptId = searchParams.get("concept");
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialSummary[]>([]);
+  const [material, setMaterial] = useState<Material | null>(null);
   const [materialId, setMaterialId] = useState("");
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [conceptId, setConceptId] = useState("");
@@ -80,16 +82,19 @@ export function LiveStudy() {
 
   useEffect(() => {
     if (!materialId) return;
+    let active = true;
     restoredSelection.current = null;
     setSession(null);
     setAnswer("");
     setNodes([]);
     setConceptId("");
+    setMaterial(null);
+    void api.material(materialId).then((detail) => { if (active) setMaterial(detail); }).catch((cause: unknown) => { if (active) setError(message(cause, "Não foi possível carregar o material.")); });
     void loadNodes(materialId);
+    return () => { active = false; };
   }, [materialId, loadNodes]);
   useEffect(() => { void api.aiUsageToday().then(setUsage).catch(() => setUsage(null)); }, []);
 
-  const material = materials.find((item) => item.id === materialId);
   const selected = nodes.find((node) => node.concept.id === conceptId);
   const words = useMemo(() => answer.trim() ? answer.trim().split(/\s+/).length : 0, [answer]);
   const hasConcepts = nodes.length > 0;
@@ -108,7 +113,7 @@ export function LiveStudy() {
     setCreating(true); setError("");
     try {
       const material = await api.createMaterial(title.trim(), content.trim(), locale);
-      setMaterials((current) => [material, ...current]);
+      setMaterials((current) => [{ id: material.id, title: material.title, locale: material.locale, createdAt: material.createdAt }, ...current]);
       saveActiveMaterialId(material.id);
       setMaterialId(material.id); setTitle(""); setContent("");
       await api.extractConcepts(material.id);
@@ -211,6 +216,15 @@ export function LiveStudy() {
       setError(message(cause, "Não foi possível localizar o conteúdo gerado."));
     } finally { setLocalizing(false); }
   };
+
+  useRealtimeRefresh((_change) => {
+    void api.materials().then(setMaterials).catch(() => {})
+    if (materialId) {
+      void api.material(materialId).then(setMaterial).catch(() => {})
+      void loadNodes(materialId)
+    }
+    void api.aiUsageToday().then(setUsage).catch(() => {})
+  });
 
   if (loading) return <LoadingSkeleton />;
   if (error && !materials.length) return <section className="empty-state"><h1>Backend indisponível</h1><p>{error}</p></section>;

@@ -9,6 +9,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(pathname === '/entrar')
   useEffect(() => {
     if (pathname === '/entrar') { setReady(true); return }
+    if (ready) return
     let active = true
     void fetch('/api/auth/session', { cache: 'no-store' }).then((response) => {
       if (!active) return
@@ -16,7 +17,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       else router.replace('/entrar')
     }).catch(() => { if (active) router.replace('/entrar') })
     return () => { active = false }
-  }, [pathname, router])
+  }, [pathname, ready, router])
   if (!ready) return <main className="auth-loading" aria-busy="true">Validando sessão…</main>
   return children
 }
