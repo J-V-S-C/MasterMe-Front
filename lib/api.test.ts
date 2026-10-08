@@ -39,7 +39,7 @@ describe('contrato HTTP do frontend', () => {
     class FakeXhr { upload = { onprogress: null as ((event: ProgressEvent) => void) | null }; onerror: (() => void) | null = null; onload: (() => void) | null = null; status = 202; responseText = JSON.stringify({ data: { id: 'material-a', title: 'Título', status: 'PENDING' } }); open(_method: string, url: string) { path = url; } send(body: FormData) { capture.sent = body; this.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent); this.onload?.(); } }
     globalThis.XMLHttpRequest = FakeXhr as unknown as typeof XMLHttpRequest;
     const progress: Array<number | null> = [];
-    const result = await uploadMaterial(new File(['conteúdo'], 'a.md'), 'Título', (percent) => progress.push(percent));
-    expect(path).toBe('/api/materials/upload'); expect(capture.sent?.get('title')).toBe('Título'); expect(progress).toEqual([50]); expect(result.id).toBe('material-a');
+    const result = await uploadMaterial(new File(['conteúdo'], 'a.md'), 'Título', 'pt-BR', (percent) => progress.push(percent));
+    expect(path).toBe('/api/materials/upload'); expect(capture.sent?.get('title')).toBe('Título'); expect(capture.sent?.get('locale')).toBe('pt-BR'); expect(progress).toEqual([50]); expect(result.id).toBe('material-a');
   });
 });

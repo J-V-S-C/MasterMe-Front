@@ -1,7 +1,9 @@
+export type SupportedLocale = 'pt-BR' | 'en-US';
 export type Material = {
   id: string;
   title: string;
   content: string;
+  locale: SupportedLocale;
   createdAt: string;
 };
 export type EvaluationStatus = 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
@@ -13,6 +15,9 @@ export type Attempt = {
     missingPremises: string[];
     logicalBreak: string | null;
     feedback: string;
+    strength?: string;
+    gap?: string | null;
+    nextAction?: string;
   };
   createdAt: string;
 };
@@ -28,6 +33,7 @@ export type Concept = {
   edgeCaseQuestion?: string;
   prerequisiteIds: string[];
   nextIds: string[];
+  generatedLocale: SupportedLocale | 'und';
 };
 export type KnowledgeNode = {
   concept: Concept;
@@ -38,6 +44,9 @@ export type KnowledgeNode = {
     text: string;
     targetPremise: string;
     expectedReasoningSteps: string[];
+    learningObjective?: string;
+    requiredIdeas?: string[];
+    commonMisconceptions?: string[];
   };
 };
 export type EdgeCaseStatus = 'NOT_REQUESTED' | 'READY' | 'REVIEW' | 'PASSED';
@@ -54,6 +63,9 @@ export type StudySession = {
     text: string;
     targetPremise: string;
     expectedReasoningSteps: string[];
+    learningObjective?: string;
+    requiredIdeas?: string[];
+    commonMisconceptions?: string[];
   };
   edgeCaseStatus: EdgeCaseStatus;
   edgeCaseChallenge: EdgeCaseChallenge | null;
@@ -75,6 +87,8 @@ export type ConceptPerformance = {
   totalInitialAttempts: number;
   failedInitialAttempts: number;
   weakness: number | null;
+  latestStatus: EvaluationStatus | null;
+  performanceNeed: number | null;
 };
 export type PracticeFocusMode =
   | 'OVERVIEW'
@@ -202,6 +216,7 @@ export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 export function uploadMaterial(
   file: File,
   title: string,
+  locale: SupportedLocale,
   onProgress: (percent: number | null) => void,
 ): Promise<UploadedMaterial> {
   const extension = file.name.split('.').at(-1)?.toLowerCase() ?? '';
@@ -215,6 +230,7 @@ export function uploadMaterial(
   const data = new FormData();
   data.append('file', new File([file], file.name, { type: mime }));
   if (title.trim()) data.append('title', title.trim());
+  data.append('locale', locale);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/materials/upload');
@@ -248,8 +264,8 @@ export function uploadMaterial(
 
 export const api = {
   materials: () => call<Material[]>('/materials'),
-  createMaterial: (title: string, content: string) =>
-    call<Material>('/materials', 'POST', { title, content }),
+  createMaterial: (title: string, content: string, locale: SupportedLocale = 'pt-BR') =>
+    call<Material>('/materials', 'POST', { title, content, locale }),
   extractConcepts: (materialId: string) =>
     call<ExtractionJob>(`/materials/${materialId}/extract`, 'POST'),
   cancelExtraction: (materialId: string) =>
@@ -258,6 +274,8 @@ export const api = {
     call<MaterialProcessingStatus>(`/materials/${materialId}/status`),
   knowledgeMap: (id: string) =>
     call<KnowledgeNode[]>(`/materials/${id}/knowledge-map`),
+  localizeMaterial: (id: string, locale: SupportedLocale) =>
+    call<Concept[]>(`/materials/${id}/localize`, 'POST', { locale }),
   startSession: (conceptId: string) =>
     call<StudySession>(`/concepts/${conceptId}/sessions`, 'POST'),
   getSession: (sessionId: string) =>

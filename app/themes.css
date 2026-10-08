@@ -465,7 +465,16 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 .header-content{display:grid;grid-template-columns:minmax(150px,1fr) minmax(480px,680px) minmax(150px,1fr);grid-template-rows:auto;height:auto;padding:10px 24px;gap:16px;align-items:start}
 .brand{grid-column:1;grid-row:1;align-self:start}
 .header-controls{grid-column:3;grid-row:1;display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-left:auto}
+.locale-control select{min-width:58px;height:38px;border:1px solid var(--line-soft);border-radius:7px;background:var(--card);color:var(--text);padding:0 8px;font:600 12px/1 Inter,sans-serif;cursor:pointer}
 .header-controls .theme-toggle{grid-column:auto;grid-row:auto;margin:0}
+
+.localize-callout{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:13px 15px;border:1px solid var(--amber);border-radius:10px;background:var(--card)}
+.localize-callout>svg{width:22px;min-width:22px;color:var(--amber)}.localize-callout>div{display:grid;gap:3px;flex:1}.localize-callout span{color:var(--muted);font-size:13px}
+.concept-summary{display:grid;gap:6px;margin:14px 0;padding:13px;border:1px solid var(--line-soft);border-radius:9px;background:var(--deep)}
+.concept-summary header{display:flex;align-items:center;justify-content:space-between}.concept-summary header span{display:flex;align-items:center;gap:7px;color:var(--blue);font:600 11px/1.2 monospace;text-transform:uppercase}.concept-summary header svg{width:16px}.concept-summary h3{margin:2px 0 0;font-size:17px}.concept-summary p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}.concept-summary footer{color:var(--dim);font:11px/1.4 monospace}
+.evidence-details{margin:10px 0}.evidence-details summary{cursor:pointer;color:var(--blue);font-size:12px}.evidence-details .evidence{margin:9px 0 0}
+.diagnostic-card.concise .diagnostic-points{display:grid;gap:9px}.diagnostic-points article{padding:10px 12px;border-radius:7px;background:var(--deep)}.diagnostic-points strong{display:block;margin-bottom:4px;color:var(--blue);font-size:12px}.diagnostic-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+@media(max-width:700px){.localize-callout{align-items:flex-start;flex-wrap:wrap}.localize-callout .app-button{width:100%}.locale-control select{min-width:52px}}
 .primary-nav{grid-column:2;grid-row:1;width:100%;margin:0;padding:4px;align-self:start}
 .primary-nav a{min-height:40px}
 .primary-nav a:first-child.active{border-radius:8px 0 0 8px}
