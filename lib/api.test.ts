@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { api, uploadMaterial } from './api';
+import { api, invalidateApiCache, uploadMaterial } from './api';
 
 const originalFetch = globalThis.fetch;
 const originalXhr = globalThis.XMLHttpRequest;
-afterEach(() => { globalThis.fetch = originalFetch; globalThis.XMLHttpRequest = originalXhr; });
+afterEach(() => { invalidateApiCache(); globalThis.fetch = originalFetch; globalThis.XMLHttpRequest = originalXhr; });
 
 describe('contrato HTTP do frontend', () => {
   test('usa os endpoints de confiança, desempenho e prática', async () => {
@@ -34,6 +34,19 @@ describe('contrato HTTP do frontend', () => {
     const result = await api.cancelExtraction('material-a');
     expect(calls).toEqual([['/api/materials/material-a/extract', 'DELETE']]);
     expect(result.status).toBe('CANCELLED');
+  });
+
+  test('reutiliza GETs recentes e invalida o cache após mutação', async () => {
+    let materialRequests = 0;
+    globalThis.fetch = (async (url: string) => {
+      if (url === '/api/materials') { materialRequests += 1; return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { etag: '"materials-v1"' } }); }
+      return new Response(JSON.stringify({ data: { conceptId: 'concept-a', value: 3 } }), { status: 200 });
+    }) as typeof fetch;
+    await api.materials(); await api.materials();
+    expect(materialRequests).toBe(1);
+    await api.saveConfidence('concept-a', 3);
+    await api.materials();
+    expect(materialRequests).toBe(2);
   });
 
   test('envia arquivo multipart, título e atualiza o progresso', async () => {

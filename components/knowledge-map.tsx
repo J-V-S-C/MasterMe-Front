@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { api, type KnowledgeNode, type Material } from "../lib/api";
+import { api, type KnowledgeNode, type MaterialSummary } from "../lib/api";
 import { Icon } from "../lib/icons";
 import { useI18n } from "../lib/i18n";
 import { LoadingSkeleton } from "./loading-skeleton";
 import { StyledSelect } from "./styled-select";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
+import { useRealtimeRefresh } from "./realtime-provider";
 
 type GraphEdge = { source: string; target: string };
 
@@ -70,7 +71,7 @@ export function graphLayout(nodes: KnowledgeNode[]) {
 
 export function KnowledgeMap() {
   const { t } = useI18n();
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [materialId, setMaterialId] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -96,6 +97,15 @@ export function KnowledgeMap() {
   const available = nodes.filter(({ status }) => status === "READY").length;
   const completion = nodes.length ? Math.round((validated / nodes.length) * 100) : 0;
   const statusText = (status: KnowledgeNode['status']) => status === 'EXPLAINED' ? t('mapExplained') : status === 'REVIEW' ? t('mapReview') : t('mapReady');
+
+  useRealtimeRefresh((change) => {
+    if (change.type === 'material.progress' || change.type === 'material.queued') return
+    void api.materials().then(setMaterials).catch(() => {})
+    if (materialId) void api.knowledgeMap(materialId).then((data) => {
+      setNodes(data)
+      setSelectedId((current) => data.some(({ concept }) => concept.id === current) ? current : data[0]?.concept.id ?? '')
+    }).catch(() => {})
+  });
 
   if (loading && !materials.length) return <LoadingSkeleton variant="map" />;
   if (error) return <section className="empty-state"><h1>{t('mapLoadError')}</h1><p>{error}</p></section>;

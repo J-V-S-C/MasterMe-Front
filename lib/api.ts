@@ -1,11 +1,11 @@
 export type SupportedLocale = 'pt-BR' | 'en-US';
-export type Material = {
+export type MaterialSummary = {
   id: string;
   title: string;
-  content: string;
   locale: SupportedLocale;
   createdAt: string;
 };
+export type Material = MaterialSummary & { content: string };
 export type EvaluationStatus = 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
 export type Attempt = {
   stage: 'INITIAL' | 'EDGE_CASE_REPLY' | 'STRESS_REPLY';
@@ -117,6 +117,12 @@ export type PracticeFocusPreview = {
   focusMode: PracticeFocusMode;
   priorities: PracticeProject['prioritizedConcepts'];
 };
+export type PracticeContext = {
+  knowledgeMap: KnowledgeNode[];
+  confidences: ConceptConfidence[];
+  performance: ConceptPerformance[];
+  projects: PracticeProject[];
+};
 export type ExtractionStage =
   | 'QUEUED'
   | 'RETRYING'
@@ -182,18 +188,35 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(
+type ResponseCacheEntry = { data: unknown; etag: string | null; expiresAt: number };
+const responseCache = new Map<string, ResponseCacheEntry>();
+const inFlight = new Map<string, Promise<unknown>>();
+const CACHE_TTL_MS = 15_000;
+
+export function invalidateApiCache(prefix?: string): void {
+  for (const key of responseCache.keys()) if (!prefix || key.startsWith(prefix)) responseCache.delete(key);
+}
+
+async function executeCall<T>(
   path: string,
   method = 'GET',
   body?: unknown,
 ): Promise<T> {
+  const stableGet = method === 'GET' && path !== '/ai-usage/today' && !path.endsWith('/status');
+  const cached = stableGet ? responseCache.get(path) : undefined;
   const response = await fetch(`/api${path}`, {
     method,
-    cache: 'no-store',
-    headers:
-      body === undefined ? undefined : { 'content-type': 'application/json' },
+    cache: stableGet ? 'no-cache' : 'no-store',
+    headers: {
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(cached?.etag ? { 'if-none-match': cached.etag } : {}),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (response.status === 304 && cached) {
+    cached.expiresAt = Date.now() + CACHE_TTL_MS;
+    return cached.data as T;
+  }
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
       message?: string;
@@ -205,9 +228,26 @@ async function call<T>(
       payload?.code,
     );
   }
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204) {
+    if (method !== 'GET') invalidateApiCache();
+    return undefined as T;
+  }
   const payload = (await response.json()) as { data: T };
+  if (stableGet) responseCache.set(path, { data: payload.data, etag: response.headers.get('etag'), expiresAt: Date.now() + CACHE_TTL_MS });
+  else if (method !== 'GET') invalidateApiCache();
   return payload.data;
+}
+
+function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  const stableGet = method === 'GET' && path !== '/ai-usage/today' && !path.endsWith('/status');
+  const cached = stableGet ? responseCache.get(path) : undefined;
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.data as T);
+  if (!stableGet) return executeCall<T>(path, method, body);
+  const pending = inFlight.get(path);
+  if (pending) return pending as Promise<T>;
+  const request = executeCall<T>(path, method, body).finally(() => inFlight.delete(path));
+  inFlight.set(path, request);
+  return request;
 }
 
 const uploadTypes: Record<string, string> = {
@@ -255,9 +295,10 @@ export function uploadMaterial(
         parsed && typeof parsed === 'object'
           ? (parsed as { data?: UploadedMaterial; message?: string })
           : null;
-      if (xhr.status >= 200 && xhr.status < 300 && payload?.data)
+      if (xhr.status >= 200 && xhr.status < 300 && payload?.data) {
+        invalidateApiCache();
         resolve(payload.data);
-      else
+      } else
         reject(
           new Error(payload?.message ?? 'Não foi possível enviar o arquivo.'),
         );
@@ -267,7 +308,8 @@ export function uploadMaterial(
 }
 
 export const api = {
-  materials: () => call<Material[]>('/materials'),
+  materials: () => call<MaterialSummary[]>('/materials'),
+  material: (id: string) => call<Material>(`/materials/${id}`),
   createMaterial: (title: string, content: string, locale: SupportedLocale = 'pt-BR') =>
     call<Material>('/materials', 'POST', { title, content, locale }),
   extractConcepts: (materialId: string) =>
@@ -302,6 +344,8 @@ export const api = {
     call<void>(`/concepts/${conceptId}/confidence`, 'DELETE'),
   performance: (materialId: string) =>
     call<ConceptPerformance[]>(`/materials/${materialId}/performance`),
+  practiceContext: (materialId: string) =>
+    call<PracticeContext>(`/materials/${materialId}/practice-context`),
   practiceFocus: (
     materialId: string,
     focusMode: PracticeFocusMode,

@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ApiError, api, type ConceptConfidence, type ConceptPerformance, type KnowledgeNode, type Material, type PracticeFocusMode, type PracticeFocusPreview, type PracticeProject } from '../lib/api';
+import { ApiError, api, type ConceptConfidence, type ConceptPerformance, type KnowledgeNode, type MaterialSummary, type PracticeFocusMode, type PracticeFocusPreview, type PracticeProject } from '../lib/api';
 import { getActiveMaterialId, saveActiveMaterialId } from '../lib/active-material';
 import { Icon } from '../lib/icons';
 import { useI18n } from '../lib/i18n';
 import { LoadingSkeleton } from './loading-skeleton';
 import { StyledSelect } from './styled-select';
 import { ActionButton } from './action-button';
+import { useRealtimeRefresh } from './realtime-provider';
 
 type FocusChoice = 'AUTOMATIC' | 'MANUAL';
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
@@ -24,7 +25,7 @@ export function resolveAutomaticFocusMode(confidences: ConceptConfidence[], perf
 
 export function PracticeWorkspace() {
   const { locale, t } = useI18n();
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [confidences, setConfidences] = useState<ConceptConfidence[]>([]);
@@ -47,15 +48,23 @@ export function PracticeWorkspace() {
       .catch((cause: unknown) => setError(errorMessage(cause, t('materialsLoadError')))).finally(() => setLoading(false));
   }, [t]);
 
-  const loadMaterial = useCallback(async (id: string) => {
-    setLoadingMaterial(true); setError(''); setProject(null); setSelectedIds([]); setPreview(null);
+  const loadMaterial = useCallback(async (id: string, reset = true) => {
+    if (reset) setLoadingMaterial(true);
+    setError('');
+    if (reset) { setProject(null); setSelectedIds([]); setPreview(null); }
     try {
-      const [map, confidenceItems, performanceItems, history] = await Promise.all([api.knowledgeMap(id), api.confidences(id), api.performance(id), api.practiceProjects(id)]);
-      setNodes(map); setConfidences(confidenceItems); setPerformance(performanceItems); setProjects(history);
+      const context = await api.practiceContext(id);
+      setNodes(context.knowledgeMap); setConfidences(context.confidences); setPerformance(context.performance); setProjects(context.projects);
     } catch (cause: unknown) { setError(errorMessage(cause, t('practiceDataError'))); }
-    finally { setLoadingMaterial(false); }
+    finally { if (reset) setLoadingMaterial(false); }
   }, [t]);
   useEffect(() => { if (materialId) void loadMaterial(materialId); }, [materialId, loadMaterial]);
+
+  useRealtimeRefresh((change) => {
+    if (change.type === 'material.progress' || change.type === 'material.queued') return
+    void api.materials().then(setMaterials).catch(() => {})
+    if (materialId) void loadMaterial(materialId, false)
+  });
 
   const confidenceByConcept = useMemo(() => new Map(confidences.map((item) => [item.conceptId, item.value])), [confidences]);
   const performanceByConcept = useMemo(() => new Map(performance.map((item) => [item.conceptId, item])), [performance]);
