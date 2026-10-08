@@ -49,6 +49,10 @@ outras protection rules no environment `production` do GitHub.
 
 Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 
+Mudanças de código seguem obrigatoriamente o fluxo de PRD temporário e revisão
+por agente independente descrito em [AGENTS.md](./AGENTS.md) e
+[docs/ENGINEERING_WORKFLOW.md](./docs/ENGINEERING_WORKFLOW.md).
+
 ## Observações do MVP
 
 - A autenticação usa cookies seguros do Supabase com renovação no proxy do Next.
