@@ -11,10 +11,12 @@ describe('contrato HTTP do frontend', () => {
     globalThis.fetch = (async (url: string, init?: RequestInit) => { calls.push([url, init?.method, typeof init?.body === 'string' ? init.body : null]); return new Response(JSON.stringify({ data: url.includes('performance') ? [] : url.includes('confidence') ? { conceptId: 'concept-a', value: 2 } : { id: 'project-a' } }), { status: 200 }); }) as typeof fetch;
     await api.saveConfidence('concept-a', 2);
     await api.performance('material-a');
+    await api.practiceFocus('material-a', 'COMBINED');
     await api.generatePracticeProject('material-a', 'MANUAL', ['concept-a']);
     expect(calls).toEqual([
       ['/api/concepts/concept-a/confidence', 'PUT', JSON.stringify({ value: 2 })],
       ['/api/materials/material-a/performance', 'GET', null],
+      ['/api/materials/material-a/practice-focus', 'POST', JSON.stringify({ focusMode: 'COMBINED' })],
       ['/api/materials/material-a/practice-projects', 'POST', JSON.stringify({ focusMode: 'MANUAL', conceptIds: ['concept-a'] })],
     ]);
   });
