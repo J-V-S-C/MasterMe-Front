@@ -2,8 +2,8 @@
 
 ## PRD temporário
 
-Antes de alterar código, crie `../.task-prds/YYYY-MM-DD-slug.md` no workspace
-compartilhado. Inclua problema, objetivo, não objetivos, contratos, threat model,
+Antes de alterar código, crie `.task-prds/YYYY-MM-DD-slug.md` na raiz deste
+repositório. Inclua problema, objetivo, não objetivos, contratos, threat model,
 privacidade, custo, aceite, testes, rollout, rollback, branches e PRs.
 
 O arquivo é descartável, não substitui o PRD global e não entra no Git. Apague-o
@@ -23,7 +23,14 @@ achados por severidade. A revisão cobre:
 - testes de componente, integração e build Next/Vinext.
 
 O PR identifica o revisor e registra achados e resoluções. Mudança material após
-a revisão exige nova passada.
+a revisão exige nova passada. Achados `CRITICAL` e `HIGH` impedem
+merge/conclusão até correção e novo veredito explícito. Achados menores precisam
+de resolução ou aceite de risco documentado.
+
+O registro no corpo do PR inclui o caminho/ID do PRD, autor, revisor, SHA exato
+revisado, achados com severidade, resoluções, veredito e confirmação de nova
+passada quando o SHA mudar materialmente. O PRD permanece ignorado e é removido
+localmente ao final; o corpo do PR preserva a evidência auditável.
 
 ## Validação
 
