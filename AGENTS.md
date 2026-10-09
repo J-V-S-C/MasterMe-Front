@@ -1,9 +1,10 @@
 # Instruções para agentes — MasterMe Frontend
 
 Este repositório deve ser operável em um clone independente. Antes de planejar
-ou editar, leia `README.md`, `docs/ENGINEERING_WORKFLOW.md` e a documentação
-versionada relacionada à área alterada (`SECURITY.md` e `DEPLOYMENT.md`).
-Documentos de um workspace pai são contexto opcional, nunca pré-requisito
+ou editar, leia esta instrução e consulte
+`.agents/skills/masterme-documentation-routing/SKILL.md`. Ela determina quais
+documentos versionados são necessários para o escopo; não leia todos por
+ritual. Documentos de um workspace pai são contexto opcional, nunca pré-requisito
 oculto. Preserve TypeScript estrito, acessibilidade, responsividade, temas
 claro/escuro, internacionalização e fronteiras server-side.
 

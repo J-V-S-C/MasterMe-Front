@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { api, invalidateApiCache, uploadMaterial } from './api';
+import { api, invalidateApiCache, MAX_UPLOAD_BYTES, uploadMaterial } from './api';
 
 const originalFetch = globalThis.fetch;
 const originalXhr = globalThis.XMLHttpRequest;
@@ -56,5 +56,11 @@ describe('contrato HTTP do frontend', () => {
     const progress: Array<number | null> = [];
     const result = await uploadMaterial(new File(['conteúdo'], 'a.md'), 'Título', 'pt-BR', (percent) => progress.push(percent));
     expect(path).toBe('/api/materials/upload'); expect(capture.sent?.get('title')).toBe('Título'); expect(capture.sent?.get('locale')).toBe('pt-BR'); expect(progress).toEqual([50]); expect(result.id).toBe('material-a');
+  });
+
+  test('rejeita no cliente arquivos acima do mesmo teto de 8 MiB da API', async () => {
+    expect(MAX_UPLOAD_BYTES).toBe(8 * 1024 * 1024);
+    const file = new File([new Uint8Array(MAX_UPLOAD_BYTES + 1)], 'grande.pdf', { type: 'application/pdf' });
+    await expect(uploadMaterial(file, '', 'pt-BR', () => undefined)).rejects.toThrow('O arquivo deve ter no máximo 8 MiB.');
   });
 });

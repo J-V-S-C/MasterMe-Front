@@ -113,11 +113,11 @@ export function PracticeWorkspace() {
   const confidenceLabels = [t('confidenceOne'), t('confidenceTwo'), t('confidenceThree'), t('confidenceFour'), t('confidenceFive')];
 
   if (loading) return <LoadingSkeleton variant="practice" />;
-  if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('addMaterialFirst')}</h1><p>{t('practiceUsesConcepts')}</p><Link className="exercise-link" href="/">{t('goToStudy')}</Link></section>;
+  if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('addMaterialFirst')}</h1><p>{t('practiceUsesConcepts')}</p><Link className="exercise-link" href="/estudar">{t('goToStudy')}</Link></section>;
   return <>
     <section className="practice-hero"><div><span>{t('practiceKicker')}</span><h1>{t('practiceTitle')}</h1><p>{t('practiceDescription')}</p></div><StyledSelect label={t('material')} icon="document" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} /></section>
     {error && <p className="form-error practice-error" role="alert">{error}</p>}
-    {loadingMaterial ? <LoadingSkeleton variant="practice" /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/?material=${materialId}`}>{t('openMaterial')}</Link></section> : <div className="practice-layout">
+    {loadingMaterial ? <LoadingSkeleton variant="practice" /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/estudar?material=${materialId}`}>{t('openMaterial')}</Link></section> : <div className="practice-layout">
       <section className="practice-config">
         <header><span>1 · {t('defineFocus')}</span><h2>{t('prepareProject')}</h2><p>{t('noTechnicalStrategy')}</p></header>
         <div className="focus-choices"><button type="button" className={focusChoice === 'AUTOMATIC' ? 'selected' : ''} aria-pressed={focusChoice === 'AUTOMATIC'} onClick={() => { setFocusChoice('AUTOMATIC'); setSelectedIds([]); }}><Icon name="sparkles" /><span><strong>{t('chooseForMe')}</strong><small>{t('chooseForMeDescription')}</small></span><i><Icon name="check" /></i></button><button type="button" className={focusChoice === 'MANUAL' ? 'selected' : ''} aria-pressed={focusChoice === 'MANUAL'} onClick={() => setFocusChoice('MANUAL')}><Icon name="brain" /><span><strong>{t('letMeChoose')}</strong><small>{t('letMeChooseDescription')}</small></span><i><Icon name="check" /></i></button></div>

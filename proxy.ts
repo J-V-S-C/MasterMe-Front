@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isPublicPage } from './lib/public-routes'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
+  if (isPublicPage(request.nextUrl.pathname)) return response
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   if (!url || !key) return response
