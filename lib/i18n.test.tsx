@@ -5,7 +5,7 @@ import { I18nProvider, useI18n } from './i18n'
 
 function Probe() {
   const { locale, t } = useI18n()
-  return <span>{locale}:{t('navStudy')}</span>
+  return <><span>{locale}:{t('navStudy')}</span><span>{t('fileHelp')}</span><span>{t('authCallbackError')}</span><span>{t('authAccountCreated')}</span></>
 }
 
 beforeEach(() => {
@@ -18,12 +18,18 @@ describe('internacionalização', () => {
   test('usa pt-BR por padrão', () => {
     const view = render(<I18nProvider><Probe /></I18nProvider>)
     expect(view.getByText('pt-BR:Estudar')).toBeTruthy()
+    expect(view.getByText(/até 8 MiB/)).toBeTruthy()
+    expect(view.getByText('O link de confirmação é inválido ou expirou. Solicite um novo cadastro.')).toBeTruthy()
+    expect(view.getByText(/Conta criada/)).toBeTruthy()
   })
 
   test('restaura en-US e atualiza o lang do documento', async () => {
     window.localStorage.setItem('masterme:locale', 'en-US')
     const view = render(<I18nProvider><Probe /></I18nProvider>)
     await waitFor(() => expect(view.getByText('en-US:Study')).toBeTruthy())
+    expect(view.getByText(/up to 8 MiB/)).toBeTruthy()
+    expect(view.getByText('The confirmation link is invalid or expired. Create a new account request.')).toBeTruthy()
+    expect(view.getByText(/Account created/)).toBeTruthy()
     expect(document.documentElement.lang).toBe('en-US')
   })
 })

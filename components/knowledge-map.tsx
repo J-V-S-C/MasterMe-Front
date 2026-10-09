@@ -109,7 +109,7 @@ export function KnowledgeMap() {
 
   if (loading && !materials.length) return <LoadingSkeleton variant="map" />;
   if (error) return <section className="empty-state"><h1>{t('mapLoadError')}</h1><p>{error}</p></section>;
-  if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('mapNeedsMaterial')}</h1><p>{t('mapNeedsMaterialDescription')}</p><Link className="exercise-link" href="/">{t('goToStudy')} <Icon name="chevron" /></Link></section>;
+  if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('mapNeedsMaterial')}</h1><p>{t('mapNeedsMaterialDescription')}</p><Link className="exercise-link" href="/estudar">{t('goToStudy')} <Icon name="chevron" /></Link></section>;
   return <>
     <section className="map-hero">
       <div className="map-kicker"><Icon name="sparkles" /> {t('mapKicker')}</div>
@@ -149,5 +149,5 @@ function Inspector({ node, statusText }: { node: KnowledgeNode | null; statusTex
   if (!node) return <aside className="inspector"><p>{t('selectMapConcept')}</p></aside>;
   const evaluation = node.lastAttempt?.evaluation;
   const gap = evaluation?.gap ?? evaluation?.logicalBreak ?? evaluation?.missingPremises[0];
-  return <aside className="inspector"><small>{t('mapFragment')} · {node.concept.kind}</small><h2>{node.concept.name}</h2><span className={`status-badge ${node.status.toLowerCase()}`}>{statusText(node.status)}</span><section><h3>{t('focusPrinciple')}</h3><p>{node.concept.description}</p></section>{evaluation && <section className="inspector-diagnostic"><h3>{t('latestDiagnostic')}</h3><strong>{t('correctPoint')}</strong><p>{evaluation.strength ?? evaluation.feedback}</p>{evaluation.status !== 'PASSED' && <><strong>{t('missingPoint')}</strong><p>{gap ?? evaluation.feedback}</p></>}<strong>{t('nextStep')}</strong><p>{evaluation.nextAction ?? evaluation.feedback}</p></section>}<section className="next-prompt"><h3>{t('nextMasteryChallenge')}</h3><p>{node.question.text}</p></section><Link className="exercise-link" href={`/?material=${node.concept.materialId}&concept=${node.concept.id}`}>{t('practiceConcept')} <Icon name="chevron" /></Link></aside>;
+  return <aside className="inspector"><small>{t('mapFragment')} · {node.concept.kind}</small><h2>{node.concept.name}</h2><span className={`status-badge ${node.status.toLowerCase()}`}>{statusText(node.status)}</span><section><h3>{t('focusPrinciple')}</h3><p>{node.concept.description}</p></section>{evaluation && <section className="inspector-diagnostic"><h3>{t('latestDiagnostic')}</h3><strong>{t('correctPoint')}</strong><p>{evaluation.strength ?? evaluation.feedback}</p>{evaluation.status !== 'PASSED' && <><strong>{t('missingPoint')}</strong><p>{gap ?? evaluation.feedback}</p></>}<strong>{t('nextStep')}</strong><p>{evaluation.nextAction ?? evaluation.feedback}</p></section>}<section className="next-prompt"><h3>{t('nextMasteryChallenge')}</h3><p>{node.question.text}</p></section><Link className="exercise-link" href={`/estudar?material=${node.concept.materialId}&concept=${node.concept.id}`}>{t('practiceConcept')} <Icon name="chevron" /></Link></aside>;
 }

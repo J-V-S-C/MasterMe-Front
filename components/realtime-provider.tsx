@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
 import { invalidateApiCache } from '../lib/api'
 
 export const DATA_CHANGED_EVENT = 'masterme:data-changed'
@@ -11,10 +10,7 @@ const activityTypes = [
 ] as const
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const enabled = pathname !== '/entrar'
   useEffect(() => {
-    if (!enabled) return
     const source = new EventSource('/api/events')
     const receive = (event: Event) => {
       invalidateApiCache()
@@ -25,7 +21,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     }
     for (const type of activityTypes) source.addEventListener(type, receive)
     return () => source.close()
-  }, [enabled])
+  }, [])
   return children
 }
 

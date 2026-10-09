@@ -5,6 +5,8 @@ O frontend é publicado no Cloudflare Workers com o adaptador vinext, mantendo o
 No repositório `MasterMe-Front`, crie o Environment `production` e configure:
 
 - Variable `BACKEND_URL`: URL HTTPS da API, sem barra final.
+- Variable `PUBLIC_APP_URL`: origem HTTPS canônica do frontend, sem path ou
+  barra final; redirects de autenticação falham fechados sem ela em produção.
 - Secret `CLOUDFLARE_ACCOUNT_ID`: ID da conta Cloudflare.
 - Secret `CLOUDFLARE_API_TOKEN`: token limitado a editar Workers nessa conta.
 
