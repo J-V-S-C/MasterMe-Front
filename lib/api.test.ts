@@ -49,6 +49,38 @@ describe('contrato HTTP do frontend', () => {
     expect(materialRequests).toBe(2);
   });
 
+  test('encaminha somente plano e chave idempotente ao checkout', async () => {
+    let captured: { url?: string; init?: RequestInit } = {};
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      captured = { url, init };
+      return new Response(JSON.stringify({ data: { id: '11111111-1111-4111-8111-111111111111', planId: 'PRO', amountInCents: 24_900, status: 'CHECKOUT_READY', checkoutUrl: 'https://checkout.infinitepay.com.br/masterme', createdAt: '2026-10-09T00:00:00.000Z', updatedAt: '2026-10-09T00:00:00.000Z' } }), { status: 201 });
+    }) as typeof fetch;
+
+    await api.createCheckout('PRO', 'checkout.PRO.11111111-1111-4111-8111-111111111111');
+
+    expect(captured.url).toBe('/api/billing/checkouts');
+    expect(captured.init?.method).toBe('POST');
+    expect(new Headers(captured.init?.headers).get('idempotency-key')).toBe('checkout.PRO.11111111-1111-4111-8111-111111111111');
+    expect(captured.init?.body).toBe(JSON.stringify({ planId: 'PRO' }));
+  });
+
+  test('deduplica saldo autoritativo e o invalida depois de uma mutação', async () => {
+    let balanceRequests = 0;
+    globalThis.fetch = (async (url: string) => {
+      if (url === '/api/billing/me') {
+        balanceRequests += 1;
+        return new Response(JSON.stringify({ data: { planId: 'FREE', dailyLimit: 10, dailyUsed: 0, dailyRemaining: 10, periodLimit: 120, periodUsed: 0, periodRemaining: 120 } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ data: { id: 'session-a' } }), { status: 200 });
+    }) as typeof fetch;
+
+    await Promise.all([api.billingMe(), api.billingMe()]);
+    expect(balanceRequests).toBe(1);
+    await api.startSession('concept-a');
+    await api.billingMe();
+    expect(balanceRequests).toBe(2);
+  });
+
   test('envia arquivo multipart, título e atualiza o progresso', async () => {
     let path = ''; const capture: { sent?: FormData } = {};
     class FakeXhr { upload = { onprogress: null as ((event: ProgressEvent) => void) | null }; onerror: (() => void) | null = null; onload: (() => void) | null = null; status = 202; responseText = JSON.stringify({ data: { id: 'material-a', title: 'Título', status: 'PENDING' } }); open(_method: string, url: string) { path = url; } send(body: FormData) { capture.sent = body; this.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent); this.onload?.(); } }

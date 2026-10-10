@@ -56,7 +56,11 @@ por agente independente descrito em [AGENTS.md](./AGENTS.md) e
 ## Observações do MVP
 
 - A autenticação usa cookies seguros do Supabase com renovação no proxy do Next.
-- O espaço de estudo mostra o consumo e a quota diária interna de IA da conta.
+- O header e o espaço de estudo usam `/api/billing/me` como fonte autoritativa
+  para plano, créditos diário/período e estimativas conservadoras por operação.
+- CTAs pagos chegam a `/estudar?plan=...`, confirmam o catálogo do servidor e
+  abrem somente URLs HTTPS do host allowlisted da InfinitePay. O retorno em
+  `/pagamento/retorno` nunca libera acesso antes da reconciliação da API.
 - A interface aceita `pt-BR` e `en-US`; a preferência fica somente no navegador.
 - Materiais novos informam o idioma escolhido à API. Conteúdo antigo em outro
   idioma só é traduzido após confirmação explícita, pois a operação consome uma
@@ -71,6 +75,8 @@ por agente independente descrito em [AGENTS.md](./AGENTS.md) e
 - O proxy apenas encaminha o token da sessão; assinatura e ownership continuam
   sendo validados pela API. Isso evita uma consulta remota duplicada ao Supabase
   em cada chamada sem transformar o frontend em autoridade de autenticação.
+- O BFF encaminha `Idempotency-Key` exclusivamente ao endpoint de checkout e
+  nunca repassa cookies ou headers arbitrários do navegador ao backend.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.

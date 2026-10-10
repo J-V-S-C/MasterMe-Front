@@ -14,8 +14,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     void fetch('/api/auth/session', { cache: 'no-store' }).then((response) => {
       if (!active) return
       if (response.ok) setReady(true)
-      else router.replace(loginHrefFor(pathname))
-    }).catch(() => { if (active) router.replace(loginHrefFor(pathname)) })
+      else router.replace(loginHrefFor(`${pathname}${window.location.search}`))
+    }).catch(() => { if (active) router.replace(loginHrefFor(`${pathname}${window.location.search}`)) })
     return () => { active = false }
   }, [pathname, ready, router])
   if (!ready) return <main className="auth-loading" aria-busy="true" aria-live="polite">Validando sessão…</main>

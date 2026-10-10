@@ -5,6 +5,7 @@ import { Icon } from '../lib/icons'
 import { LogoutButton } from './logout-button'
 import { useI18n } from '../lib/i18n'
 import { ThemeToggle } from './theme-toggle'
+import { CreditBalance } from './credit-balance'
 
 const links = [
   { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/estudar', id: 'study', icon: 'book' },
@@ -17,6 +18,7 @@ export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'p
   return <header className="site-header"><div className="header-content">
     <Link className="brand" href="/estudar" aria-label={t('brandLabel')}><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
     <div className="header-controls">
+      <CreditBalance compact />
       <label className="locale-control"><span className="sr-only">{t('language')}</span><select aria-label={t('language')} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}><option value="pt-BR">PT</option><option value="en-US">EN</option></select></label>
       <ThemeToggle lightLabel={t('lightTheme')} darkLabel={t('darkTheme')} />
       <LogoutButton />

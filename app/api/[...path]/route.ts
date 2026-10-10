@@ -1,4 +1,5 @@
 import { accessTokenForProxy } from '../../../lib/supabase-server'
+import { buildBackendHeaders, InvalidProxyHeaderError } from '../../../lib/bff-headers'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,12 +9,15 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   const { path } = await context.params
   const incoming = new URL(request.url)
   const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3333'
-  const headers = new Headers()
-  headers.set('authorization', `Bearer ${accessToken}`)
-  const contentType = request.headers.get('content-type')
-  if (contentType) headers.set('content-type', contentType)
-  const ifNoneMatch = request.headers.get('if-none-match')
-  if (ifNoneMatch) headers.set('if-none-match', ifNoneMatch)
+  let headers: Headers
+  try {
+    headers = buildBackendHeaders(request, accessToken, path)
+  } catch (error) {
+    if (error instanceof InvalidProxyHeaderError) {
+      return Response.json({ code: 'INVALID_IDEMPOTENCY_KEY', message: 'A intenção de checkout expirou. Tente novamente.' }, { status: 400 })
+    }
+    throw error
+  }
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer()
   const upstream = await fetch(`${backendUrl}/api/${path.join('/')}${incoming.search}`, {
     method: request.method,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { api, uploadMaterial, type AiUsageSummary, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
+import { api, uploadMaterial, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
 import { stageCopy, type ExtractionProgress } from "../lib/extraction-progress";
 import { useMaterialExtraction } from "../lib/use-material-extraction";
 import { Icon } from "../lib/icons";
@@ -10,14 +10,17 @@ import { LoadingSkeleton } from "./loading-skeleton";
 import { StyledSelect } from "./styled-select";
 import { ActionButton } from "./action-button";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
-import { studyState, usageCounts } from "../lib/study-state";
+import { studyState } from "../lib/study-state";
 import { useI18n } from "../lib/i18n";
 import { useRealtimeRefresh } from "./realtime-provider";
+import { useBilling } from "./billing-provider";
+import { CreditBalance } from "./credit-balance";
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
 export function LiveStudy() {
   const { locale, t } = useI18n();
+  const { refresh: refreshBilling } = useBilling();
   const searchParams = useSearchParams();
   const requestedMaterialId = searchParams.get("material");
   const requestedConceptId = searchParams.get("concept");
@@ -37,7 +40,6 @@ export function LiveStudy() {
   const [loadingNodes, setLoadingNodes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [localizing, setLocalizing] = useState(false);
-  const [usage, setUsage] = useState<AiUsageSummary | null>(null);
   const restoredSelection = useRef<string | null>(null);
   const activeSelection = useRef("");
   const nodeLoadRequest = useRef(0);
@@ -93,7 +95,6 @@ export function LiveStudy() {
     void loadNodes(materialId);
     return () => { active = false; };
   }, [materialId, loadNodes]);
-  useEffect(() => { void api.aiUsageToday().then(setUsage).catch(() => setUsage(null)); }, []);
 
   const selected = nodes.find((node) => node.concept.id === conceptId);
   const words = useMemo(() => answer.trim() ? answer.trim().split(/\s+/).length : 0, [answer]);
@@ -105,7 +106,7 @@ export function LiveStudy() {
   const extract = async () => {
     if (!materialId || extraction.enqueueing) return;
     setError("");
-    try { await extraction.startExtraction(); }
+    try { await extraction.startExtraction(); void refreshBilling(); }
     catch (cause: unknown) { setError(message(cause, "Não foi possível extrair o contexto.")); }
   };
   const createMaterial = async () => {
@@ -117,6 +118,7 @@ export function LiveStudy() {
       saveActiveMaterialId(material.id);
       setMaterialId(material.id); setTitle(""); setContent("");
       await api.extractConcepts(material.id);
+      void refreshBilling();
     } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o material.")); }
     finally { setCreating(false); }
   };
@@ -139,6 +141,7 @@ export function LiveStudy() {
     setError("");
     try {
       const s = await api.startSession(conceptId);
+      void refreshBilling();
       studyState.saveSession(materialId, conceptId, s.id);
       if (activeSelection.current === `${materialId}:${conceptId}`) {
         setSession(s);
@@ -181,7 +184,7 @@ export function LiveStudy() {
       const updated = edgeCaseAnswer ? await api.answerEdgeCase(session.id, answer) : await api.answer(session.id, answer);
       if (activeSelection.current !== `${materialId}:${session.conceptId}`) return;
       setSession(updated);
-      void api.aiUsageToday().then(setUsage).catch(() => {});
+      void refreshBilling();
       if (updated.state === 'EXPLANATION_PASSED') {
         setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, status: 'EXPLAINED', edgeCaseStatus: updated.edgeCaseStatus } : node));
         setAnswer("");
@@ -211,7 +214,7 @@ export function LiveStudy() {
       await api.localizeMaterial(materialId, locale);
       setMaterials((current) => current.map((item) => item.id === materialId ? { ...item, locale } : item));
       await loadNodes(materialId);
-      void api.aiUsageToday().then(setUsage).catch(() => {});
+      void refreshBilling();
     } catch (cause: unknown) {
       setError(message(cause, "Não foi possível localizar o conteúdo gerado."));
     } finally { setLocalizing(false); }
@@ -223,7 +226,7 @@ export function LiveStudy() {
       void api.material(materialId).then(setMaterial).catch(() => {})
       void loadNodes(materialId)
     }
-    void api.aiUsageToday().then(setUsage).catch(() => {})
+    void refreshBilling()
   });
 
   if (loading) return <LoadingSkeleton />;
@@ -237,7 +240,7 @@ export function LiveStudy() {
     </section>
     <section className="live-toolbar">
       <StyledSelect label={t('material')} icon="document" value={materialId} disabled={creating} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { setError(""); saveActiveMaterialId(id); setMaterialId(id); }} />
-      {usage && <div className="usage-inline" title={`A quota renova em ${new Date(usage.resetsAt).toLocaleString(locale)}`}><strong>{usage.remainingRequests} de {usage.dailyLimit} chamadas de IA disponíveis hoje</strong><span>{usageCounts(usage).extractions} extrações · {usageCounts(usage).validations} avaliações · {usageCounts(usage).edgeCases} casos-limite · {usageCounts(usage).practiceProjects} projetos · {usage.totalInputTokens + usage.totalOutputTokens} tokens</span><progress aria-label="Quota diária de IA restante" value={usage.remainingRequests} max={usage.dailyLimit} /></div>}
+      <CreditBalance />
       {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: node.concept.name + " — " + node.status }))} onValueChange={changeConcept} /><ActionButton variant="primary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton></> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">Acompanhe a extração abaixo.</p> : <div className="extract-callout"><div><strong>Extraia o contexto deste material</strong><span>Depois, você poderá escolher um conceito para estudar.</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
     </section>
     <details className="material-creator">
@@ -246,7 +249,7 @@ export function LiveStudy() {
     </details>
     {error && <p className="form-error" role="alert">{error}</p>}
     {selected && selected.concept.generatedLocale !== locale && <section className="localize-callout"><Icon name="warning" /><div><strong>{t('localizeTitle')}</strong><span>{t('localizeDescription')}</span></div><ActionButton variant="secondary" disabled={localizing} onClick={() => void localize()}>{localizing ? t('localizing') : t('localizeAction')}</ActionButton></section>}
-    {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid ${hasConcepts ? "concepts-ready" : ""}`}><section className="reading-pane"><div className="pane-title"><span><Icon name="book" />{t('referenceMaterial')}</span></div><article className="reading-card"><h1>{material?.title}</h1><p className="source-content">{material?.content}</p></article></section><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o caso-limite.")); } finally { setSubmitting(false); } }} /> : <section className="empty-state compact"><Icon name="brain" /><h1>{hasConcepts ? t('chooseConcept') : t('contextNotExtracted')}</h1><p>{hasConcepts ? t('chooseConceptDescription') : t('contextNotExtractedDescription')}</p></section>}</section></div>}
+    {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid ${hasConcepts ? "concepts-ready" : ""}`}><section className="reading-pane"><div className="pane-title"><span><Icon name="book" />{t('referenceMaterial')}</span></div><article className="reading-card"><h1>{material?.title}</h1><p className="source-content">{material?.content}</p></article></section><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o caso-limite.")); } finally { setSubmitting(false); } }} /> : <section className="empty-state compact"><Icon name="brain" /><h1>{hasConcepts ? t('chooseConcept') : t('contextNotExtracted')}</h1><p>{hasConcepts ? t('chooseConceptDescription') : t('contextNotExtractedDescription')}</p></section>}</section></div>}
   </>;
 }
 
