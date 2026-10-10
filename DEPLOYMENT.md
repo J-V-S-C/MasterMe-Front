@@ -9,6 +9,13 @@ No repositório `MasterMe-Front`, crie o Environment `production` e configure:
   barra final; redirects de autenticação falham fechados sem ela em produção.
 - Secret `CLOUDFLARE_ACCOUNT_ID`: ID da conta Cloudflare.
 - Secret `CLOUDFLARE_API_TOKEN`: token limitado a editar Workers nessa conta.
+- `APP_BUILD_ID` é preenchido automaticamente pelo workflow com o SHA imutável
+  do commit publicado; não crie nem sobrescreva essa variável manualmente.
+- Variable opcional `OBSERVABILITY_INGEST_URL`: destino HTTPS de telemetria.
+- Variable opcional `OBSERVABILITY_ALLOWED_ORIGINS`: origens HTTPS exatas,
+  separadas por vírgula; deve conter a origem do destino.
+- Secret opcional `OBSERVABILITY_INGEST_TOKEN`: bearer dedicado do destino;
+  nunca use prefixo `NEXT_PUBLIC_`.
 
 O workflow `.github/workflows/ci.yml` valida typecheck, testes, o build Next e o
 build vinext. O workflow `.github/workflows/deploy.yml` repete as validações e
@@ -25,3 +32,6 @@ bun run typecheck
 bun test
 BACKEND_URL=https://api.seudominio.com bun run build:vinext
 ```
+
+Privacidade, SLOs, custo, alertas e desligamento da coleta estão em
+[`docs/CLIENT_OBSERVABILITY.md`](docs/CLIENT_OBSERVABILITY.md).
