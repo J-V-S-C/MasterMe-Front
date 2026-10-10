@@ -1,3 +1,5 @@
+import { reportApiRequest } from './client-observability';
+
 export type SupportedLocale = 'pt-BR' | 'en-US';
 export type MaterialSummary = {
   id: string;
@@ -234,21 +236,29 @@ async function executeCall<T>(
 ): Promise<T> {
   const stableGet = method === 'GET' && !path.endsWith('/status');
   const cached = stableGet ? responseCache.get(path) : undefined;
-  const response = await fetch(`/api${path}`, {
-    method,
-    cache: stableGet ? 'no-cache' : 'no-store',
-    headers: {
-      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
-      ...(cached?.etag ? { 'if-none-match': cached.etag } : {}),
-      ...requestHeaders,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method,
+      cache: stableGet ? 'no-cache' : 'no-store',
+      headers: {
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+        ...(cached?.etag ? { 'if-none-match': cached.etag } : {}),
+        ...requestHeaders,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (error) {
+    reportApiRequest('network_error');
+    throw error;
+  }
   if (response.status === 304 && cached) {
+    reportApiRequest('success');
     cached.expiresAt = Date.now() + CACHE_TTL_MS;
     return cached.data as T;
   }
   if (!response.ok) {
+    reportApiRequest(response.status >= 500 ? 'server_error' : 'client_error');
     const payload = (await response.json().catch(() => null)) as {
       message?: string;
       code?: string;
@@ -259,6 +269,7 @@ async function executeCall<T>(
       payload?.code,
     );
   }
+  reportApiRequest('success');
   if (response.status === 204) {
     if (method !== 'GET') invalidateApiCache();
     return undefined as T;
@@ -315,8 +326,10 @@ export function uploadMaterial(
           ? Math.round((event.loaded / event.total) * 100)
           : null,
       );
-    xhr.onerror = () =>
+    xhr.onerror = () => {
+      reportApiRequest('network_error');
       reject(new Error('Falha de conexão durante o envio do arquivo.'));
+    };
     xhr.onload = () => {
       let parsed: unknown = null;
       try {
@@ -327,12 +340,15 @@ export function uploadMaterial(
           ? (parsed as { data?: UploadedMaterial; message?: string })
           : null;
       if (xhr.status >= 200 && xhr.status < 300 && payload?.data) {
+        reportApiRequest('success');
         invalidateApiCache();
         resolve(payload.data);
-      } else
+      } else {
+        reportApiRequest(xhr.status >= 500 || xhr.status === 0 ? 'server_error' : 'client_error');
         reject(
           new Error(payload?.message ?? 'Não foi possível enviar o arquivo.'),
         );
+      }
     };
     xhr.send(data);
   });

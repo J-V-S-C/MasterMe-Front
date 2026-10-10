@@ -7,6 +7,7 @@ import './themes.css'
 import './practice.css'
 import './auth.css'
 import './billing.css'
+import { ClientObservability } from '../components/client-observability'
 
 export const metadata: Metadata = {
   title: {
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: "try { const saved = localStorage.getItem('theme'); document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch {}" }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<ClientObservability build={process.env.APP_BUILD_ID ?? 'unknown'} /></body>
     </html>
   )
 }
