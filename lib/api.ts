@@ -1,9 +1,13 @@
-export type Material = {
+import { reportApiRequest } from './client-observability';
+
+export type SupportedLocale = 'pt-BR' | 'en-US';
+export type MaterialSummary = {
   id: string;
   title: string;
-  content: string;
+  locale: SupportedLocale;
   createdAt: string;
 };
+export type Material = MaterialSummary & { content: string };
 export type EvaluationStatus = 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
 export type Attempt = {
   stage: 'INITIAL' | 'EDGE_CASE_REPLY' | 'STRESS_REPLY';
@@ -13,6 +17,9 @@ export type Attempt = {
     missingPremises: string[];
     logicalBreak: string | null;
     feedback: string;
+    strength?: string;
+    gap?: string | null;
+    nextAction?: string;
   };
   createdAt: string;
 };
@@ -28,6 +35,7 @@ export type Concept = {
   edgeCaseQuestion?: string;
   prerequisiteIds: string[];
   nextIds: string[];
+  generatedLocale: SupportedLocale | 'und';
 };
 export type KnowledgeNode = {
   concept: Concept;
@@ -38,6 +46,9 @@ export type KnowledgeNode = {
     text: string;
     targetPremise: string;
     expectedReasoningSteps: string[];
+    learningObjective?: string;
+    requiredIdeas?: string[];
+    commonMisconceptions?: string[];
   };
 };
 export type EdgeCaseStatus = 'NOT_REQUESTED' | 'READY' | 'REVIEW' | 'PASSED';
@@ -54,6 +65,9 @@ export type StudySession = {
     text: string;
     targetPremise: string;
     expectedReasoningSteps: string[];
+    learningObjective?: string;
+    requiredIdeas?: string[];
+    commonMisconceptions?: string[];
   };
   edgeCaseStatus: EdgeCaseStatus;
   edgeCaseChallenge: EdgeCaseChallenge | null;
@@ -75,6 +89,8 @@ export type ConceptPerformance = {
   totalInitialAttempts: number;
   failedInitialAttempts: number;
   weakness: number | null;
+  latestStatus: EvaluationStatus | null;
+  performanceNeed: number | null;
 };
 export type PracticeFocusMode =
   | 'OVERVIEW'
@@ -98,6 +114,16 @@ export type PracticeProject = {
   }>;
   focusMode: PracticeFocusMode;
   createdAt: string;
+};
+export type PracticeFocusPreview = {
+  focusMode: PracticeFocusMode;
+  priorities: PracticeProject['prioritizedConcepts'];
+};
+export type PracticeContext = {
+  knowledgeMap: KnowledgeNode[];
+  confidences: ConceptConfidence[];
+  performance: ConceptPerformance[];
+  projects: PracticeProject[];
 };
 export type ExtractionStage =
   | 'QUEUED'
@@ -126,24 +152,56 @@ export type MaterialProcessingStatus = {
   startedAt: string | null;
   finishedAt: string | null;
 };
-export type AiUsageSummary = {
-  totalRequests: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  byModel: Array<{
-    model: string;
-    requests: number;
-    successes: number;
-    inputTokens: number;
-    outputTokens: number;
-  }>;
-  byOperation: Array<{
-    operation: string;
-    requests: number;
-    successes: number;
-    inputTokens: number;
-    outputTokens: number;
-  }>;
+export type BillingPlanId = 'FREE' | 'ESSENTIAL' | 'PRO';
+export type PaidBillingPlanId = Exclude<BillingPlanId, 'FREE'>;
+export type AiCreditOperation =
+  | 'EXTRACTION'
+  | 'INITIAL_EVALUATION'
+  | 'EDGE_CASE_GENERATION'
+  | 'EDGE_CASE_EVALUATION'
+  | 'PRACTICE_PROJECT'
+  | 'LOCALIZATION'
+  | 'STRESS_EVALUATION'
+  | 'ISOMORPHIC_PROBLEM';
+export type BillingPlan = {
+  id: BillingPlanId;
+  name: string;
+  priceInCents: number;
+  durationDays: number | null;
+  dailyCreditLimit: number;
+  periodCreditLimit: number;
+};
+export type BillingCatalog = {
+  currency: 'BRL';
+  billingType: 'ONE_TIME';
+  plans: BillingPlan[];
+  creditWeights: Record<AiCreditOperation, number>;
+  fallbackPolicy: string;
+};
+export type BillingOrder = {
+  id: string;
+  planId: PaidBillingPlanId;
+  amountInCents: number;
+  status: 'PENDING' | 'CHECKOUT_READY' | 'CHECKOUT_FAILED' | 'PAID';
+  checkoutUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type BillingSummary = {
+  planId: BillingPlanId;
+  dailyLimit: number;
+  dailyUsed: number;
+  dailyRemaining: number;
+  dailyResetsAt: string;
+  periodLimit: number;
+  periodUsed: number;
+  periodRemaining: number;
+  periodStartsAt: string;
+  periodEndsAt: string;
+  validUntil: string | null;
+  weights: Record<AiCreditOperation, number>;
+  estimates: Record<AiCreditOperation, number>;
+  estimateAssumption: { providerAttemptsPerOperation: number };
 };
 export type UploadedMaterial = {
   id: string;
@@ -161,19 +219,46 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(
+type ResponseCacheEntry = { data: unknown; etag: string | null; expiresAt: number };
+const responseCache = new Map<string, ResponseCacheEntry>();
+const inFlight = new Map<string, Promise<unknown>>();
+const CACHE_TTL_MS = 15_000;
+
+export function invalidateApiCache(prefix?: string): void {
+  for (const key of responseCache.keys()) if (!prefix || key.startsWith(prefix)) responseCache.delete(key);
+}
+
+async function executeCall<T>(
   path: string,
   method = 'GET',
   body?: unknown,
+  requestHeaders?: Readonly<Record<string, string>>,
 ): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    method,
-    cache: 'no-store',
-    headers:
-      body === undefined ? undefined : { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const stableGet = method === 'GET' && !path.endsWith('/status');
+  const cached = stableGet ? responseCache.get(path) : undefined;
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method,
+      cache: stableGet ? 'no-cache' : 'no-store',
+      headers: {
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+        ...(cached?.etag ? { 'if-none-match': cached.etag } : {}),
+        ...requestHeaders,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (error) {
+    reportApiRequest('network_error');
+    throw error;
+  }
+  if (response.status === 304 && cached) {
+    reportApiRequest('success');
+    cached.expiresAt = Date.now() + CACHE_TTL_MS;
+    return cached.data as T;
+  }
   if (!response.ok) {
+    reportApiRequest(response.status >= 500 ? 'server_error' : 'client_error');
     const payload = (await response.json().catch(() => null)) as {
       message?: string;
       code?: string;
@@ -184,9 +269,27 @@ async function call<T>(
       payload?.code,
     );
   }
-  if (response.status === 204) return undefined as T;
+  reportApiRequest('success');
+  if (response.status === 204) {
+    if (method !== 'GET') invalidateApiCache();
+    return undefined as T;
+  }
   const payload = (await response.json()) as { data: T };
+  if (stableGet) responseCache.set(path, { data: payload.data, etag: response.headers.get('etag'), expiresAt: Date.now() + CACHE_TTL_MS });
+  else if (method !== 'GET') invalidateApiCache();
   return payload.data;
+}
+
+function call<T>(path: string, method = 'GET', body?: unknown, requestHeaders?: Readonly<Record<string, string>>): Promise<T> {
+  const stableGet = method === 'GET' && !path.endsWith('/status');
+  const cached = stableGet ? responseCache.get(path) : undefined;
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.data as T);
+  if (!stableGet) return executeCall<T>(path, method, body, requestHeaders);
+  const pending = inFlight.get(path);
+  if (pending) return pending as Promise<T>;
+  const request = executeCall<T>(path, method, body, requestHeaders).finally(() => inFlight.delete(path));
+  inFlight.set(path, request);
+  return request;
 }
 
 const uploadTypes: Record<string, string> = {
@@ -195,10 +298,11 @@ const uploadTypes: Record<string, string> = {
   markdown: 'text/markdown',
   txt: 'text/plain',
 };
-export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 export function uploadMaterial(
   file: File,
   title: string,
+  locale: SupportedLocale,
   onProgress: (percent: number | null) => void,
 ): Promise<UploadedMaterial> {
   const extension = file.name.split('.').at(-1)?.toLowerCase() ?? '';
@@ -208,10 +312,11 @@ export function uploadMaterial(
       new Error('Selecione um arquivo PDF, Markdown ou TXT.'),
     );
   if (file.size > MAX_UPLOAD_BYTES)
-    return Promise.reject(new Error('O arquivo deve ter no máximo 15 MiB.'));
+    return Promise.reject(new Error('O arquivo deve ter no máximo 8 MiB.'));
   const data = new FormData();
   data.append('file', new File([file], file.name, { type: mime }));
   if (title.trim()) data.append('title', title.trim());
+  data.append('locale', locale);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/materials/upload');
@@ -221,8 +326,10 @@ export function uploadMaterial(
           ? Math.round((event.loaded / event.total) * 100)
           : null,
       );
-    xhr.onerror = () =>
+    xhr.onerror = () => {
+      reportApiRequest('network_error');
       reject(new Error('Falha de conexão durante o envio do arquivo.'));
+    };
     xhr.onload = () => {
       let parsed: unknown = null;
       try {
@@ -232,21 +339,26 @@ export function uploadMaterial(
         parsed && typeof parsed === 'object'
           ? (parsed as { data?: UploadedMaterial; message?: string })
           : null;
-      if (xhr.status >= 200 && xhr.status < 300 && payload?.data)
+      if (xhr.status >= 200 && xhr.status < 300 && payload?.data) {
+        reportApiRequest('success');
+        invalidateApiCache();
         resolve(payload.data);
-      else
+      } else {
+        reportApiRequest(xhr.status >= 500 || xhr.status === 0 ? 'server_error' : 'client_error');
         reject(
           new Error(payload?.message ?? 'Não foi possível enviar o arquivo.'),
         );
+      }
     };
     xhr.send(data);
   });
 }
 
 export const api = {
-  materials: () => call<Material[]>('/materials'),
-  createMaterial: (title: string, content: string) =>
-    call<Material>('/materials', 'POST', { title, content }),
+  materials: () => call<MaterialSummary[]>('/materials'),
+  material: (id: string) => call<Material>(`/materials/${id}`),
+  createMaterial: (title: string, content: string, locale: SupportedLocale = 'pt-BR') =>
+    call<Material>('/materials', 'POST', { title, content, locale }),
   extractConcepts: (materialId: string) =>
     call<ExtractionJob>(`/materials/${materialId}/extract`, 'POST'),
   cancelExtraction: (materialId: string) =>
@@ -255,6 +367,8 @@ export const api = {
     call<MaterialProcessingStatus>(`/materials/${materialId}/status`),
   knowledgeMap: (id: string) =>
     call<KnowledgeNode[]>(`/materials/${id}/knowledge-map`),
+  localizeMaterial: (id: string, locale: SupportedLocale) =>
+    call<Concept[]>(`/materials/${id}/localize`, 'POST', { locale }),
   startSession: (conceptId: string) =>
     call<StudySession>(`/concepts/${conceptId}/sessions`, 'POST'),
   getSession: (sessionId: string) =>
@@ -277,6 +391,17 @@ export const api = {
     call<void>(`/concepts/${conceptId}/confidence`, 'DELETE'),
   performance: (materialId: string) =>
     call<ConceptPerformance[]>(`/materials/${materialId}/performance`),
+  practiceContext: (materialId: string) =>
+    call<PracticeContext>(`/materials/${materialId}/practice-context`),
+  practiceFocus: (
+    materialId: string,
+    focusMode: PracticeFocusMode,
+    conceptIds?: string[],
+  ) => call<PracticeFocusPreview>(
+    `/materials/${materialId}/practice-focus`,
+    'POST',
+    conceptIds === undefined ? { focusMode } : { focusMode, conceptIds },
+  ),
   generatePracticeProject: (
     materialId: string,
     focusMode: PracticeFocusMode,
@@ -291,5 +416,10 @@ export const api = {
     call<PracticeProject[]>(`/materials/${materialId}/practice-projects`),
   practiceProject: (id: string) =>
     call<PracticeProject>(`/practice-projects/${id}`),
-  aiUsageToday: () => call<AiUsageSummary>('/ai-usage/today'),
+  billingCatalog: () => call<BillingCatalog>('/billing/catalog'),
+  billingMe: () => call<BillingSummary>('/billing/me'),
+  createCheckout: (planId: PaidBillingPlanId, idempotencyKey: string) =>
+    call<BillingOrder>('/billing/checkouts', 'POST', { planId }, { 'idempotency-key': idempotencyKey }),
+  reconcileOrder: (orderId: string, reference?: { transactionNsu: string; slug: string }) =>
+    call<BillingOrder>(`/billing/orders/${orderId}/reconcile`, 'POST', reference ?? {}),
 };

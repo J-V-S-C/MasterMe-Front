@@ -1,38 +1,28 @@
 "use client"
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Icon } from '../lib/icons'
 import { LogoutButton } from './logout-button'
+import { useI18n } from '../lib/i18n'
+import { ThemeToggle } from './theme-toggle'
+import { CreditBalance } from './credit-balance'
 
 const links = [
-  { label: 'Estudar', accessibleLabel: 'Espaço de estudo', href: '/', id: 'study', icon: 'book' },
-  { label: 'Analisar', accessibleLabel: 'Mapa do conhecimento', href: '/mapa-do-conhecimento', id: 'map', icon: 'brain' },
-  { label: 'Criar', accessibleLabel: 'Projeto de prática', href: '/pratica', id: 'practice', icon: 'sparkles' },
+  { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/estudar', id: 'study', icon: 'book' },
+  { label: 'navMap', accessibleLabel: 'navMapLabel', href: '/mapa-do-conhecimento', id: 'map', icon: 'brain' },
+  { label: 'navPractice', accessibleLabel: 'navPracticeLabel', href: '/pratica', id: 'practice', icon: 'sparkles' },
 ] as const
 
 export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'practice' }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  useEffect(() => {
-    const saved = window.localStorage.getItem('theme')
-    const nextTheme = saved === 'light' || saved === 'dark' ? saved : window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-    setTheme(nextTheme)
-    document.documentElement.dataset.theme = nextTheme
-  }, [])
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(nextTheme)
-    document.documentElement.dataset.theme = nextTheme
-    window.localStorage.setItem('theme', nextTheme)
-  }
+  const { locale, setLocale, t } = useI18n()
   return <header className="site-header"><div className="header-content">
-    <Link className="brand" href="/" aria-label="MasterMe, ir para o espaço de estudo"><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
+    <Link className="brand" href="/estudar" aria-label={t('brandLabel')}><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
     <div className="header-controls">
-      <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} aria-pressed={theme === 'dark'}>
-      <span className="theme-track" aria-hidden="true"><Icon name="sun" /><Icon name="moon" /><i className="theme-orbit" /></span>
-    </button>
+      <CreditBalance compact />
+      <label className="locale-control"><span className="sr-only">{t('language')}</span><select aria-label={t('language')} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}><option value="pt-BR">PT</option><option value="en-US">EN</option></select></label>
+      <ThemeToggle lightLabel={t('lightTheme')} darkLabel={t('darkTheme')} />
       <LogoutButton />
     </div>
-    <nav className="primary-nav" aria-label="Navegação principal">{links.map((link) => <Link className={active === link.id ? 'active' : ''} aria-label={link.accessibleLabel} aria-current={active === link.id ? 'page' : undefined} href={link.href} key={link.id}><span className="nav-icon"><Icon name={link.icon} /></span><span className="nav-label">{link.label}</span></Link>)}</nav>
+    <nav className="primary-nav" aria-label={t('mainNavigation')}>{links.map((link) => <Link className={active === link.id ? 'active' : ''} aria-label={t(link.accessibleLabel)} aria-current={active === link.id ? 'page' : undefined} href={link.href} key={link.id}><span className="nav-icon"><Icon name={link.icon} /></span><span className="nav-label">{t(link.label)}</span></Link>)}</nav>
   </div></header>
 }

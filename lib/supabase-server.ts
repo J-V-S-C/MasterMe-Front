@@ -30,3 +30,10 @@ export async function authenticatedSession() {
   if (!data.session?.access_token) return null
   return { user: userData.user, accessToken: data.session.access_token }
 }
+
+/** The API verifies the JWT signature and ownership; the BFF only forwards the cookie token. */
+export async function accessTokenForProxy(): Promise<string | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? null
+}

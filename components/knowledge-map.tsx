@@ -1,243 +1,153 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { api, type KnowledgeNode, type Material } from "../lib/api";
+import { api, type KnowledgeNode, type MaterialSummary } from "../lib/api";
 import { Icon } from "../lib/icons";
+import { useI18n } from "../lib/i18n";
 import { LoadingSkeleton } from "./loading-skeleton";
 import { StyledSelect } from "./styled-select";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
+import { useRealtimeRefresh } from "./realtime-provider";
 
-const statusText = {
-  READY: "Disponível",
-  EXPLAINED: "Explicado",
-  REVIEW: "Revisão recomendada",
-} as const;
+type GraphEdge = { source: string; target: string };
 
-export function KnowledgeMap() {
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
-  const [materialId, setMaterialId] = useState("");
-  const [selectedId, setSelectedId] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    api
-      .materials()
-      .then((data) => {
-        setMaterials(data);
-        setMaterialId(getActiveMaterialId(data.map((material) => material.id)) || data[0]?.id || "");
-      })
-      .catch((cause: unknown) =>
-        setError(cause instanceof Error ? cause.message : "Erro inesperado."),
-      )
-      .finally(() => setLoading(false));
-  }, []);
-  useEffect(() => {
-    if (!materialId) return;
-    setLoading(true);
-    api
-      .knowledgeMap(materialId)
-      .then((data) => {
-        setNodes(data);
-        setSelectedId(data[0]?.concept.id ?? "");
-      })
-      .catch((cause: unknown) =>
-        setError(cause instanceof Error ? cause.message : "Erro inesperado."),
-      )
-      .finally(() => setLoading(false));
-  }, [materialId]);
-  const selected = useMemo(
-    () => nodes.find((node) => node.concept.id === selectedId) ?? null,
-    [nodes, selectedId],
-  );
-  const graph = useMemo(() => graphLayout(nodes), [nodes]);
-  const validated = nodes.filter((node) => node.status === "EXPLAINED").length;
-  const review = nodes.filter((node) => node.status === "REVIEW").length;
-  const available = nodes.filter((node) => node.status === "READY").length;
-  const completion = nodes.length ? Math.round((validated / nodes.length) * 100) : 0;
-  const openConcept = (node: KnowledgeNode) => {
-    window.location.assign(`/?material=${node.concept.materialId}&concept=${node.concept.id}`);
+export function visibleGraphEdges(nodes: KnowledgeNode[], includeTransitive = false): GraphEdge[] {
+  const ids = new Set(nodes.map(({ concept }) => concept.id));
+  const edges = nodes.flatMap(({ concept }) => concept.nextIds.filter((target) => ids.has(target)).map((target) => ({ source: concept.id, target })));
+  if (includeTransitive) return edges;
+  const adjacency = new Map<string, string[]>();
+  for (const edge of edges) adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
+  const reachesWithout = (edge: GraphEdge): boolean => {
+    const queue = (adjacency.get(edge.source) ?? []).filter((target) => target !== edge.target);
+    const visited = new Set<string>([edge.source]);
+    while (queue.length) {
+      const current = queue.shift()!;
+      if (current === edge.target) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      queue.push(...(adjacency.get(current) ?? []));
+    }
+    return false;
   };
-  if (loading && !materials.length) return <LoadingSkeleton variant="map" />;
-  if (error)
-    return (
-      <section className="empty-state">
-        <h1>Não foi possível carregar o mapa</h1>
-        <p>
-          {error} Verifique se o backend está ativo em{" "}
-          <code>localhost:3333</code>.
-        </p>
-      </section>
-    );
-  if (!materials.length)
-    return (
-      <section className="empty-state">
-        <Icon name="document" />
-        <h1>Seu mapa começa com um material</h1>
-        <p>
-          Crie um material no Espaço de estudo e extraia seus conceitos para visualizar
-          relações e evolução real das sessões.
-        </p>
-        <a className="exercise-link" href="/">Ir para o Espaço de estudo <Icon name="chevron" /></a>
-      </section>
-    );
-  return (
-    <>
-      <section className="map-hero">
-        <div className="map-kicker"><Icon name="sparkles" /> CONSTELAÇÃO EPISTÊMICA · MAPA DO MATERIAL</div>
-        <div className="map-hero-title"><div><h1>Seu domínio conceitual</h1><p>O que foi consolidado pelo diálogo, o que pede revisão e os caminhos ainda velados.</p></div><StyledSelect label="Material em estudo" icon="book" value={materialId} options={materials.map((material) => ({ value: material.id, label: material.title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} /></div>
-        <div className="map-stats">
-          <Stat value={`${validated} / ${nodes.length}`} label="Conceitos explicados" tone="green" />
-          <Stat value={review} label="Pontos em alerta" tone="amber" />
-          <Stat value={`${completion}%`} label="Progresso de explicação" tone="blue" />
-          <Stat value={available} label="Disponíveis" tone="neutral" />
-        </div>
-      </section>
-      <section className="map-legend"><span><i className="validated" />Explicado</span><span><i className="review" />Revisitar</span><span><i className="ready" />Disponível</span><small>Selecione um ponto do astrolábio para investigar.</small></section>
-      <section className="map-layout">
-        <div className="graph astrolabe" role="region" tabIndex={0} aria-label="Mapa de conceitos interativo. Use Tab para navegar entre os conceitos.">
-          <div className="graph-hint">
-            Selecione um conceito para ver seu diagnóstico
-          </div>
-          <svg
-            viewBox={`0 0 ${graph.width} ${graph.height}`}
-            role="img"
-            aria-label="Relações entre conceitos"
-          >
-            {nodes.flatMap((node) =>
-              node.concept.nextIds.map((next) => {
-                const target = nodes.findIndex(
-                  (candidate) => candidate.concept.id === next,
-                );
-                return target >= 0 ? (
-                  <line
-                    key={`${node.concept.id}-${next}`}
-                    x1={graph.points.get(node.concept.id)?.x}
-                    y1={graph.points.get(node.concept.id)?.y}
-                    x2={graph.points.get(nodes[target].concept.id)?.x}
-                    y2={graph.points.get(nodes[target].concept.id)?.y}
-                  />
-                ) : null;
-              }),
-            )}
-            {nodes.map((node) => {
-              const point = graph.points.get(node.concept.id)!;
-              return (
-                <g
-                  key={node.concept.id}
-                  className={`graph-node ${node.status.toLowerCase()} ${selectedId === node.concept.id ? "selected" : ""}`}
-                  transform={`translate(${point.x},${point.y})`}
-                  onClick={() => openConcept(node)}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Abrir ${node.concept.name}`}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openConcept(node); }
-                  }}
-                >
-                  <circle r={node.status === "REVIEW" ? 28 : 23} />
-                  <circle className="inner" r="8" />
-                  <text y="43"><title>{node.concept.name}</title>{shortLabel(node.concept.name)}</text>
-                  <text className="node-status" y="59">
-                    {statusText[node.status]}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-        <Inspector node={selected} />
-      </section>
-      <section className="map-insights">
-        <article><span>CADEIA DE DEPENDÊNCIAS</span><h3>{review ? `${review} ponto${review > 1 ? 's' : ''} pede${review > 1 ? 'm' : ''} refinamento` : 'Nenhum ponto cego detectado'}</h3><p>{review ? 'Os conceitos em alerta merecem uma nova explicação sem bloquear os demais conceitos.' : 'Seu mapa não tem diagnósticos pendentes neste material.'}</p></article>
-        <article><span>FUNDAMENTOS FORTES</span><h3>{validated ? `${validated} conceito${validated > 1 ? 's' : ''} consolidado${validated > 1 ? 's' : ''}` : 'Aguardando a primeira validação'}</h3><p>Uma explicação aprovada conclui o conceito; o caso-limite é opcional.</p></article>
-        <article><span>PRÓXIMA INVESTIGAÇÃO</span><h3>{selected?.concept.name ?? 'Selecione um conceito'}</h3><p>{selected?.question?.text ?? 'Escolha um ponto do mapa para ver sua pergunta específica.'}</p></article>
-      </section>
-    </>
-  );
-}
-function shortLabel(name: string) {
-  return name.length > 22 ? `${name.slice(0, 21)}…` : name;
+  return edges.filter((edge) => !reachesWithout(edge));
 }
 
-function graphLayout(nodes: KnowledgeNode[]) {
+export function graphLayout(nodes: KnowledgeNode[]) {
   const byId = new Map(nodes.map((node) => [node.concept.id, node]));
+  const levels = new Map<string, number>();
   const levelFor = (node: KnowledgeNode, visiting = new Set<string>()): number => {
+    if (levels.has(node.concept.id)) return levels.get(node.concept.id)!;
     if (visiting.has(node.concept.id)) return 0;
-    const prerequisites = node.concept.prerequisiteIds
-      .map((id) => byId.get(id))
-      .filter((item): item is KnowledgeNode => Boolean(item));
-    if (!prerequisites.length) return 0;
-    const nextVisiting = new Set(visiting).add(node.concept.id);
-    return Math.max(...prerequisites.map((item) => levelFor(item, nextVisiting))) + 1;
+    const parents = node.concept.prerequisiteIds.map((id) => byId.get(id)).filter((item): item is KnowledgeNode => Boolean(item));
+    const level = parents.length ? Math.max(...parents.map((item) => levelFor(item, new Set(visiting).add(node.concept.id)))) + 1 : 0;
+    levels.set(node.concept.id, level);
+    return level;
   };
   const layers = new Map<number, KnowledgeNode[]>();
   nodes.forEach((node) => {
     const level = levelFor(node);
     layers.set(level, [...(layers.get(level) ?? []), node]);
   });
-  const largestLayer = Math.max(1, ...[...layers.values()].map((layer) => layer.length));
-  const width = Math.max(760, layers.size * 220 + 140);
+  const ordered = [...layers.entries()].sort(([a], [b]) => a - b);
+  const priorOrder = new Map<string, number>();
+  ordered.forEach(([, layer]) => {
+    layer.sort((left, right) => {
+      const average = (node: KnowledgeNode) => {
+        const positions = node.concept.prerequisiteIds.flatMap((id) => priorOrder.has(id) ? [priorOrder.get(id)!] : []);
+        return positions.length ? positions.reduce((sum, value) => sum + value, 0) / positions.length : Number.MAX_SAFE_INTEGER;
+      };
+      return average(left) - average(right) || left.concept.name.localeCompare(right.concept.name);
+    });
+    layer.forEach((node, index) => priorOrder.set(node.concept.id, index));
+  });
+  const largestLayer = Math.max(1, ...ordered.map(([, layer]) => layer.length));
+  const width = Math.max(760, ordered.length * 220 + 140);
   const height = Math.max(520, largestLayer * 118 + 150);
   const points = new Map<string, { x: number; y: number }>();
-  [...layers.entries()].sort(([a], [b]) => a - b).forEach(([level, layer]) => {
-    layer.forEach((node, index) => points.set(node.concept.id, {
-      x: 90 + level * 220,
-      y: height / 2 + (index - (layer.length - 1) / 2) * 118,
-    }));
-  });
+  ordered.forEach(([level, layer]) => layer.forEach((node, index) => points.set(node.concept.id, { x: 90 + level * 220, y: height / 2 + (index - (layer.length - 1) / 2) * 118 })));
   return { points, width, height };
 }
-function Stat({
-  value,
-  label,
-  tone,
-}: {
-  value: string | number;
-  label: string;
-  tone: string;
-}) {
-  return (
-    <div className={`map-stat ${tone}`}>
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
+
+export function KnowledgeMap() {
+  const { t } = useI18n();
+  const [materials, setMaterials] = useState<MaterialSummary[]>([]);
+  const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
+  const [materialId, setMaterialId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [showAllEdges, setShowAllEdges] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.materials().then((data) => { setMaterials(data); setMaterialId(getActiveMaterialId(data.map(({ id }) => id)) || data[0]?.id || ""); })
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : t('unexpectedError'))).finally(() => setLoading(false));
+  }, [t]);
+  useEffect(() => {
+    if (!materialId) return;
+    setLoading(true);
+    api.knowledgeMap(materialId).then((data) => { setNodes(data); setSelectedId(data[0]?.concept.id ?? ""); })
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : t('unexpectedError'))).finally(() => setLoading(false));
+  }, [materialId, t]);
+  const selected = useMemo(() => nodes.find(({ concept }) => concept.id === selectedId) ?? null, [nodes, selectedId]);
+  const graph = useMemo(() => graphLayout(nodes), [nodes]);
+  const edges = useMemo(() => visibleGraphEdges(nodes, showAllEdges), [nodes, showAllEdges]);
+  const adjacent = useMemo(() => new Set(selected ? [selected.concept.id, ...selected.concept.prerequisiteIds, ...selected.concept.nextIds] : []), [selected]);
+  const validated = nodes.filter(({ status }) => status === "EXPLAINED").length;
+  const review = nodes.filter(({ status }) => status === "REVIEW").length;
+  const available = nodes.filter(({ status }) => status === "READY").length;
+  const completion = nodes.length ? Math.round((validated / nodes.length) * 100) : 0;
+  const statusText = (status: KnowledgeNode['status']) => status === 'EXPLAINED' ? t('mapExplained') : status === 'REVIEW' ? t('mapReview') : t('mapReady');
+
+  useRealtimeRefresh((change) => {
+    if (change.type === 'material.progress' || change.type === 'material.queued') return
+    void api.materials().then(setMaterials).catch(() => {})
+    if (materialId) void api.knowledgeMap(materialId).then((data) => {
+      setNodes(data)
+      setSelectedId((current) => data.some(({ concept }) => concept.id === current) ? current : data[0]?.concept.id ?? '')
+    }).catch(() => {})
+  });
+
+  if (loading && !materials.length) return <LoadingSkeleton variant="map" />;
+  if (error) return <section className="empty-state"><h1>{t('mapLoadError')}</h1><p>{error}</p></section>;
+  if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('mapNeedsMaterial')}</h1><p>{t('mapNeedsMaterialDescription')}</p><Link className="exercise-link" href="/estudar">{t('goToStudy')} <Icon name="chevron" /></Link></section>;
+  return <>
+    <section className="map-hero">
+      <div className="map-kicker"><Icon name="sparkles" /> {t('mapKicker')}</div>
+      <div className="map-hero-title"><div><h1>{t('mapTitle')}</h1><p>{t('mapDescription')}</p></div><StyledSelect label={t('studiedMaterial')} icon="book" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} /></div>
+      <div className="map-stats"><Stat value={`${validated} / ${nodes.length}`} label={t('conceptsExplained')} tone="green" /><Stat value={review} label={t('reviewPoints')} tone="amber" /><Stat value={`${completion}%`} label={t('explanationProgress')} tone="blue" /><Stat value={available} label={t('available')} tone="neutral" /></div>
+    </section>
+    <section className="map-legend"><span><i className="explained" />{t('mapExplained')}</span><span><i className="review" />{t('mapReview')}</span><span><i className="ready" />{t('mapReady')}</span><button type="button" aria-pressed={showAllEdges} onClick={() => setShowAllEdges((current) => !current)}>{showAllEdges ? t('essentialRelations') : t('allRelations')}</button><small>{t('mapSelectionHint')}</small></section>
+    <section className="map-layout">
+      <div className="graph astrolabe" role="region" tabIndex={0} aria-label={t('interactiveMap')}>
+        <div className="graph-hint">{t('selectForDiagnostic')}</div>
+        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="img" aria-label={t('conceptRelations')}>
+          {edges.map((edge) => {
+            const from = graph.points.get(edge.source); const to = graph.points.get(edge.target);
+            if (!from || !to) return null;
+            const active = !selected || edge.source === selectedId || edge.target === selectedId;
+            const bend = Math.max(50, (to.x - from.x) * .45);
+            return <path key={`${edge.source}-${edge.target}`} className={active ? 'active' : 'dimmed'} d={`M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`} />;
+          })}
+          {nodes.map((node) => {
+            const point = graph.points.get(node.concept.id)!;
+            const dimmed = selected && !adjacent.has(node.concept.id);
+            return <g key={node.concept.id} className={`graph-node ${node.status.toLowerCase()} ${selectedId === node.concept.id ? "selected" : ""} ${dimmed ? 'dimmed' : ''}`} transform={`translate(${point.x},${point.y})`} onClick={() => setSelectedId(node.concept.id)} tabIndex={0} role="button" aria-label={`${t('selectConcept')} ${node.concept.name}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(node.concept.id); } }}><circle r={node.status === "REVIEW" ? 28 : 23} /><circle className="inner" r="8" /><text y="43"><title>{node.concept.name}</title>{shortLabel(node.concept.name)}</text><text className="node-status" y="59">{statusText(node.status)}</text></g>;
+          })}
+        </svg>
+      </div>
+      <Inspector node={selected} statusText={statusText} />
+    </section>
+    <section className="map-insights"><article><span>{t('dependencyChain')}</span><h3>{review ? `${review} ${t('needsRefinement')}` : t('noBlindSpots')}</h3><p>{review ? t('reviewDescription') : t('noPendingDiagnostics')}</p></article><article><span>{t('strongFoundations')}</span><h3>{validated ? `${validated} ${t('consolidatedConcepts')}` : t('awaitingValidation')}</h3><p>{t('approvalExplanation')}</p></article><article><span>{t('nextInvestigation')}</span><h3>{selected?.concept.name ?? t('selectConcept')}</h3><p>{selected?.question.text ?? t('selectMapPoint')}</p></article></section>
+  </>;
 }
-function Inspector({ node }: { node: KnowledgeNode | null }) {
-  if (!node)
-    return (
-      <aside className="inspector">
-        <p>Selecione um conceito no mapa.</p>
-      </aside>
-    );
-  const gap =
-    node.lastAttempt?.evaluation.logicalBreak ??
-    node.lastAttempt?.evaluation.missingPremises[0] ??
-    "Nenhuma falha registrada até agora.";
-  return (
-    <aside className="inspector">
-      <small>TRATADO · FRAGMENTO {node.concept.kind}</small>
-      <h2>{node.concept.name}</h2>
-      <span className={`status-badge ${node.status.toLowerCase()}`}>
-        {statusText[node.status]}
-      </span>
-      <section>
-        <h3>Princípio em foco</h3>
-        <p>{node.concept.description}</p>
-      </section>
-      <section>
-        <h3>Salto de raciocínio detectado</h3>
-        <p>{gap}</p>
-      </section>
-      <section className="next-prompt">
-        <h3>Próximo desafio de domínio</h3>
-        <p>{node.question?.text}</p>
-      </section>
-      <a className="exercise-link" href={`/?material=${node.concept.materialId}&concept=${node.concept.id}`}>
-        Exercitar este conceito agora{" "}
-        <Icon name="chevron" />
-      </a>
-    </aside>
-  );
+
+function shortLabel(name: string) { return name.length > 22 ? `${name.slice(0, 21)}…` : name; }
+function Stat({ value, label, tone }: { value: string | number; label: string; tone: string }) { return <div className={`map-stat ${tone}`}><strong>{value}</strong><span>{label}</span></div>; }
+
+function Inspector({ node, statusText }: { node: KnowledgeNode | null; statusText: (status: KnowledgeNode['status']) => string }) {
+  const { t } = useI18n();
+  if (!node) return <aside className="inspector"><p>{t('selectMapConcept')}</p></aside>;
+  const evaluation = node.lastAttempt?.evaluation;
+  const gap = evaluation?.gap ?? evaluation?.logicalBreak ?? evaluation?.missingPremises[0];
+  return <aside className="inspector"><small>{t('mapFragment')} · {node.concept.kind}</small><h2>{node.concept.name}</h2><span className={`status-badge ${node.status.toLowerCase()}`}>{statusText(node.status)}</span><section><h3>{t('focusPrinciple')}</h3><p>{node.concept.description}</p></section>{evaluation && <section className="inspector-diagnostic"><h3>{t('latestDiagnostic')}</h3><strong>{t('correctPoint')}</strong><p>{evaluation.strength ?? evaluation.feedback}</p>{evaluation.status !== 'PASSED' && <><strong>{t('missingPoint')}</strong><p>{gap ?? evaluation.feedback}</p></>}<strong>{t('nextStep')}</strong><p>{evaluation.nextAction ?? evaluation.feedback}</p></section>}<section className="next-prompt"><h3>{t('nextMasteryChallenge')}</h3><p>{node.question.text}</p></section><Link className="exercise-link" href={`/estudar?material=${node.concept.materialId}&concept=${node.concept.id}`}>{t('practiceConcept')} <Icon name="chevron" /></Link></aside>;
 }

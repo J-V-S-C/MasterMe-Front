@@ -6,7 +6,6 @@ de produção é adaptada pelo vinext e executada em Cloudflare Workers.
 ## Acesso
 
 - Aplicação: <https://masterme-frontend.joaovictorcortabitart.workers.dev>
-- API Docs: <https://masterme-api.duckdns.org/docs>
 - API Repo: <https://github.com/J-V-S-C/MasterMe-API>
 
 As chamadas para `/api/*` feitas no domínio do frontend são encaminhadas para a
@@ -50,9 +49,34 @@ outras protection rules no environment `production` do GitHub.
 
 Mais detalhes operacionais estão em [DEPLOYMENT.md](./DEPLOYMENT.md).
 
+Mudanças de código seguem obrigatoriamente o fluxo de PRD temporário e revisão
+por agente independente descrito em [AGENTS.md](./AGENTS.md) e
+[docs/ENGINEERING_WORKFLOW.md](./docs/ENGINEERING_WORKFLOW.md).
+
 ## Observações do MVP
 
-- Ainda não há autenticação ou isolamento de dados por usuário.
+- A autenticação usa cookies seguros do Supabase com renovação no proxy do Next.
+- O header e o espaço de estudo usam `/api/billing/me` como fonte autoritativa
+  para plano, créditos diário/período e estimativas conservadoras por operação.
+- CTAs pagos chegam a `/estudar?plan=...`, confirmam o catálogo do servidor e
+  abrem somente URLs HTTPS do host allowlisted da InfinitePay. O retorno em
+  `/pagamento/retorno` nunca libera acesso antes da reconciliação da API.
+- A interface aceita `pt-BR` e `en-US`; a preferência fica somente no navegador.
+- Materiais novos informam o idioma escolhido à API. Conteúdo antigo em outro
+  idioma só é traduzido após confirmação explícita, pois a operação consome uma
+  chamada de IA e preserva os identificadores do mapa e das sessões.
+- O mapa seleciona nós localmente e mostra o diagnóstico no mesmo contexto;
+  relações transitivas ficam ocultas por padrão para reduzir cruzamentos.
+- A prática pré-visualiza até três lacunas ativas antes de consumir IA e não
+  inclui automaticamente conceitos já dominados.
+- A listagem carrega somente metadados; o texto completo é buscado para o
+  material ativo. Leituras recentes usam cache curto com ETag e são invalidadas
+  por eventos SSE após mudanças em qualquer aba.
+- O proxy apenas encaminha o token da sessão; assinatura e ownership continuam
+  sendo validados pela API. Isso evita uma consulta remota duplicada ao Supabase
+  em cada chamada sem transformar o frontend em autoridade de autenticação.
+- O BFF encaminha `Idempotency-Key` exclusivamente ao endpoint de checkout e
+  nunca repassa cookies ou headers arbitrários do navegador ao backend.
 - O domínio `workers.dev` pode ser substituído por um domínio personalizado.
 - O processamento de materiais ocorre na API e no worker da OCI, não no Worker
   da Cloudflare.
