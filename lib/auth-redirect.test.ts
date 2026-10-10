@@ -8,6 +8,7 @@ describe('redirects internos de autenticação', () => {
     expect(safeInternalDestination('/mapa-do-conhecimento')).toBe('/mapa-do-conhecimento')
     expect(safeInternalDestination('/pratica')).toBe('/pratica')
     expect(safeInternalDestination('/estudar?plan=ESSENTIAL')).toBe('/estudar?plan=ESSENTIAL')
+    expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')).toBe('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')
   })
 
   test('recusa origem externa, protocolo relativo, plano e parâmetros desconhecidos', () => {
@@ -17,6 +18,8 @@ describe('redirects internos de autenticação', () => {
     expect(safeInternalDestination('/estudar?plan=UNLIMITED')).toBe('/estudar')
     expect(safeInternalDestination('/estudar?plan=FREE&plan=PRO')).toBe('/estudar')
     expect(safeInternalDestination('/estudar?returnTo=https://example.com')).toBe('/estudar')
+    expect(safeInternalDestination('/pagamento/retorno?orderId=invalid')).toBe('/estudar')
+    expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111&next=https://example.com')).toBe('/estudar')
   })
 
   test('monta CTA somente com o identificador do plano', () => {

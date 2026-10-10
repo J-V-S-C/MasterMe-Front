@@ -5,7 +5,7 @@ import { I18nProvider, useI18n } from './i18n'
 
 function Probe() {
   const { locale, t } = useI18n()
-  return <><span>{locale}:{t('navStudy')}</span><span>{t('fileHelp')}</span><span>{t('authCallbackError')}</span><span>{t('authAccountCreated')}</span></>
+  return <><span>{locale}:{t('navStudy')}</span><span>{t('fileHelp')}</span><span>{t('authCallbackError')}</span><span>{t('authAccountCreated')}</span><span>{t('creditBalance')}</span><span>{t('checkoutContinue')}</span><span>{t('paymentPending')}</span></>
 }
 
 beforeEach(() => {
@@ -21,6 +21,9 @@ describe('internacionalização', () => {
     expect(view.getByText(/até 8 MiB/)).toBeTruthy()
     expect(view.getByText('O link de confirmação é inválido ou expirou. Solicite um novo cadastro.')).toBeTruthy()
     expect(view.getByText(/Conta criada/)).toBeTruthy()
+    expect(view.getByText('Saldo de créditos')).toBeTruthy()
+    expect(view.getByText('Continuar para a InfinitePay')).toBeTruthy()
+    expect(view.getByText('Pagamento em confirmação')).toBeTruthy()
   })
 
   test('restaura en-US e atualiza o lang do documento', async () => {
@@ -30,6 +33,9 @@ describe('internacionalização', () => {
     expect(view.getByText(/up to 8 MiB/)).toBeTruthy()
     expect(view.getByText('The confirmation link is invalid or expired. Create a new account request.')).toBeTruthy()
     expect(view.getByText(/Account created/)).toBeTruthy()
+    expect(view.getByText('Credit balance')).toBeTruthy()
+    expect(view.getByText('Continue to InfinitePay')).toBeTruthy()
+    expect(view.getByText('Payment being confirmed')).toBeTruthy()
     expect(document.documentElement.lang).toBe('en-US')
   })
 })

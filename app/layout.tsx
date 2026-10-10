@@ -6,6 +6,7 @@ import './shell.css'
 import './themes.css'
 import './practice.css'
 import './auth.css'
+import './billing.css'
 
 export const metadata: Metadata = {
   title: {

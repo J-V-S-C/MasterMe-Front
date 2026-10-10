@@ -10,6 +10,7 @@ import { LoadingSkeleton } from './loading-skeleton';
 import { StyledSelect } from './styled-select';
 import { ActionButton } from './action-button';
 import { useRealtimeRefresh } from './realtime-provider';
+import { useBilling } from './billing-provider';
 
 type FocusChoice = 'AUTOMATIC' | 'MANUAL';
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
@@ -25,6 +26,7 @@ export function resolveAutomaticFocusMode(confidences: ConceptConfidence[], perf
 
 export function PracticeWorkspace() {
   const { locale, t } = useI18n();
+  const { refresh: refreshBilling } = useBilling();
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
@@ -64,6 +66,7 @@ export function PracticeWorkspace() {
     if (change.type === 'material.progress' || change.type === 'material.queued') return
     void api.materials().then(setMaterials).catch(() => {})
     if (materialId) void loadMaterial(materialId, false)
+    void refreshBilling()
   });
 
   const confidenceByConcept = useMemo(() => new Map(confidences.map((item) => [item.conceptId, item.value])), [confidences]);
@@ -107,6 +110,7 @@ export function PracticeWorkspace() {
     try {
       const generated = await api.generatePracticeProject(materialId, selectedMode, conceptIds);
       setProject(generated); setProjects((current) => [generated, ...current.filter(({ id }) => id !== generated.id)]);
+      void refreshBilling();
     } catch (cause: unknown) { setError(errorMessage(cause, t('projectGenerateError'))); }
     finally { setGenerating(false); }
   };

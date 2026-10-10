@@ -150,27 +150,56 @@ export type MaterialProcessingStatus = {
   startedAt: string | null;
   finishedAt: string | null;
 };
-export type AiUsageSummary = {
-  totalRequests: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
+export type BillingPlanId = 'FREE' | 'ESSENTIAL' | 'PRO';
+export type PaidBillingPlanId = Exclude<BillingPlanId, 'FREE'>;
+export type AiCreditOperation =
+  | 'EXTRACTION'
+  | 'INITIAL_EVALUATION'
+  | 'EDGE_CASE_GENERATION'
+  | 'EDGE_CASE_EVALUATION'
+  | 'PRACTICE_PROJECT'
+  | 'LOCALIZATION'
+  | 'STRESS_EVALUATION'
+  | 'ISOMORPHIC_PROBLEM';
+export type BillingPlan = {
+  id: BillingPlanId;
+  name: string;
+  priceInCents: number;
+  durationDays: number | null;
+  dailyCreditLimit: number;
+  periodCreditLimit: number;
+};
+export type BillingCatalog = {
+  currency: 'BRL';
+  billingType: 'ONE_TIME';
+  plans: BillingPlan[];
+  creditWeights: Record<AiCreditOperation, number>;
+  fallbackPolicy: string;
+};
+export type BillingOrder = {
+  id: string;
+  planId: PaidBillingPlanId;
+  amountInCents: number;
+  status: 'PENDING' | 'CHECKOUT_READY' | 'CHECKOUT_FAILED' | 'PAID';
+  checkoutUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type BillingSummary = {
+  planId: BillingPlanId;
   dailyLimit: number;
-  remainingRequests: number;
-  resetsAt: string;
-  byModel: Array<{
-    model: string;
-    requests: number;
-    successes: number;
-    inputTokens: number;
-    outputTokens: number;
-  }>;
-  byOperation: Array<{
-    operation: string;
-    requests: number;
-    successes: number;
-    inputTokens: number;
-    outputTokens: number;
-  }>;
+  dailyUsed: number;
+  dailyRemaining: number;
+  dailyResetsAt: string;
+  periodLimit: number;
+  periodUsed: number;
+  periodRemaining: number;
+  periodStartsAt: string;
+  periodEndsAt: string;
+  validUntil: string | null;
+  weights: Record<AiCreditOperation, number>;
+  estimates: Record<AiCreditOperation, number>;
+  estimateAssumption: { providerAttemptsPerOperation: number };
 };
 export type UploadedMaterial = {
   id: string;
@@ -201,8 +230,9 @@ async function executeCall<T>(
   path: string,
   method = 'GET',
   body?: unknown,
+  requestHeaders?: Readonly<Record<string, string>>,
 ): Promise<T> {
-  const stableGet = method === 'GET' && path !== '/ai-usage/today' && !path.endsWith('/status');
+  const stableGet = method === 'GET' && !path.endsWith('/status');
   const cached = stableGet ? responseCache.get(path) : undefined;
   const response = await fetch(`/api${path}`, {
     method,
@@ -210,6 +240,7 @@ async function executeCall<T>(
     headers: {
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
       ...(cached?.etag ? { 'if-none-match': cached.etag } : {}),
+      ...requestHeaders,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -238,14 +269,14 @@ async function executeCall<T>(
   return payload.data;
 }
 
-function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const stableGet = method === 'GET' && path !== '/ai-usage/today' && !path.endsWith('/status');
+function call<T>(path: string, method = 'GET', body?: unknown, requestHeaders?: Readonly<Record<string, string>>): Promise<T> {
+  const stableGet = method === 'GET' && !path.endsWith('/status');
   const cached = stableGet ? responseCache.get(path) : undefined;
   if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.data as T);
-  if (!stableGet) return executeCall<T>(path, method, body);
+  if (!stableGet) return executeCall<T>(path, method, body, requestHeaders);
   const pending = inFlight.get(path);
   if (pending) return pending as Promise<T>;
-  const request = executeCall<T>(path, method, body).finally(() => inFlight.delete(path));
+  const request = executeCall<T>(path, method, body, requestHeaders).finally(() => inFlight.delete(path));
   inFlight.set(path, request);
   return request;
 }
@@ -369,5 +400,10 @@ export const api = {
     call<PracticeProject[]>(`/materials/${materialId}/practice-projects`),
   practiceProject: (id: string) =>
     call<PracticeProject>(`/practice-projects/${id}`),
-  aiUsageToday: () => call<AiUsageSummary>('/ai-usage/today'),
+  billingCatalog: () => call<BillingCatalog>('/billing/catalog'),
+  billingMe: () => call<BillingSummary>('/billing/me'),
+  createCheckout: (planId: PaidBillingPlanId, idempotencyKey: string) =>
+    call<BillingOrder>('/billing/checkouts', 'POST', { planId }, { 'idempotency-key': idempotencyKey }),
+  reconcileOrder: (orderId: string, reference?: { transactionNsu: string; slug: string }) =>
+    call<BillingOrder>(`/billing/orders/${orderId}/reconcile`, 'POST', reference ?? {}),
 };
