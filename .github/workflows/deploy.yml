@@ -42,6 +42,10 @@ jobs:
           fi
       - run: bun run typecheck
       - run: bun test
+      - run: bun run validate:dependencies
+      - run: bun run build
+      - name: Smoke test Next production build
+        run: ./scripts/smoke-next-build.sh
       - name: Inject non-secret Worker observability variables
         run: bun scripts/configure-observability-deploy.ts wrangler.jsonc
       - run: bun run build:vinext
