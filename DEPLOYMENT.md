@@ -35,3 +35,10 @@ BACKEND_URL=https://api.seudominio.com bun run build:vinext
 
 Privacidade, SLOs, custo, alertas e desligamento da coleta estão em
 [`docs/CLIENT_OBSERVABILITY.md`](docs/CLIENT_OBSERVABILITY.md).
+
+Antes de aceitar um PR, o CI executa o comando único de validação, audita as
+dependências de produção e sobe o build Next para um smoke HTTP da landing e do
+login, incluindo os headers CSP e `nosniff`. O deploy repete auditoria, build e
+smoke antes de gerar/publicar o Worker. A busca pelo valor do token de
+observabilidade no artefato permanece um gate adicional quando a exportação
+está configurada.
