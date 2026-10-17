@@ -170,7 +170,7 @@ body { font-size: var(--font-body); }
   .progress-track.indeterminate i { animation: none; width: 100%; opacity: .65; }
 }
 
-/* MasterMe — sistema editorial inspirado no tratado de referência. */
+/* MasterMe — editorial system inspired by the reference treatise. */
 :root {
   color-scheme: light;
   --bg: #faf8ff; --deep: #f2f3ff; --low: #fff; --card: #f2f3ff; --high: #e1e8ff;
@@ -244,7 +244,7 @@ nav a:hover, nav a.active { border-color: transparent; color: #fff; background: 
 .answer-actions .secondary { border: 0; border-radius: 6px; padding: 9px 12px; background: var(--deep); color: var(--muted); }
 .empty-state, .material-form { border-radius: 10px; background: var(--low); box-shadow: 0 2px 10px var(--shadow); }
 
-/* Referência dark: nenhuma alteração de layout, apenas superfícies e acentos. */
+/* Dark reference: keep the layout and change only surfaces and accents. */
 [data-theme="dark"] .site-header nav a.active,
 [data-theme="dark"] .live-toolbar>.app-button,
 [data-theme="dark"] .answer-card .primary,
@@ -274,7 +274,7 @@ nav a:hover, nav a.active { border-color: transparent; color: #fff; background: 
   .workspace-grid { grid-template-columns: 1fr; }
   }
 
-/* Mapa do conhecimento: campo cartográfico / astrolábio. */
+/* Knowledge map: cartographic field / astrolabe. */
 .map-page { max-width: 1520px; padding-top: 38px; }
 .map-hero { display: grid; gap: 16px; margin-bottom: 20px; }
 .map-kicker { display: flex; align-items: center; gap: 6px; color: var(--amber); font-size: 10px; font-weight: 700; letter-spacing: .13em; }
@@ -304,7 +304,7 @@ nav a:hover, nav a.active { border-color: transparent; color: #fff; background: 
 @media (max-width: 900px) { .map-hero-title { align-items: start; flex-direction: column; }.map-stats { grid-template-columns: repeat(2, 1fr); }.map-layout { grid-template-columns: 1fr; }.inspector { border-top: 1px solid var(--line-faint); }.map-insights { grid-template-columns: 1fr; }.map-legend small { width: 100%; margin-left: 0; } }
 @media (max-width: 560px) { .map-page { padding-top: 24px; }.map-stats { gap: 8px; }.map-stat { min-height: 98px; padding: 12px; }.map-stat strong { margin-top: 10px; font-size: 23px; }.graph.astrolabe { min-height: 550px; }.graph svg { min-width: 620px; min-height: 550px; } }
 
-/* Escala de leitura e controles: prioriza legibilidade no uso contínuo. */
+/* Reading scale and controls prioritize legibility during prolonged use. */
 .theme-track { width: 70px; height: 38px; padding: 0 9px; }
 .theme-track svg { width: 17px; }
 .theme-orbit { top: 4px; right: 4px; width: 28px; height: 28px; }
@@ -318,7 +318,7 @@ nav a { min-height: 38px; display: inline-flex; align-items: center; font-size: 
 .graph-node text { font-size: 13px; }.graph-node .node-status { font-size: 11px; }
 .graph-node .inner { fill: var(--dim); }.graph-node.ready .inner { fill: var(--blue); }.graph-node.explained .inner { fill: var(--green); }.graph-node.review .inner { fill: var(--amber); }
 
-/* Controles usam o mesmo sistema de superfícies do workspace. */
+/* Controls use the same surface system as the workspace. */
 select, input, textarea {
   border: 1px solid var(--line) !important;
   border-radius: 7px !important;
@@ -334,7 +334,7 @@ select:hover, input:hover, textarea:hover { border-color: var(--dim) !important;
 select:focus, input:focus, textarea:focus { border-color: var(--blue) !important; outline: 0; box-shadow: 0 0 0 3px var(--accent-soft); }
 button { border-radius: 7px; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
 button:not(:disabled):active { transform: translateY(1px); }
-/* Navegação e controles compartilhados respondem como um único sistema. */
+/* Navigation and shared controls behave as one system. */
 .site-header nav a{position:relative;transition:color var(--motion-fast),background var(--motion-fast),transform var(--motion-fast)}
 .site-header nav a:hover{transform:translateY(-1px)}
 .site-header nav a.active::after{display:none}
@@ -342,7 +342,7 @@ button:not(:disabled):active { transform: translateY(1px); }
 .page-main{animation:page-enter var(--motion-standard) var(--ease-out)}
 @media(prefers-reduced-motion:reduce){.site-header nav a,.page-main{animation:none;transition:none}.site-header nav a:hover{transform:none}}
 
-/* Navegação integrada: uma única barra, sem cartões soltos. */
+/* Integrated navigation: one bar without detached cards. */
 .primary-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--deep);box-shadow:none}
 .primary-nav a{display:grid;grid-template-columns:18px 26px minmax(0,1fr);gap:8px;min-width:168px;min-height:58px;margin:0;padding:9px 13px;border:0;border-left:1px solid var(--line-faint);border-radius:0;background:transparent;box-shadow:none;overflow:visible}
 .primary-nav a:first-child{border-left:0}.primary-nav a:hover{border-color:var(--line-faint);background:var(--card);color:var(--text);transform:none}.primary-nav a.active{border-color:var(--line-faint);background:var(--low);box-shadow:inset 0 -2px 0 var(--amber)}
@@ -387,7 +387,7 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 @media(hover:none){.brand:hover,.primary-nav a:hover,.select-control:hover,.focus-choices>button:hover,.concept-scope label:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.skip-link{transition:none}}
 
-/* Paleta escura com superfícies profundas e contraste hierárquico. */
+/* Dark palette with deep surfaces and hierarchical contrast. */
 [data-theme="dark"]{--bg:#070d13;--deep:#09131c;--low:#0e1a25;--card:#132432;--high:#1a3040;--line:#385267;--line-soft:#385267aa;--line-faint:#38526766;--text:#edf4fb;--muted:#bdcad5;--dim:#8fa2b3;--soft-text:#d4e0e9;--header:#070d13f2;--shadow:#00000055;--graph-dot:#38526777;--graph-edge:#7890a477}
 [data-theme="dark"] .primary-nav{background:#08121a;border-color:#30485b}
 [data-theme="dark"] .primary-nav a{color:#aebdca}
@@ -396,7 +396,7 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 [data-theme="dark"] .primary-nav a.active .nav-icon{background:#285887;color:#dceaff}
 [data-theme="dark"] .focus-choices>button.selected,[data-theme="dark"] .concept-scope label.selected{background:#132f49;border-color:#73a9f4}
 
-/* Listbox visual próprio, na mesma escala de 44px dos botões. */
+/* Custom listbox at the same 44px scale as buttons. */
 .select-field{position:relative;gap:6px!important}
 .select-control{position:relative;isolation:visible}
 .select-control::after{display:none}
@@ -429,7 +429,7 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 .app-button svg{width:15px;margin:0}.live-toolbar .app-button{min-height:40px;align-self:end}.answer-actions .app-button{margin:0}.completion-card .app-button{margin-left:auto}
 .material-mode button{min-height:36px;padding:6px 11px}.material-mode button:hover{border-color:var(--dim);background:var(--high);color:var(--text)}.project-history button:hover{background:var(--card)}.confidence-panel summary:hover{background:var(--deep)}
 
-/* Select neutro: label e proporções preservadas, sem acento azul excessivo. */
+/* Neutral select preserves label and proportions without excessive blue accent. */
 .select-field{z-index:5;min-width:220px}.select-field:has(.select-control.open){z-index:200}.select-control.open{z-index:200}.select-trigger{grid-template-columns:24px minmax(0,1fr) 24px;gap:7px;min-height:40px;padding:5px 7px;border-radius:7px;background:var(--deep);box-shadow:none}.select-leading,.select-chevron{width:24px;height:24px}.select-leading{border-radius:5px;background:var(--card);color:var(--muted)}.select-leading svg,.select-chevron svg{display:block;width:14px;height:14px}.select-value{font-size:13px;font-weight:550}.select-trigger:hover:not(:disabled){background:var(--card);border-color:var(--dim)}
 .select-options{z-index:500;top:calc(100% + 5px);padding:5px;border-radius:8px;background:var(--low);box-shadow:0 14px 35px #0007}.select-options button{min-height:38px;padding:7px 9px;border-radius:5px;font-size:13px}.select-options button.highlighted{background:var(--card);color:var(--text)}.select-options button.selected,.select-options button.selected.highlighted{background:var(--high);color:var(--text)}.select-options button.selected svg{color:var(--green)}
 [data-theme="dark"] .select-trigger{background:#0a151e;border-color:#304556}[data-theme="dark"] .select-trigger:hover:not(:disabled){background:#111f2a;border-color:#486174}[data-theme="dark"] .select-leading{background:#162632;color:#aebdca}[data-theme="dark"] .select-options{background:#0d1923;border-color:#354c5e}[data-theme="dark"] .select-options button.highlighted{background:#162632}[data-theme="dark"] .select-options button.selected,[data-theme="dark"] .select-options button.selected.highlighted{background:#1b2d3a;color:#edf4fb}
@@ -441,28 +441,28 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 @media(max-width:620px){.header-content{gap:8px;padding-inline:10px}.primary-nav a{gap:5px;padding:5px 7px}.nav-label{font-size:12px}.nav-icon{width:22px;height:22px}}
 @media(max-width:390px){.primary-nav a{padding-inline:5px}.nav-label{font-size:11px}}
 
-/* Select consistente nas três áreas: a identidade pertence ao componente. */
+/* Consistent select across the three areas: identity belongs to the component. */
 .select-label{color:var(--amber);font:700 11px/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
 .live-toolbar .select-label,.map-hero .select-label,.practice-hero .select-label{color:var(--amber);font:700 11px/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
 
-/* Em telas amplas, a navegação ocupa o centro disponível sem mudar sua composição. */
+/* On wide screens navigation fills the available center without changing its composition. */
 @media(min-width:981px){
   .primary-nav{width:clamp(480px,46vw,680px)}
   .primary-nav a{min-width:0;min-height:42px;padding-inline:clamp(14px,2vw,28px)}
   .nav-icon{flex:0 0 24px}.nav-label{font-size:14px}
 }
 
-/* Uma única geometria para StyledSelect em Estudar, Analisar e Criar. */
+/* One geometry for StyledSelect across Study, Analyze and Create. */
 .live-toolbar .select-field,.map-hero .select-field,.practice-hero .select-field{flex:0 1 270px;width:270px;min-width:220px;max-width:270px}
 @media(max-width:700px){.live-toolbar .select-field,.map-hero .select-field,.practice-hero .select-field{flex-basis:auto;width:100%;min-width:0;max-width:none}}
 
-/* Interação uniforme das três áreas de navegação. */
+/* Uniform interaction across the three navigation areas. */
 .primary-nav .nav-icon{display:grid;place-items:center;background:var(--high);color:var(--dim);transition:background var(--motion-fast),color var(--motion-fast),transform var(--motion-fast) var(--ease-out)}
 .primary-nav a:hover .nav-icon,.primary-nav a.active:hover .nav-icon{background:var(--accent-medium);color:var(--blue);transform:translateY(-1px) rotate(-7deg) scale(1.08)}
 @media(prefers-reduced-motion:reduce){.primary-nav a:hover .nav-icon,.primary-nav a.active:hover .nav-icon{transform:none}}
 .header-controls{display:flex;align-items:center}.header-logout{display:grid;place-items:center;width:38px;height:38px;margin:0;padding:0;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--dim)}.header-logout:hover{border-color:var(--line-soft);background:var(--card);color:var(--text)}.header-logout svg{width:18px}
 @media(max-width:980px){.header-content{grid-template-columns:auto 1fr auto auto}.header-controls{grid-column:4;grid-row:1}.theme-toggle{grid-column:3;margin-left:0}}
-/* Header em uma linha nas telas amplas; as abas acompanham o topo das ações. */
+/* Single-line header on wide screens; tabs align with the actions above. */
 .site-header{height:auto;min-height:0}
 .header-content{display:grid;grid-template-columns:minmax(150px,1fr) minmax(480px,680px) minmax(150px,1fr);grid-template-rows:auto;height:auto;padding:10px 24px;gap:16px;align-items:start}
 .brand{grid-column:1;grid-row:1;align-self:start}
@@ -484,3 +484,5 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 [data-theme="dark"] .material-mode button.selected{border-color:#73a9f4;background:#173a5b;color:#fff}
 @media(max-width:980px){.site-header{height:auto;min-height:0}.header-content{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;height:auto;padding:9px 16px 8px}.brand{grid-column:1;grid-row:1}.brand>strong{display:block}.header-controls{grid-column:2;grid-row:1}.primary-nav{grid-column:1/-1;grid-row:2;width:100%}}
 @media(max-width:620px){.header-content{padding:8px 10px 7px;gap:7px 8px}.brand>strong{display:none}.primary-nav{padding:3px}.primary-nav a{min-height:38px}}
+.graph .react-flow{height:630px;min-height:0}.graph .react-flow svg{min-width:0;min-height:0;width:100%;height:100%}.masterme-flow-node{background:var(--card);color:var(--text);border:2px solid var(--blue);border-radius:9px;padding:10px 14px;max-width:175px;text-align:center;font-size:12px;box-shadow:0 6px 18px var(--shadow)}.masterme-flow-node.review{border-color:var(--amber)}.masterme-flow-node.explained{border-color:var(--green)}.masterme-flow-node.selected{outline:3px solid var(--text);outline-offset:2px}.map-active-section{margin-top:18px;background:var(--low);border:1px solid var(--line-faint);border-radius:10px;padding:22px;display:grid;gap:10px}.map-active-section h2{font:26px Georgia,serif;margin:0}.map-active-section h3{font:18px Georgia,serif;margin:8px 0 0}.map-active-section p{color:var(--muted);margin:4px 0}.map-active-section form{display:grid;gap:12px;max-width:760px}.map-active-section label{display:grid;gap:5px}.map-active-section label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px}.map-active-section select,.map-active-section textarea{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit}.map-active-section textarea{min-height:130px;resize:vertical}.map-active-section button,.inspector button{background:var(--high);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 12px}.map-active-section ul{padding-left:20px}.map-active-section li{margin:10px 0}.map-active-section li button{border:0;background:transparent;padding:0;text-decoration:underline;text-align:left;color:var(--blue)}.map-active-section small{color:var(--muted)}@media(max-width:560px){.graph .react-flow{height:550px}}
+.map-active-section input:not([type=checkbox]){background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit}

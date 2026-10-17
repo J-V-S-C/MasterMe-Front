@@ -10,15 +10,15 @@ const memoryStorage = () => {
   }
 }
 
-describe('segurança do checkout', () => {
-  test('aceita somente plano único conhecido', () => {
+describe('checkout security', () => {
+  test('accepts only a known single plan', () => {
     expect(requestedPlan(new URLSearchParams('plan=FREE'))).toBe('FREE')
     expect(requestedPlan(new URLSearchParams('plan=PRO'))).toBe('PRO')
     expect(requestedPlan(new URLSearchParams('plan=PRO&plan=ESSENTIAL'))).toBeNull()
     expect(requestedPlan(new URLSearchParams('plan=ENTERPRISE'))).toBeNull()
   })
 
-  test('aceita somente navegação HTTPS para o host exato da InfinitePay', () => {
+  test('allows only HTTPS navigation to the exact InfinitePay host', () => {
     expect(safeInfinitePayCheckoutUrl('https://checkout.infinitepay.com.br/masterme?lenc=safe')).toBe('https://checkout.infinitepay.com.br/masterme?lenc=safe')
     expect(safeInfinitePayCheckoutUrl('https://checkout.infinitepay.com.br.evil.test/steal')).toBeNull()
     expect(safeInfinitePayCheckoutUrl('https://evil.test/?next=https://checkout.infinitepay.com.br')).toBeNull()
@@ -26,7 +26,7 @@ describe('segurança do checkout', () => {
     expect(safeInfinitePayCheckoutUrl('javascript:alert(1)')).toBeNull()
   })
 
-  test('reutiliza a mesma intenção somente no mesmo plano e permite encerrá-la', () => {
+  test('reuses an intent only for the same plan and allows closing it', () => {
     const storage = memoryStorage()
     const essential = checkoutIntentKey('ESSENTIAL', storage as Storage, () => '11111111-1111-4111-8111-111111111111')
     expect(checkoutIntentKey('ESSENTIAL', storage as Storage, () => 'never-used')).toBe(essential)
@@ -35,7 +35,7 @@ describe('segurança do checkout', () => {
     expect(checkoutIntentKey('ESSENTIAL', storage as Storage, () => '33333333-3333-4333-8333-333333333333')).not.toBe(essential)
   })
 
-  test('valida retorno sem aceitar parâmetros ou referências parciais', () => {
+  test('validates return without accepting partial parameters or references', () => {
     const orderId = '11111111-1111-4111-8111-111111111111'
     expect(paymentReturnReference(new URLSearchParams({ orderId }))).toEqual({ orderId })
     expect(paymentReturnReference(new URLSearchParams({ orderId, transaction_nsu: 'tx', invoice_slug: 'invoice' }))).toEqual({ orderId, reference: { transactionNsu: 'tx', slug: 'invoice' } })

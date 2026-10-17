@@ -9,7 +9,7 @@ afterEach(() => cleanup())
 const options = [{ value: 'a', label: 'Arquitetura' }, { value: 'b', label: 'Banco de dados' }]
 
 describe('StyledSelect', () => {
-  test('expõe label, estado e permite escolher uma opção', () => {
+  test('exposes a label and state and allows choosing an option', () => {
     const onValueChange = mock(() => {})
     const view = render(<StyledSelect label="Conceito" value="a" options={options} onValueChange={onValueChange} />)
     const trigger = view.getByRole('combobox', { name: /conceito arquitetura/i })
@@ -20,7 +20,7 @@ describe('StyledSelect', () => {
     expect(onValueChange).toHaveBeenCalledWith('b')
   })
 
-  test('abre e seleciona com teclado', () => {
+  test('opens and selects with keyboard', () => {
     const onValueChange = mock(() => {})
     const view = render(<StyledSelect label="Material" value="a" options={options} onValueChange={onValueChange} />)
     const trigger = view.getByRole('combobox')

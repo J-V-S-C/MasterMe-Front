@@ -13,8 +13,8 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); invalidateApiCache(); globalThis.fetch = originalFetch })
 
-describe('saldo autoritativo', () => {
-  test('mostra menor saldo simultâneo e estimativas do backend com uma única consulta', async () => {
+describe('authoritative balance', () => {
+  test('shows the lowest simultaneous balance and backend estimates with a single request', async () => {
     let calls = 0
     globalThis.fetch = (async () => {
       calls += 1

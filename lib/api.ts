@@ -208,6 +208,17 @@ export type UploadedMaterial = {
   title: string;
   status: ProcessingState;
 };
+export type EditorialUnit = { id: string; order: number; title: string | null; level: number; startOffset: number; endOffset: number; provenance: 'HEADING' | 'PDF_OUTLINE' | 'UNSTRUCTURED'; pageNumber: number | null };
+export type ConceptRelation = { id: string; material_id: string; from_concept_id: string; to_concept_id: string; relation_type: string; statement: string; justification: string; source_excerpt: string; provenance: 'EXTRACTED' | 'STUDENT' };
+export type Shelf = { id: string; name: string; shelf_materials: Array<{ material_id: string }> };
+export type ConceptCard = { concept_id: string; note: string; concepts: { name: string; material_id: string; source_excerpt: string } };
+export type LearningGoal = { id: string; title: string; description: string; deadline: string | null };
+export type StudyPlan = { id: string; title: string; goal_id: string | null };
+export type TaskActivity = 'READ' | 'EXPLAIN' | 'RELATE' | 'APPLY' | 'REVISIT' | 'PRACTICE';
+export type StudyTask = { id: string; title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'DONE' | 'REMOVED'; reason: string };
+export type StudyAvailability = { weekday: number; minutes: number; timezone: string };
+export type StudySuggestion = { id: string; title: string; reason: string; status: 'PENDING' | 'ACCEPTED' | 'IGNORED'; task_id: string | null; learning_evidence: { material_id: string; source_excerpt: string; activity_type: string; status: string } };
+export type LearningEvidence = { id: string; activity_type: 'COMPREHENSION' | 'RELATION' | 'APPLICATION' | 'RETENTION'; prompt: string; answer: string; status: EvaluationStatus | 'SELF_REPORTED' | 'CONTESTED'; assisted: boolean; diagnosis: string; source_excerpt: string; created_at: string; evidence_contestations?: Array<{ id: string; reason: string; created_at: string }> };
 
 export class ApiError extends Error {
   public constructor(
@@ -355,6 +366,31 @@ export function uploadMaterial(
 }
 
 export const api = {
+  outline: (materialId: string) => call<EditorialUnit[]>(`/learning/materials/${materialId}/outline`),
+  relations: (materialId: string) => call<ConceptRelation[]>(`/learning/materials/${materialId}/relations`),
+  createRelation: (input: { materialId: string; fromConceptId: string; toConceptId: string; relationType: string; statement: string; justification: string; sourceExcerpt: string }) => call<ConceptRelation>('/learning/relations', 'POST', input),
+  shelves: () => call<Shelf[]>('/learning/shelves'),
+  createShelf: (name: string) => call<Shelf>('/learning/shelves', 'POST', { name }),
+  deleteShelf: (id: string) => call<void>(`/learning/shelves/${id}`, 'DELETE'),
+  setShelfMaterial: (shelfId: string, materialId: string, included: boolean) => call<void>(`/learning/shelves/${shelfId}/materials/${materialId}`, included ? 'PUT' : 'DELETE'),
+  cards: () => call<ConceptCard[]>('/learning/cards'),
+  saveCard: (conceptId: string, note: string) => call<ConceptCard>(`/learning/cards/${conceptId}`, 'PUT', { note }),
+  deleteCard: (conceptId: string) => call<void>(`/learning/cards/${conceptId}`, 'DELETE'),
+  goals: () => call<LearningGoal[]>('/learning/goals'),
+  createGoal: (title: string, description: string, deadline?: string) => call<LearningGoal>('/learning/goals', 'POST', { title, description, deadline }),
+  plans: () => call<StudyPlan[]>('/learning/plans'),
+  createPlan: (title: string, goalId?: string) => call<StudyPlan>('/learning/plans', 'POST', { title, goalId }),
+  tasks: () => call<StudyTask[]>('/learning/tasks'),
+  createTask: (input: { title: string; activityType: TaskActivity; planId?: string; materialId?: string; conceptId?: string; unitId?: string; durationMinutes?: number; scheduledAt?: string; reason?: string }) => call<StudyTask>('/learning/tasks', 'POST', input),
+  updateTask: (id: string, input: { title?: string; durationMinutes?: number | null; scheduledAt?: string | null; status?: StudyTask['status'] }) => call<StudyTask>(`/learning/tasks/${id}`, 'PATCH', input),
+  availability: () => call<StudyAvailability[]>('/learning/availability'),
+  setAvailability: (weekday: number, minutes: number, timezone: string) => call<StudyAvailability>('/learning/availability', 'PUT', { weekday, minutes, timezone }),
+  desk: (date: string, timezone: string) => call<{ tasks: StudyTask[]; load: { plannedMinutes: number; availableMinutes: number; excessMinutes: number } }>(`/learning/desk?date=${encodeURIComponent(date)}&timezone=${encodeURIComponent(timezone)}`),
+  suggestions: () => call<StudySuggestion[]>('/learning/suggestions'),
+  decideSuggestion: (id: string, decision: 'ACCEPTED' | 'IGNORED') => call<StudySuggestion>(`/learning/suggestions/${id}/decision`, 'POST', { decision }),
+  evidence: (materialId: string) => call<LearningEvidence[]>(`/learning/materials/${materialId}/evidence`),
+  contestEvidence: (id: string, reason: string) => call<{ id: string; reason: string }>(`/learning/evidence/${id}/contestations`, 'POST', { reason }),
+  evaluateActivity: (input: { requestId: string; conceptId?: string; relationId?: string; taskId?: string; activityType: LearningEvidence['activity_type']; answer: string; assisted: boolean }) => call<{ event: LearningEvidence; suggestion: StudySuggestion | null }>('/learning/activities/answers', 'POST', input),
   materials: () => call<MaterialSummary[]>('/materials'),
   material: (id: string) => call<Material>(`/materials/${id}`),
   createMaterial: (title: string, content: string, locale: SupportedLocale = 'pt-BR') =>

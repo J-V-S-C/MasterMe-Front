@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { api, type KnowledgeNode, type MaterialSummary } from "../lib/api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, type ConceptRelation, type KnowledgeNode, type LearningEvidence, type MaterialSummary } from "../lib/api";
+import { ReactFlow, Background, Controls, type Edge, type Node } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { Icon } from "../lib/icons";
 import { useI18n } from "../lib/i18n";
 import { LoadingSkeleton } from "./loading-skeleton";
@@ -70,11 +72,26 @@ export function graphLayout(nodes: KnowledgeNode[]) {
 }
 
 export function KnowledgeMap() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
+  const [relations, setRelations] = useState<ConceptRelation[]>([]);
+  const [evidence, setEvidence] = useState<LearningEvidence[]>([]);
   const [materialId, setMaterialId] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [selectedRelationId, setSelectedRelationId] = useState("");
+  const [activityType, setActivityType] = useState<'RELATION' | 'APPLICATION' | 'RETENTION'>('APPLICATION');
+  const [activityAnswer, setActivityAnswer] = useState('');
+  const [assisted, setAssisted] = useState(false);
+  const [activityBusy, setActivityBusy] = useState(false);
+  const [activityMessage, setActivityMessage] = useState('');
+  const activityRequestId = useRef<string | null>(null);
+  const [newRelationTarget, setNewRelationTarget] = useState('');
+  const [newRelationType, setNewRelationType] = useState<'REQUIRES' | 'ENABLES' | 'CONTRASTS' | 'APPLIES_TO' | 'PART_OF'>('ENABLES');
+  const [newRelationStatement, setNewRelationStatement] = useState('');
+  const [newRelationJustification, setNewRelationJustification] = useState('');
+  const [newRelationExcerpt, setNewRelationExcerpt] = useState('');
+  useEffect(() => { activityRequestId.current = null; }, [activityAnswer, activityType, assisted, selectedId, selectedRelationId]);
   const [showAllEdges, setShowAllEdges] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -85,18 +102,49 @@ export function KnowledgeMap() {
   useEffect(() => {
     if (!materialId) return;
     setLoading(true);
-    api.knowledgeMap(materialId).then((data) => { setNodes(data); setSelectedId(data[0]?.concept.id ?? ""); })
+    Promise.all([api.knowledgeMap(materialId), api.relations(materialId), api.evidence(materialId)]).then(([data, relationsData, evidenceData]) => { setNodes(data); setRelations(relationsData); setEvidence(evidenceData); setSelectedId(data[0]?.concept.id ?? ""); setSelectedRelationId(''); })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : t('unexpectedError'))).finally(() => setLoading(false));
   }, [materialId, t]);
   const selected = useMemo(() => nodes.find(({ concept }) => concept.id === selectedId) ?? null, [nodes, selectedId]);
   const graph = useMemo(() => graphLayout(nodes), [nodes]);
   const edges = useMemo(() => visibleGraphEdges(nodes, showAllEdges), [nodes, showAllEdges]);
+  const selectedRelation = relations.find((relation) => relation.id === selectedRelationId) ?? null;
+  const flowNodes = useMemo<Node[]>(() => nodes.map((item) => ({ id: item.concept.id, position: graph.points.get(item.concept.id) ?? { x: 0, y: 0 }, data: { label: `${item.concept.name} · ${item.status}` }, className: `masterme-flow-node ${item.status.toLowerCase()} ${selectedId === item.concept.id ? 'selected' : ''}`, ariaLabel: `${t('selectConcept')} ${item.concept.name}`, draggable: false })), [nodes, graph, selectedId, t]);
+  const flowEdges = useMemo<Edge[]>(() => {
+    const typedPairs = new Set(relations.map((relation) => `${relation.from_concept_id}:${relation.to_concept_id}`));
+    return [...edges.filter((edge) => !typedPairs.has(`${edge.source}:${edge.target}`)).map((edge) => ({ id: `legacy:${edge.source}:${edge.target}`, source: edge.source, target: edge.target, animated: false, style: { strokeDasharray: '5 5', stroke: 'var(--muted)' }, ariaLabel: 'Relação legada sem justificativa de fonte' })), ...relations.map((relation) => ({ id: relation.id, source: relation.from_concept_id, target: relation.to_concept_id, label: relation.relation_type, style: { stroke: '#bb9164' }, ariaLabel: relation.statement }))];
+  }, [edges, relations]);
   const adjacent = useMemo(() => new Set(selected ? [selected.concept.id, ...selected.concept.prerequisiteIds, ...selected.concept.nextIds] : []), [selected]);
   const validated = nodes.filter(({ status }) => status === "EXPLAINED").length;
   const review = nodes.filter(({ status }) => status === "REVIEW").length;
   const available = nodes.filter(({ status }) => status === "READY").length;
   const completion = nodes.length ? Math.round((validated / nodes.length) * 100) : 0;
   const statusText = (status: KnowledgeNode['status']) => status === 'EXPLAINED' ? t('mapExplained') : status === 'REVIEW' ? t('mapReview') : t('mapReady');
+  const assess = async () => {
+    if (activityAnswer.trim().length < 20 || !selected) return;
+    setActivityBusy(true); setActivityMessage('');
+    try {
+      const target = activityType === 'RELATION' && selectedRelation ? { relationId: selectedRelation.id } : { conceptId: selected.concept.id };
+      activityRequestId.current ??= crypto.randomUUID();
+      const result = await api.evaluateActivity({ requestId: activityRequestId.current, ...target, activityType, answer: activityAnswer.trim(), assisted });
+      setEvidence((current) => [result.event, ...current]);
+      setActivityMessage(`${result.event.status}: ${result.event.diagnosis}`);
+      setActivityAnswer('');
+      activityRequestId.current = null;
+    } catch (cause: unknown) { setActivityMessage(cause instanceof Error ? cause.message : t('unexpectedError')); }
+    finally { setActivityBusy(false); }
+  };
+  const createRelation = async () => {
+    if (!selected || !newRelationTarget) return;
+    setActivityBusy(true); setActivityMessage('');
+    try {
+      await api.createRelation({ materialId, fromConceptId: selected.concept.id, toConceptId: newRelationTarget, relationType: newRelationType, statement: newRelationStatement.trim(), justification: newRelationJustification.trim(), sourceExcerpt: newRelationExcerpt.trim() });
+      setRelations(await api.relations(materialId));
+      setNewRelationTarget(''); setNewRelationStatement(''); setNewRelationJustification(''); setNewRelationExcerpt('');
+      setActivityMessage('Relação guardada com sua fonte.');
+    } catch (cause: unknown) { setActivityMessage(cause instanceof Error ? cause.message : t('unexpectedError')); }
+    finally { setActivityBusy(false); }
+  };
 
   useRealtimeRefresh((change) => {
     if (change.type === 'material.progress' || change.type === 'material.queued') return
@@ -105,6 +153,7 @@ export function KnowledgeMap() {
       setNodes(data)
       setSelectedId((current) => data.some(({ concept }) => concept.id === current) ? current : data[0]?.concept.id ?? '')
     }).catch(() => {})
+    if (materialId) { void api.relations(materialId).then(setRelations).catch(() => {}); void api.evidence(materialId).then(setEvidence).catch(() => {}); }
   });
 
   if (loading && !materials.length) return <LoadingSkeleton variant="map" />;
@@ -118,25 +167,13 @@ export function KnowledgeMap() {
     </section>
     <section className="map-legend"><span><i className="explained" />{t('mapExplained')}</span><span><i className="review" />{t('mapReview')}</span><span><i className="ready" />{t('mapReady')}</span><button type="button" aria-pressed={showAllEdges} onClick={() => setShowAllEdges((current) => !current)}>{showAllEdges ? t('essentialRelations') : t('allRelations')}</button><small>{t('mapSelectionHint')}</small></section>
     <section className="map-layout">
-      <div className="graph astrolabe" role="region" tabIndex={0} aria-label={t('interactiveMap')}>
+      <div className="graph astrolabe" role="region" aria-label={t('interactiveMap')}>
         <div className="graph-hint">{t('selectForDiagnostic')}</div>
-        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="img" aria-label={t('conceptRelations')}>
-          {edges.map((edge) => {
-            const from = graph.points.get(edge.source); const to = graph.points.get(edge.target);
-            if (!from || !to) return null;
-            const active = !selected || edge.source === selectedId || edge.target === selectedId;
-            const bend = Math.max(50, (to.x - from.x) * .45);
-            return <path key={`${edge.source}-${edge.target}`} className={active ? 'active' : 'dimmed'} d={`M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`} />;
-          })}
-          {nodes.map((node) => {
-            const point = graph.points.get(node.concept.id)!;
-            const dimmed = selected && !adjacent.has(node.concept.id);
-            return <g key={node.concept.id} className={`graph-node ${node.status.toLowerCase()} ${selectedId === node.concept.id ? "selected" : ""} ${dimmed ? 'dimmed' : ''}`} transform={`translate(${point.x},${point.y})`} onClick={() => setSelectedId(node.concept.id)} tabIndex={0} role="button" aria-label={`${t('selectConcept')} ${node.concept.name}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(node.concept.id); } }}><circle r={node.status === "REVIEW" ? 28 : 23} /><circle className="inner" r="8" /><text y="43"><title>{node.concept.name}</title>{shortLabel(node.concept.name)}</text><text className="node-status" y="59">{statusText(node.status)}</text></g>;
-          })}
-        </svg>
+        <ReactFlow nodes={flowNodes} edges={flowEdges} fitView nodesDraggable={false} nodesConnectable={false} elementsSelectable nodesFocusable edgesFocusable onNodeClick={(_, node) => { setSelectedId(node.id); setSelectedRelationId(''); }} onEdgeClick={(_, edge) => { if (!edge.id.startsWith('legacy:')) { setSelectedRelationId(edge.id); setActivityType('RELATION'); } }}><Background gap={24} size={1} /><Controls showInteractive={false} /></ReactFlow>
       </div>
-      <Inspector node={selected} statusText={statusText} />
+      {selectedRelation ? <aside className="inspector"><small>{selectedRelation.relation_type} · {selectedRelation.provenance}</small><h2>{selectedRelation.statement}</h2><section><h3>Justificativa</h3><p>{selectedRelation.justification}</p></section><section><h3>Trecho de origem</h3><p>{selectedRelation.source_excerpt}</p></section><button type="button" onClick={() => { setSelectedRelationId(''); setActivityType('APPLICATION'); }}>Voltar ao conceito</button></aside> : <Inspector node={selected} statusText={statusText} />}
     </section>
+    <section className="map-active-section"><h2>Investigar e reconstruir</h2><p>As relações com fonte aparecem em linha contínua. Relações legadas são hipóteses sem justificativa verificada.</p><ul>{relations.map((relation) => <li key={relation.id}><button type="button" onClick={() => { setSelectedRelationId(relation.id); setActivityType('RELATION'); }}>{relation.statement}</button> <small>{relation.relation_type}</small></li>)}</ul><form onSubmit={(event) => { event.preventDefault(); void assess(); }}><label>Atividade<select value={activityType} onChange={(event) => setActivityType(event.target.value === 'RELATION' ? 'RELATION' : event.target.value === 'RETENTION' ? 'RETENTION' : 'APPLICATION')}><option value="APPLICATION">Aplicação</option><option value="RETENTION">Retomada voluntária</option>{selectedRelation && <option value="RELATION">Reconstruir relação</option>}</select></label><p>{activityType === 'RELATION' ? selectedRelation?.statement : selected?.question.text}</p><label>Sua resposta<textarea minLength={20} maxLength={20000} required value={activityAnswer} onChange={(event) => setActivityAnswer(event.target.value)} /></label><label><input type="checkbox" checked={assisted} onChange={(event) => setAssisted(event.target.checked)} /> Usei pistas ou consultei o material</label><button disabled={activityBusy || activityAnswer.trim().length < 20 || (activityType === 'RELATION' && !selectedRelation)}>{activityBusy ? 'Avaliando…' : 'Avaliar resposta'}</button></form><h3>Justificar uma nova ligação</h3><form onSubmit={(event) => { event.preventDefault(); void createRelation(); }}><p>Origem: {selected?.concept.name ?? 'Selecione um conceito'}</p><label>Destino<select required value={newRelationTarget} onChange={(event) => setNewRelationTarget(event.target.value)}><option value="">Selecione</option>{nodes.filter(({ concept }) => concept.id !== selectedId).map(({ concept }) => <option key={concept.id} value={concept.id}>{concept.name}</option>)}</select></label><label>Tipo<select value={newRelationType} onChange={(event) => setNewRelationType(event.target.value as typeof newRelationType)}>{(['REQUIRES','ENABLES','CONTRASTS','APPLIES_TO','PART_OF'] as const).map((type) => <option key={type} value={type}>{type}</option>)}</select></label><label>Proposição<input required minLength={5} maxLength={500} value={newRelationStatement} onChange={(event) => setNewRelationStatement(event.target.value)} /></label><label>Justificativa<textarea required minLength={5} maxLength={1000} value={newRelationJustification} onChange={(event) => setNewRelationJustification(event.target.value)} /></label><label>Trecho exato do material<textarea required value={newRelationExcerpt} onChange={(event) => setNewRelationExcerpt(event.target.value)} /></label><button disabled={activityBusy || !selected}>Guardar relação</button></form>{activityMessage && <p role="status">{activityMessage}</p>}<h3>Histórico de evidências</h3><ul>{evidence.map((event) => <EvidenceRow key={event.id} event={event} locale={locale} onContested={() => { void api.evidence(materialId).then(setEvidence).catch(() => {}); }} />)}</ul></section>
     <section className="map-insights"><article><span>{t('dependencyChain')}</span><h3>{review ? `${review} ${t('needsRefinement')}` : t('noBlindSpots')}</h3><p>{review ? t('reviewDescription') : t('noPendingDiagnostics')}</p></article><article><span>{t('strongFoundations')}</span><h3>{validated ? `${validated} ${t('consolidatedConcepts')}` : t('awaitingValidation')}</h3><p>{t('approvalExplanation')}</p></article><article><span>{t('nextInvestigation')}</span><h3>{selected?.concept.name ?? t('selectConcept')}</h3><p>{selected?.question.text ?? t('selectMapPoint')}</p></article></section>
   </>;
 }
@@ -150,4 +187,11 @@ function Inspector({ node, statusText }: { node: KnowledgeNode | null; statusTex
   const evaluation = node.lastAttempt?.evaluation;
   const gap = evaluation?.gap ?? evaluation?.logicalBreak ?? evaluation?.missingPremises[0];
   return <aside className="inspector"><small>{t('mapFragment')} · {node.concept.kind}</small><h2>{node.concept.name}</h2><span className={`status-badge ${node.status.toLowerCase()}`}>{statusText(node.status)}</span><section><h3>{t('focusPrinciple')}</h3><p>{node.concept.description}</p></section>{evaluation && <section className="inspector-diagnostic"><h3>{t('latestDiagnostic')}</h3><strong>{t('correctPoint')}</strong><p>{evaluation.strength ?? evaluation.feedback}</p>{evaluation.status !== 'PASSED' && <><strong>{t('missingPoint')}</strong><p>{gap ?? evaluation.feedback}</p></>}<strong>{t('nextStep')}</strong><p>{evaluation.nextAction ?? evaluation.feedback}</p></section>}<section className="next-prompt"><h3>{t('nextMasteryChallenge')}</h3><p>{node.question.text}</p></section><Link className="exercise-link" href={`/estudar?material=${node.concept.materialId}&concept=${node.concept.id}`}>{t('practiceConcept')} <Icon name="chevron" /></Link></aside>;
+}
+
+function EvidenceRow({ event, locale, onContested }: { event: LearningEvidence; locale: 'pt-BR' | 'en-US'; onContested: () => void }) {
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  return <li className="evidence-row"><strong>{event.activity_type} · {event.status}</strong><small>{new Date(event.created_at).toLocaleString(locale)} · {event.assisted ? (locale === 'pt-BR' ? 'com ajuda' : 'assisted') : (locale === 'pt-BR' ? 'sem ajuda declarada' : 'no assistance declared')}</small><details><summary>{locale === 'pt-BR' ? 'Resposta, diagnóstico e fonte' : 'Answer, diagnosis and source'}</summary><p>{event.prompt}</p><blockquote>{event.answer}</blockquote><p>{event.diagnosis}</p><blockquote>{event.source_excerpt}</blockquote></details>{event.evidence_contestations?.map((item) => <p key={item.id}>{locale === 'pt-BR' ? 'Contestação' : 'Contest'}: {item.reason}</p>)}{event.status !== 'SELF_REPORTED' && <form onSubmit={(submission) => { submission.preventDefault(); setBusy(true); setError(''); void api.contestEvidence(event.id, reason.trim()).then(() => { setReason(''); onContested(); }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause))).finally(() => setBusy(false)); }}><label>{locale === 'pt-BR' ? 'Contestar diagnóstico' : 'Contest diagnosis'}<input minLength={5} maxLength={2000} required value={reason} onChange={(change) => setReason(change.target.value)} /></label><button disabled={busy || reason.trim().length < 5}>{locale === 'pt-BR' ? 'Registrar contestação' : 'Record contest'}</button></form>}{error && <p role="alert">{error}</p>}</li>;
 }

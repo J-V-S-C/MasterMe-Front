@@ -14,20 +14,21 @@ const node = (id: string, name: string, prerequisiteIds: string[] = [], nextIds:
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
   const window = new Window();
-  Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, localStorage: window.localStorage });
+  class ResizeObserverStub { observe() {} unobserve() {} disconnect() {} }
+  Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, localStorage: window.localStorage, ResizeObserver: ResizeObserverStub, requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0), cancelAnimationFrame: (id: number) => clearTimeout(id) });
 });
 afterEach(() => { cleanup(); globalThis.fetch = originalFetch; });
 
-describe('Mapa do conhecimento', () => {
-  test('remove arestas transitivas para reduzir cruzamentos', () => {
+describe('Knowledge map', () => {
+  test('removes transitive edges to reduce crossings', () => {
     const nodes = [node('a', 'A', [], ['b', 'c']), node('b', 'B', ['a'], ['c']), node('c', 'C', ['a', 'b'])];
     expect(visibleGraphEdges(nodes)).toEqual([{ source: 'a', target: 'b' }, { source: 'b', target: 'c' }]);
     expect(visibleGraphEdges(nodes, true)).toHaveLength(3);
   });
 
-  test('seleciona o nó e atualiza o diagnóstico sem navegar', async () => {
+  test('selects a node and updates its diagnosis without navigation', async () => {
     const nodes = [node('a', 'Raiz', [], ['b']), node('b', 'Filho', ['a'])];
-    globalThis.fetch = (async (url: string) => new Response(JSON.stringify({ data: url.endsWith('/materials') ? [{ id: 'material-a', title: 'Material', content: 'Texto', locale: 'pt-BR', createdAt: '2026-01-01T00:00:00.000Z' }] : nodes }), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async (url: string) => new Response(JSON.stringify({ data: url.endsWith('/materials') ? [{ id: 'material-a', title: 'Material', content: 'Texto', locale: 'pt-BR', createdAt: '2026-01-01T00:00:00.000Z' }] : url.endsWith('/relations') || url.endsWith('/evidence') ? [] : nodes }), { status: 200 })) as typeof fetch;
     const view = render(<I18nProvider><KnowledgeMap /></I18nProvider>);
     const child = await view.findByLabelText('Selecionar conceito Filho');
     const locationBeforeSelection = window.location.href;

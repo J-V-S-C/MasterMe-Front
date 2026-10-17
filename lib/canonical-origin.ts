@@ -14,7 +14,7 @@ export function canonicalAppOrigin(
     return url.origin
   }
 
-  if (nodeEnv === 'production') throw new Error('PUBLIC_APP_URL é obrigatória em produção.')
+  if (nodeEnv === 'production') throw new Error('PUBLIC_APP_URL is required in production.')
   if (requestUrl) {
     const candidate = new URL(requestUrl)
     if (LOCAL_HOSTS.has(candidate.hostname) && ['http:', 'https:'].includes(candidate.protocol)) return candidate.origin
