@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { buildBackendHeaders, InvalidProxyHeaderError } from './bff-headers'
 
-describe('allowlist de headers do BFF', () => {
-  test('encaminha Idempotency-Key somente ao checkout autenticado', () => {
+describe('BFF header allowlist', () => {
+  test('forwards Idempotency-Key only to authenticated checkout', () => {
     const request = new Request('https://masterme.test/api/billing/checkouts', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'idempotency-key': 'checkout.PRO.safe-key', cookie: 'secret=never-forward' },
@@ -16,7 +16,7 @@ describe('allowlist de headers do BFF', () => {
     expect(otherRoute.get('idempotency-key')).toBeNull()
   })
 
-  test('rejeita chave ausente ou fora do contrato antes do backend', () => {
+  test('rejects missing or invalid keys before reaching the backend', () => {
     expect(() => buildBackendHeaders(new Request('https://masterme.test/api/billing/checkouts', { method: 'POST' }), 'token', ['billing', 'checkouts'])).toThrow(InvalidProxyHeaderError)
     expect(() => buildBackendHeaders(new Request('https://masterme.test/api/billing/checkouts', { method: 'POST', headers: { 'idempotency-key': 'bad key' } }), 'token', ['billing', 'checkouts'])).toThrow(InvalidProxyHeaderError)
   })

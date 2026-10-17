@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { loginHrefFor, planLoginHref, safeInternalDestination } from './auth-redirect'
 import { isPublicPage } from './public-routes'
 
-describe('redirects internos de autenticação', () => {
-  test('preserva apenas destinos e planos conhecidos', () => {
+describe('internal authentication redirects', () => {
+  test('preserves only known destinations and plans', () => {
     expect(safeInternalDestination('/estudar')).toBe('/estudar')
     expect(safeInternalDestination('/mapa-do-conhecimento')).toBe('/mapa-do-conhecimento')
     expect(safeInternalDestination('/pratica')).toBe('/pratica')
@@ -11,7 +11,7 @@ describe('redirects internos de autenticação', () => {
     expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')).toBe('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')
   })
 
-  test('recusa origem externa, protocolo relativo, plano e parâmetros desconhecidos', () => {
+  test('rejects external origin, protocol-relative URLs, plans and unknown parameters', () => {
     expect(safeInternalDestination('https://example.com/estudar')).toBe('/estudar')
     expect(safeInternalDestination('//example.com/estudar')).toBe('/estudar')
     expect(safeInternalDestination('javascript:alert(1)')).toBe('/estudar')
@@ -22,14 +22,14 @@ describe('redirects internos de autenticação', () => {
     expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111&next=https://example.com')).toBe('/estudar')
   })
 
-  test('monta CTA somente com o identificador do plano', () => {
+  test('builds CTA using only the plan identifier', () => {
     expect(decodeURIComponent(planLoginHref('PRO'))).toBe('/entrar?next=/estudar?plan=PRO')
     expect(loginHrefFor('/pratica')).toBe('/entrar?next=%2Fpratica')
   })
 })
 
-describe('rotas públicas', () => {
-  test('mantém somente aquisição e autenticação fora do gate', () => {
+describe('public routes', () => {
+  test('keeps only acquisition and authentication outside the gate', () => {
     expect(isPublicPage('/')).toBe(true)
     expect(isPublicPage('/entrar')).toBe(true)
     expect(isPublicPage('/auth/callback')).toBe(true)

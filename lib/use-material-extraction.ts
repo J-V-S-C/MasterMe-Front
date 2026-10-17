@@ -28,7 +28,7 @@ export function useMaterialExtraction(materialId: string, onReady: () => Promise
         readyNotified.current = true
         await readyCallback.current()
       } else if (previousStatus === null) {
-        // O mapa já é carregado pela tela ao trocar de material. Não duplique esse GET.
+        // The screen loads the map when the material changes. Do not duplicate this GET.
         readyNotified.current = true
       }
     }

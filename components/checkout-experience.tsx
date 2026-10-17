@@ -25,9 +25,11 @@ export function CheckoutQueryExperience() {
 export function CheckoutExperience({
   plan,
   navigate = (url) => window.location.assign(url),
+  paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true',
 }: {
   plan: RequestedPlan | null
   navigate?: (url: string) => void
+  paymentsEnabled?: boolean
 }) {
   const { locale, t } = useI18n()
   const [catalog, setCatalog] = useState<BillingCatalog | null>(null)
@@ -40,13 +42,13 @@ export function CheckoutExperience({
   const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    if (!plan || plan === 'FREE') return
+    if (!paymentsEnabled || !plan || plan === 'FREE') return
     let active = true
     void api.billingCatalog().then((value) => { if (active) setCatalog(value) }).catch(() => { if (active) setError(t('checkoutUnavailable')) }).finally(() => { if (active) setLoadingCatalog(false) })
     return () => { active = false }
-  }, [plan, t])
+  }, [plan, paymentsEnabled, t])
   useEffect(() => {
-    if (!plan || plan === 'FREE' || dismissed) return
+    if (!paymentsEnabled || !plan || plan === 'FREE' || dismissed) return
     const previousFocus = document.activeElement as HTMLElement | null
     titleRef.current?.focus()
     const handleKey = (event: KeyboardEvent) => {
@@ -63,9 +65,9 @@ export function CheckoutExperience({
     }
     window.addEventListener('keydown', handleKey)
     return () => { window.removeEventListener('keydown', handleKey); previousFocus?.focus() }
-  }, [plan, dismissed])
+  }, [plan, paymentsEnabled, dismissed])
 
-  if (plan === 'FREE' || dismissed) return null
+  if (!paymentsEnabled || plan === 'FREE' || dismissed) return null
   if (!plan) return <p className="checkout-query-error" role="alert">{t('checkoutInvalidPlan')}</p>
   const selected = catalog?.plans.find((candidate) => candidate.id === plan)
   const price = selected ? new Intl.NumberFormat(locale, { style: 'currency', currency: catalog?.currency ?? 'BRL' }).format(selected.priceInCents / 100) : '—'

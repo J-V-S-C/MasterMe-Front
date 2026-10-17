@@ -14,8 +14,8 @@ beforeEach(() => {
 })
 afterEach(() => cleanup())
 
-describe('internacionalização', () => {
-  test('usa pt-BR por padrão', () => {
+describe('internationalization', () => {
+  test('defaults to pt-BR', () => {
     const view = render(<I18nProvider><Probe /></I18nProvider>)
     expect(view.getByText('pt-BR:Estudar')).toBeTruthy()
     expect(view.getByText(/até 8 MiB/)).toBeTruthy()
@@ -26,7 +26,7 @@ describe('internacionalização', () => {
     expect(view.getByText('Pagamento em confirmação')).toBeTruthy()
   })
 
-  test('restaura en-US e atualiza o lang do documento', async () => {
+  test('restores en-US and updates the document lang', async () => {
     window.localStorage.setItem('masterme:locale', 'en-US')
     const view = render(<I18nProvider><Probe /></I18nProvider>)
     await waitFor(() => expect(view.getByText('en-US:Study')).toBeTruthy())

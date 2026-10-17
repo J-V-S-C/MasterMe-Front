@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { studyState } from './study-state';
 
-describe('estado de estudo', () => {
-  test('mantém sessões e rascunhos separados por conceito', () => {
+describe('study state', () => {
+  test('keeps sessions and drafts separate by concept', () => {
     const items = new Map<string, string>();
     globalThis.sessionStorage = {
       getItem: (key: string) => items.get(key) ?? null,

@@ -11,9 +11,10 @@ const links = [
   { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/estudar', id: 'study', icon: 'book' },
   { label: 'navMap', accessibleLabel: 'navMapLabel', href: '/mapa-do-conhecimento', id: 'map', icon: 'brain' },
   { label: 'navPractice', accessibleLabel: 'navPracticeLabel', href: '/pratica', id: 'practice', icon: 'sparkles' },
+  { label: 'navLibrary', accessibleLabel: 'navLibraryLabel', href: '/biblioteca', id: 'library', icon: 'book' },
 ] as const
 
-export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'practice' }) {
+export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'practice' | 'library' }) {
   const { locale, setLocale, t } = useI18n()
   return <header className="site-header"><div className="header-content">
     <Link className="brand" href="/estudar" aria-label={t('brandLabel')}><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>

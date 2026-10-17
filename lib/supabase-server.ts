@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 const configuration = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  if (!url || !key) throw new Error('Supabase Auth não está configurado.')
+  if (!url || !key) throw new Error('Supabase Auth is not configured.')
   return { url, key }
 }
 

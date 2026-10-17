@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-describe('guardrails da release frontend', () => {
-  test('CI usa validação única, auditoria e smoke do build', async () => {
+describe('frontend release guardrails', () => {
+  test('CI uses a single validation, audit and build smoke test', async () => {
     const workflow = await read('.github/workflows/ci.yml')
     expect(workflow).toContain('bun run validate')
     expect(workflow).toContain('bun run validate:dependencies')
@@ -12,7 +12,7 @@ describe('guardrails da release frontend', () => {
     expect(workflow).toContain('cancel-in-progress: true')
   })
 
-  test('deploy é exclusivo de main e prova Next antes do Worker', async () => {
+  test('deployment is exclusive to main and validates Next before the Worker', async () => {
     const workflow = await read('.github/workflows/deploy.yml')
     expect(workflow).toContain('branches: [main]')
     expect(workflow).toContain("if: github.ref == 'refs/heads/main'")
@@ -22,7 +22,7 @@ describe('guardrails da release frontend', () => {
     expect(workflow).not.toContain('pull_request:')
   })
 
-  test('secret de observabilidade permanece server-only e é verificado no artefato', async () => {
+  test('observability secret remains server-only and is checked in the artifact', async () => {
     const [workflow, template] = await Promise.all([read('.github/workflows/deploy.yml'), read('.env.example')])
     expect(workflow).toContain('rg --quiet --fixed-strings')
     expect(template).toContain('OBSERVABILITY_INGEST_TOKEN=')

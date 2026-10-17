@@ -3,12 +3,14 @@ node_modules/
 
 # Next.js and build output
 .next/
+next-env.d.ts
 out/
 dist/
 .vercel/
 
 # Tests and TypeScript caches
 coverage/
+test-results/
 *.lcov
 *.tsbuildinfo
 
