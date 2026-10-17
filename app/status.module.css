@@ -1,0 +1,8 @@
+.page { width: 100%; min-height: 100vh; max-width: none; display: grid; place-items: center; margin: 0; padding: 24px; background: radial-gradient(circle at 70% 20%, var(--accent-medium), transparent 32rem), var(--bg); }
+.card { width: min(620px, 100%); padding: clamp(28px, 6vw, 58px); border: 1px solid var(--line-soft); border-radius: 20px; background: var(--low); box-shadow: 0 28px 75px var(--shadow); }
+.card > span { color: var(--amber); font-size: 11px; font-weight: 800; letter-spacing: .13em; }
+.card h1 { margin: 13px 0; font: 600 clamp(34px, 6vw, 52px)/1.08 "Iowan Old Style", "Palatino Linotype", Georgia, serif; }
+.card p { margin: 0; color: var(--muted); line-height: 1.7; }
+.card div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.card a, .card button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 9px 15px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: var(--deep); font-weight: 700; text-decoration: none; }
+.card .primary, .card button { border-color: var(--blue); color: var(--blue-ink); background: var(--blue); }

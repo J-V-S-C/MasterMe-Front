@@ -1,16 +1,16 @@
-import { authenticatedSession } from '../../../lib/supabase-server'
+import { accessTokenForProxy } from '../../../lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request): Promise<Response> {
-  const session = await authenticatedSession()
-  if (!session) return Response.json({ message: 'Entre na sua conta para continuar.' }, { status: 401 })
+  const accessToken = await accessTokenForProxy()
+  if (!accessToken) return Response.json({ message: 'Entre na sua conta para continuar.' }, { status: 401 })
   const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3333'
   const lastEventId = request.headers.get('last-event-id')
   const upstream = await fetch(`${backendUrl}/api/events`, {
     cache: 'no-store',
     headers: {
-      authorization: `Bearer ${session.accessToken}`,
+      authorization: `Bearer ${accessToken}`,
       ...(lastEventId ? { 'last-event-id': lastEventId } : {}),
     },
     signal: request.signal,
