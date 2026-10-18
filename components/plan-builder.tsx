@@ -90,8 +90,8 @@ function PlanEditor({ plan, materials, goals, tasks, busy, operate, labels: t }:
     <button disabled={busy}>{t.save}</button>
     {taskIds.length > 0 && <div><strong>{t.tasks}</strong><ol>{taskIds.map((id, index) => <li key={id}>
       {planTasks.find((task) => task.id === id)?.title ?? id}
-      <button type="button" disabled={busy || index === 0} onClick={() => setTaskIds((current) => swap(current, index, -1))} aria-label={`${t.up}: ${id}`}>↑</button>
-      <button type="button" disabled={busy || index === taskIds.length - 1} onClick={() => setTaskIds((current) => swap(current, index, 1))} aria-label={`${t.down}: ${id}`}>↓</button>
+      <button type="button" disabled={busy || index === 0} onClick={() => setTaskIds((current) => swap(current, index, -1))} aria-label={`${t.up}: ${planTasks.find((task) => task.id === id)?.title ?? id}`}>↑</button>
+      <button type="button" disabled={busy || index === taskIds.length - 1} onClick={() => setTaskIds((current) => swap(current, index, 1))} aria-label={`${t.down}: ${planTasks.find((task) => task.id === id)?.title ?? id}`}>↓</button>
     </li>)}</ol><button type="button" disabled={busy} onClick={() => void operate(() => api.reorderPlanTasks(plan.id, taskIds))}>{t.saveTasks}</button></div>}
 
   </form>;
