@@ -15,6 +15,7 @@ import { useI18n } from "../lib/i18n";
 import { useRealtimeRefresh } from "./realtime-provider";
 import { useBilling } from "./billing-provider";
 import { CreditBalance } from "./credit-balance";
+import { MaterialReader } from './material-reader';
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
@@ -24,6 +25,8 @@ export function LiveStudy() {
   const searchParams = useSearchParams();
   const requestedMaterialId = searchParams.get("material");
   const requestedConceptId = searchParams.get("concept");
+  const requestedUnitId = searchParams.get('unit');
+  const requestedSourceExcerpt = searchParams.get('source');
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [material, setMaterial] = useState<Material | null>(null);
   const [materialId, setMaterialId] = useState("");
@@ -249,7 +252,7 @@ export function LiveStudy() {
     </details>
     {error && <p className="form-error" role="alert">{error}</p>}
     {selected && selected.concept.generatedLocale !== locale && <section className="localize-callout"><Icon name="warning" /><div><strong>{t('localizeTitle')}</strong><span>{t('localizeDescription')}</span></div><ActionButton variant="secondary" disabled={localizing} onClick={() => void localize()}>{localizing ? t('localizing') : t('localizeAction')}</ActionButton></section>}
-    {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid ${hasConcepts ? "concepts-ready" : ""}`}><section className="reading-pane"><div className="pane-title"><span><Icon name="book" />{t('referenceMaterial')}</span></div><article className="reading-card"><h1>{material?.title}</h1><p className="source-content">{material?.content}</p></article></section><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o caso-limite.")); } finally { setSubmitting(false); } }} /> : <section className="empty-state compact"><Icon name="brain" /><h1>{hasConcepts ? t('chooseConcept') : t('contextNotExtracted')}</h1><p>{hasConcepts ? t('chooseConceptDescription') : t('contextNotExtractedDescription')}</p></section>}</section></div>}
+    {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid ${hasConcepts ? "concepts-ready" : ""}`}><section className="reading-pane"><div className="pane-title"><span><Icon name="book" />{t('referenceMaterial')}</span></div><MaterialReader material={material} requestedUnitId={requestedUnitId} sourceExcerpt={requestedSourceExcerpt ?? selected?.concept.sourceExcerpt} /></section><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o caso-limite.")); } finally { setSubmitting(false); } }} /> : <section className="empty-state compact"><Icon name="brain" /><h1>{hasConcepts ? t('chooseConcept') : t('contextNotExtracted')}</h1><p>{hasConcepts ? t('chooseConceptDescription') : t('contextNotExtractedDescription')}</p></section>}</section></div>}
   </>;
 }
 

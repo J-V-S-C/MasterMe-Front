@@ -213,7 +213,7 @@ export type ConceptRelation = { id: string; material_id: string; from_concept_id
 export type Shelf = { id: string; name: string; shelf_materials: Array<{ material_id: string }> };
 export type ConceptCard = { concept_id: string; note: string; concepts: { name: string; material_id: string; source_excerpt: string } };
 export type LearningGoal = { id: string; title: string; description: string; deadline: string | null };
-export type StudyPlan = { id: string; title: string; goal_id: string | null };
+export type StudyPlan = { id: string; title: string; goal_id: string | null; study_plan_materials: Array<{ material_id: string; ordinal: number }> };
 export type TaskActivity = 'READ' | 'EXPLAIN' | 'RELATE' | 'APPLY' | 'REVISIT' | 'PRACTICE';
 export type StudyTask = { id: string; title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'DONE' | 'REMOVED'; reason: string };
 export type StudyAvailability = { weekday: number; minutes: number; timezone: string };
@@ -367,6 +367,8 @@ export function uploadMaterial(
 
 export const api = {
   outline: (materialId: string) => call<EditorialUnit[]>(`/learning/materials/${materialId}/outline`),
+  readingPosition: (materialId: string) => call<{ offset: number }>(`/learning/materials/${materialId}/reading-position`),
+  setReadingPosition: (materialId: string, offset: number) => call<{ offset: number }>(`/learning/materials/${materialId}/reading-position`, 'PUT', { offset }),
   relations: (materialId: string) => call<ConceptRelation[]>(`/learning/materials/${materialId}/relations`),
   createRelation: (input: { materialId: string; fromConceptId: string; toConceptId: string; relationType: string; statement: string; justification: string; sourceExcerpt: string }) => call<ConceptRelation>('/learning/relations', 'POST', input),
   shelves: () => call<Shelf[]>('/learning/shelves'),
@@ -379,7 +381,8 @@ export const api = {
   goals: () => call<LearningGoal[]>('/learning/goals'),
   createGoal: (title: string, description: string, deadline?: string) => call<LearningGoal>('/learning/goals', 'POST', { title, description, deadline }),
   plans: () => call<StudyPlan[]>('/learning/plans'),
-  createPlan: (title: string, goalId?: string) => call<StudyPlan>('/learning/plans', 'POST', { title, goalId }),
+  createPlan: (title: string, goalId?: string, materialIds: string[] = []) => call<StudyPlan>('/learning/plans', 'POST', { title, goalId, materialIds }),
+  updatePlan: (id: string, input: { title?: string; goalId?: string | null; materialIds?: string[] }) => call<StudyPlan>(`/learning/plans/${id}`, 'PATCH', input),
   tasks: () => call<StudyTask[]>('/learning/tasks'),
   createTask: (input: { title: string; activityType: TaskActivity; planId?: string; materialId?: string; conceptId?: string; unitId?: string; durationMinutes?: number; scheduledAt?: string; reason?: string }) => call<StudyTask>('/learning/tasks', 'POST', input),
   updateTask: (id: string, input: { title?: string; durationMinutes?: number | null; scheduledAt?: string | null; status?: StudyTask['status'] }) => call<StudyTask>(`/learning/tasks/${id}`, 'PATCH', input),
@@ -393,6 +396,7 @@ export const api = {
   evaluateActivity: (input: { requestId: string; conceptId?: string; relationId?: string; taskId?: string; activityType: LearningEvidence['activity_type']; answer: string; assisted: boolean }) => call<{ event: LearningEvidence; suggestion: StudySuggestion | null }>('/learning/activities/answers', 'POST', input),
   materials: () => call<MaterialSummary[]>('/materials'),
   material: (id: string) => call<Material>(`/materials/${id}`),
+  deleteMaterial: (id: string) => call<void>(`/materials/${id}`, 'DELETE'),
   createMaterial: (title: string, content: string, locale: SupportedLocale = 'pt-BR') =>
     call<Material>('/materials', 'POST', { title, content, locale }),
   extractConcepts: (materialId: string) =>
