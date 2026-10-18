@@ -215,7 +215,7 @@ export type ConceptCard = { concept_id: string; note: string; concepts: { name: 
 export type LearningGoal = { id: string; title: string; description: string; deadline: string | null };
 export type StudyPlan = { id: string; title: string; goal_id: string | null; study_plan_materials: Array<{ material_id: string; ordinal: number }> };
 export type TaskActivity = 'READ' | 'EXPLAIN' | 'RELATE' | 'APPLY' | 'REVISIT' | 'PRACTICE';
-export type StudyTask = { id: string; title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'DONE' | 'REMOVED'; reason: string };
+export type StudyTask = { id: string; sort_order: number;  title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'DONE' | 'REMOVED'; reason: string };
 export type StudyAvailability = { weekday: number; minutes: number; timezone: string };
 export type StudySuggestion = { id: string; title: string; reason: string; status: 'PENDING' | 'ACCEPTED' | 'IGNORED'; task_id: string | null; learning_evidence: { material_id: string; source_excerpt: string; activity_type: string; status: string } };
 export type LearningEvidence = { id: string; activity_type: 'COMPREHENSION' | 'RELATION' | 'APPLICATION' | 'RETENTION'; prompt: string; answer: string; status: EvaluationStatus | 'SELF_REPORTED' | 'CONTESTED'; assisted: boolean; diagnosis: string; source_excerpt: string; created_at: string; evidence_contestations?: Array<{ id: string; reason: string; created_at: string }> };
@@ -383,6 +383,7 @@ export const api = {
   plans: () => call<StudyPlan[]>('/learning/plans'),
   createPlan: (title: string, goalId?: string, materialIds: string[] = []) => call<StudyPlan>('/learning/plans', 'POST', { title, goalId, materialIds }),
   updatePlan: (id: string, input: { title?: string; goalId?: string | null; materialIds?: string[] }) => call<StudyPlan>(`/learning/plans/${id}`, 'PATCH', input),
+  reorderPlanTasks: (id: string, taskIds: string[]) => call<StudyTask[]>(`/learning/plans/${id}/tasks/order`, 'PUT', { taskIds }),
   tasks: () => call<StudyTask[]>('/learning/tasks'),
   createTask: (input: { title: string; activityType: TaskActivity; planId?: string; materialId?: string; conceptId?: string; unitId?: string; durationMinutes?: number; scheduledAt?: string; reason?: string }) => call<StudyTask>('/learning/tasks', 'POST', input),
   updateTask: (id: string, input: { title?: string; durationMinutes?: number | null; scheduledAt?: string | null; status?: StudyTask['status'] }) => call<StudyTask>(`/learning/tasks/${id}`, 'PATCH', input),

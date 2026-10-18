@@ -1,19 +1,20 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { api, type LearningGoal, type MaterialSummary, type StudyPlan } from '../lib/api';
+import { api, type LearningGoal, type MaterialSummary, type StudyPlan, type StudyTask } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import styles from './library-workspace.module.css';
 
 const labels = {
-  'pt-BR': { newPlan: 'Novo roteiro', title: 'Título', goal: 'Objetivo', noGoal: 'Sem objetivo', materials: 'Materiais na ordem escolhida', add: 'Adicionar', save: 'Salvar roteiro', up: 'Subir', down: 'Descer', remove: 'Retirar', none: 'Nenhum material vinculado: há uma lacuna no acervo deste objetivo.', unverified: 'Materiais vinculados; confirme se cobrem o objetivo antes de considerar o estudo planejado.', limit: 'Máximo de 30 materiais por roteiro.' },
-  'en-US': { newPlan: 'New plan', title: 'Title', goal: 'Goal', noGoal: 'No goal', materials: 'Materials in your chosen order', add: 'Add', save: 'Save plan', up: 'Move up', down: 'Move down', remove: 'Remove', none: 'No material linked: this goal has a gap in your collection.', unverified: 'Materials linked; confirm that they cover the goal before considering it planned.', limit: 'Maximum of 30 materials per plan.' },
+  'pt-BR': { newPlan: 'Novo roteiro', title: 'Título', goal: 'Objetivo', noGoal: 'Sem objetivo', materials: 'Materiais na ordem escolhida', add: 'Adicionar', save: 'Salvar roteiro', up: 'Subir', down: 'Descer', remove: 'Retirar', none: 'Nenhum material vinculado: há uma lacuna no acervo deste objetivo.', unverified: 'Materiais vinculados; confirme se cobrem o objetivo antes de considerar o estudo planejado.', limit: 'Máximo de 30 materiais por roteiro.', tasks: 'Ordem das tarefas', saveTasks: 'Salvar ordem das tarefas' },
+  'en-US': { newPlan: 'New plan', title: 'Title', goal: 'Goal', noGoal: 'No goal', materials: 'Materials in your chosen order', add: 'Add', save: 'Save plan', up: 'Move up', down: 'Move down', remove: 'Remove', none: 'No material linked: this goal has a gap in your collection.', unverified: 'Materials linked; confirm that they cover the goal before considering it planned.', limit: 'Maximum of 30 materials per plan.', tasks: 'Task order', saveTasks: 'Save task order' },
 } as const;
 
-export function PlanBuilder({ materials, goals, plans, busy, operate }: {
+export function PlanBuilder({ materials, goals, plans, tasks, busy, operate }: {
   materials: MaterialSummary[];
   goals: LearningGoal[];
   plans: StudyPlan[];
+  tasks: StudyTask[];
   busy: boolean;
   operate: (action: () => Promise<unknown>) => Promise<void>;
 }) {
@@ -40,18 +41,21 @@ export function PlanBuilder({ materials, goals, plans, busy, operate }: {
       {materialIds.length >= 30 && <p>{t.limit}</p>}
       <button disabled={busy}>{t.add}</button>
     </form>
-    <ul>{plans.map((plan) => <li key={plan.id}><PlanEditor plan={plan} materials={materials} goals={goals} busy={busy} operate={operate} labels={t} /></li>)}</ul>
+    <ul>{plans.map((plan) => <li key={plan.id}><PlanEditor plan={plan} materials={materials} goals={goals} tasks={tasks} busy={busy} operate={operate} labels={t} /></li>)}</ul>
   </>;
 }
 
-function PlanEditor({ plan, materials, goals, busy, operate, labels: t }: {
+function PlanEditor({ plan, materials, goals, tasks, busy, operate, labels: t }: {
   plan: StudyPlan;
   materials: MaterialSummary[];
   goals: LearningGoal[];
+  tasks: StudyTask[];
   busy: boolean;
   operate: (action: () => Promise<unknown>) => Promise<void>;
   labels: typeof labels['pt-BR'] | typeof labels['en-US'];
 }) {
+  const planTasks = tasks.filter((task) => task.plan_id === plan.id && task.status !== 'REMOVED').sort((a, b) => a.sort_order - b.sort_order);
+  const [taskIds, setTaskIds] = useState(planTasks.map(({ id }) => id));
   const [title, setTitle] = useState(plan.title);
   const [goalId, setGoalId] = useState(plan.goal_id ?? '');
   const [ids, setIds] = useState(plan.study_plan_materials.map(({ material_id }) => material_id));
@@ -59,6 +63,7 @@ function PlanEditor({ plan, materials, goals, busy, operate, labels: t }: {
     setTitle(plan.title); setGoalId(plan.goal_id ?? '');
     setIds(plan.study_plan_materials.map(({ material_id }) => material_id));
   }, [plan]);
+  useEffect(() => { setTaskIds(planTasks.map(({ id }) => id)); }, [tasks, plan.id]);
   const move = (index: number, direction: -1 | 1) => setIds((current) => {
     const next = [...current];
     const other = index + direction;
@@ -83,5 +88,19 @@ function PlanEditor({ plan, materials, goals, busy, operate, labels: t }: {
     {ids.length >= 30 && <p>{t.limit}</p>}
     {goalId && <p>{ids.length ? t.unverified : t.none}</p>}
     <button disabled={busy}>{t.save}</button>
+    {taskIds.length > 0 && <div><strong>{t.tasks}</strong><ol>{taskIds.map((id, index) => <li key={id}>
+      {planTasks.find((task) => task.id === id)?.title ?? id}
+      <button type="button" disabled={busy || index === 0} onClick={() => setTaskIds((current) => swap(current, index, -1))} aria-label={`${t.up}: ${id}`}>↑</button>
+      <button type="button" disabled={busy || index === taskIds.length - 1} onClick={() => setTaskIds((current) => swap(current, index, 1))} aria-label={`${t.down}: ${id}`}>↓</button>
+    </li>)}</ol><button type="button" disabled={busy} onClick={() => void operate(() => api.reorderPlanTasks(plan.id, taskIds))}>{t.saveTasks}</button></div>}
+
   </form>;
+}
+
+function swap(ids: string[], index: number, direction: -1 | 1): string[] {
+  const target = index + direction;
+  if (target < 0 || target >= ids.length) return ids;
+  const next = [...ids];
+  [next[index], next[target]] = [next[target]!, next[index]!];
+  return next;
 }
