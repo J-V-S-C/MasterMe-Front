@@ -7,7 +7,7 @@ import { invalidateApiCache } from '../lib/api'
 
 const originalFetch = globalThis.fetch
 const catalog = { currency: 'BRL', billingType: 'ONE_TIME', plans: [
-  { id: 'FREE', name: 'Gratuito', priceInCents: 0, durationDays: null, dailyCreditLimit: 24, periodCreditLimit: 120 },
+  { id: 'FREE', name: 'Gratuito', priceInCents: 0, durationDays: null, dailyCreditLimit: 100, periodCreditLimit: 100 },
   { id: 'ESSENTIAL', name: 'Essencial', priceInCents: 2_990, durationDays: 30, dailyCreditLimit: 120, periodCreditLimit: 1_500 },
   { id: 'PRO', name: 'Pro', priceInCents: 24_900, durationDays: 365, dailyCreditLimit: 180, periodCreditLimit: 15_000 },
 ], creditWeights: {}, fallbackPolicy: '' }

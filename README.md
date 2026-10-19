@@ -3,6 +3,11 @@
 Interface web do MasterMe construída com Next.js, React e TypeScript. A versão
 de produção é adaptada pelo vinext e executada em Cloudflare Workers.
 
+Antes de alterar a interface ou seus componentes, leia
+[`skills/front-skill.md`](skills/front-skill.md) e
+[`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md). Atualize o design system quando uma
+decisão visual durável mudar.
+
 ## Acesso
 
 - Aplicação: <https://masterme-frontend.joaovictorcortabitart.workers.dev>
@@ -93,7 +98,8 @@ independente antes da conclusão.
 No lançamento gratuito, `NEXT_PUBLIC_PAYMENTS_ENABLED` fica `false` no build:
 a landing mostra só o plano livre e a experiência de checkout não abre, mesmo
 com `?plan=PRO`. A API deve estar no mesmo modo, com `INFINITEPAY_HANDLE` vazio.
-O plano gratuito oferece 24 créditos/dia e 120/mês; valores exibidos na landing
+O plano gratuito oferece 100 créditos/dia, sem teto mensal; cada tentativa real
+de geração no Gemini consome um crédito. Os valores exibidos na landing
 devem acompanhar o catálogo e a função de reserva do backend.
 
 - Preço, plano, saldo e confirmação de pagamento vêm da API; o cliente não

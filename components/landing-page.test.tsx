@@ -30,8 +30,9 @@ describe('public landing page', () => {
     expect(view.getByText('R$ 0')).toBeTruthy()
     expect(view.queryByText('R$ 29,90')).toBeNull()
     expect(view.queryByText('R$ 249')).toBeNull()
-    expect(view.getByText('24 créditos por dia')).toBeTruthy()
-    expect(view.getAllByText('Os limites diário e do período valem simultaneamente.')).toHaveLength(1)
+    expect(view.getByText('100 créditos por dia')).toBeTruthy()
+    expect(view.queryByText(/créditos por mês/)).toBeNull()
+    expect(view.queryByText('Os limites diário e do período valem simultaneamente.')).toBeNull()
     expect(marketingPlans.every((plan) => !plan.periodLimit.trimStart().startsWith('+'))).toBe(true)
   })
 
@@ -50,7 +51,8 @@ describe('public landing page', () => {
 
     expect(view.getByRole('heading', { level: 1, name: /stop merely rereading/i })).toBeTruthy()
     expect(view.getByRole('heading', { name: 'Frequently asked questions' })).toBeTruthy()
-    expect(view.getAllByText('Daily and period limits apply simultaneously.')).toHaveLength(1)
+    expect(view.getByText('100 credits per day')).toBeTruthy()
+    expect(view.queryByText('Daily and period limits apply simultaneously.')).toBeNull()
     expect(view.queryByText('Perguntas frequentes')).toBeNull()
     expect(window.localStorage.getItem('masterme:locale')).toBe('en-US')
     expect(document.documentElement.lang).toBe('en-US')

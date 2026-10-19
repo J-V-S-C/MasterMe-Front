@@ -128,10 +128,10 @@ const landingCopy = {
       freeDescription: 'O acesso gratuito está disponível enquanto preparamos os demais planos.',
       featuredBadge: 'MAIOR HORIZONTE',
       simultaneousLimits: 'Os limites diário e do período valem simultaneamente.',
-      creditNote: 'Créditos são ponderados conforme o custo de cada operação de IA. Novos usos pausam quando qualquer um dos limites é atingido; o saldo disponível fica visível antes de cada uso.',
+      creditNote: 'No plano Livre, cada tentativa enviada ao Gemini consome 1 crédito. O saldo renova diariamente; tentativas de fallback também contam. A capacidade do provedor é compartilhada.',
     },
     plans: [
-      { id: 'FREE', name: 'Livre', price: 'R$ 0', duration: 'sem prazo', dailyLimit: '24 créditos por dia', periodLimit: '120 créditos por mês', description: 'Para conhecer o método com seu próprio material.', action: 'Começar gratuitamente', footnote: 'Não exige pagamento.' },
+      { id: 'FREE', name: 'Livre', price: 'R$ 0', duration: 'sem prazo', dailyLimit: '100 créditos por dia', periodLimit: '', description: 'Para conhecer o método com seu próprio material.', action: 'Começar gratuitamente', footnote: 'Não exige pagamento.' },
       { id: 'ESSENTIAL', name: 'Essencial', price: 'R$ 29,90', duration: 'por 30 dias', dailyLimit: '120 créditos por dia', periodLimit: '1.500 créditos por vigência', description: 'Para transformar uma fase intensa de estudo em prática.', action: 'Escolher Essencial', footnote: 'Pagamento único · sem renovação automática.' },
       { id: 'PRO', name: 'Pro', price: 'R$ 249', duration: 'por 365 dias', dailyLimit: '180 créditos por dia', periodLimit: '15.000 créditos por vigência', description: 'Para manter uma biblioteca ativa ao longo do ano.', action: 'Escolher Pro', footnote: 'Pagamento único · sem renovação automática.', featured: true },
     ],
@@ -219,10 +219,10 @@ const landingCopy = {
       freeDescription: 'Free access is available while we prepare the other plans.',
       featuredBadge: 'LONGEST HORIZON',
       simultaneousLimits: 'Daily and period limits apply simultaneously.',
-      creditNote: 'Credits are weighted by the cost of each AI operation. New uses pause when either limit is reached; your available balance is visible before every use.',
+      creditNote: 'On the Free plan, each attempt sent to Gemini uses 1 credit. The balance resets daily; fallback attempts also count. Provider capacity is shared.',
     },
     plans: [
-      { id: 'FREE', name: 'Free', price: 'R$ 0', duration: 'no expiration', dailyLimit: '24 credits per day', periodLimit: '120 credits per month', description: 'Explore the method with your own material.', action: 'Start for free', footnote: 'No payment required.' },
+      { id: 'FREE', name: 'Free', price: 'R$ 0', duration: 'no expiration', dailyLimit: '100 credits per day', periodLimit: '', description: 'Explore the method with your own material.', action: 'Start for free', footnote: 'No payment required.' },
       { id: 'ESSENTIAL', name: 'Essential', price: 'R$ 29.90', duration: 'for 30 days', dailyLimit: '120 credits per day', periodLimit: '1,500 credits per access period', description: 'Turn an intensive study phase into deliberate practice.', action: 'Choose Essential', footnote: 'One-time payment · no automatic renewal.' },
       { id: 'PRO', name: 'Pro', price: 'R$ 249', duration: 'for 365 days', dailyLimit: '180 credits per day', periodLimit: '15,000 credits per access period', description: 'Keep an active library throughout the year.', action: 'Choose Pro', footnote: 'One-time payment · no automatic renewal.', featured: true },
     ],
@@ -320,7 +320,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
               {plan.featured && <span className={styles.planBadge}>{copy.pricing.featuredBadge}</span>}
               <header><h3>{plan.name}</h3><span>{plan.description}</span></header>
               <div className={styles.price}><strong>{plan.price}</strong><span>{plan.duration}</span></div>
-              <div className={styles.credits}><b>{plan.dailyLimit}</b><span>{plan.periodLimit}</span><small>{copy.pricing.simultaneousLimits}</small></div>
+              <div className={styles.credits}><b>{plan.dailyLimit}</b>{plan.periodLimit && <span>{plan.periodLimit}</span>}{plan.id !== 'FREE' && <small>{copy.pricing.simultaneousLimits}</small>}</div>
               <Link className={plan.featured ? styles.primaryAction : styles.planAction} href={planLoginHref(plan.id)} data-plan-id={plan.id}>{plan.action} <Icon name="chevron" /></Link>
               <small>{plan.footnote}</small>
             </article>)}
