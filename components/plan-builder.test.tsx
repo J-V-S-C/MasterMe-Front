@@ -24,6 +24,7 @@ test('plan editor persists reordered sources and shows an uncovered goal', async
   const view = render(<I18nProvider><PlanBuilder materials={materials} goals={[{ id: 'goal', title: 'Research', description: '', deadline: null }]} plans={plans} tasks={[]} busy={false} operate={async (action) => { await action(); }} /></I18nProvider>);
   const editor = view.getByDisplayValue('My plan').closest('form');
   expect(editor).not.toBeNull();
+  expect(view.getByText(/prioridade destes materiais segue a ordem que você escolheu/)).toBeTruthy();
   fireEvent.click(view.getByRole('button', { name: 'Descer: first' }));
   fireEvent.change(editor!.querySelector('select')!, { target: { value: 'goal' } });
   fireEvent.submit(editor!);

@@ -11,10 +11,11 @@ const labels: Record<'pt-BR' | 'en-US', Labels> = {
   'en-US': { outline: 'Contents', fullText: 'Full text', page: 'Page', progress: 'Reading position saved', source: 'Source excerpt', failed: 'Could not save your reading position.', occurrence: 'Excerpt occurrence' },
 };
 
-export function MaterialReader({ material, requestedUnitId, sourceExcerpt }: {
+export function MaterialReader({ material, requestedUnitId, sourceExcerpt, requestedSourceOffset }: {
   material: Material | null;
   requestedUnitId: string | null;
   sourceExcerpt?: string;
+  requestedSourceOffset?: number;
 }) {
   const { locale } = useI18n();
   const t = labels[locale];
@@ -59,12 +60,18 @@ export function MaterialReader({ material, requestedUnitId, sourceExcerpt }: {
     return offsets;
   }, [sourceExcerpt, material]);
   const sourceOffset = occurrences[occurrenceIndex] ?? -1;
+  const missingUnit = Boolean(material && units.length && requestedUnitId && !units.some(({ id }) => id === requestedUnitId));
+  const missingSource = Boolean(material && sourceExcerpt && (!occurrences.length || (requestedSourceOffset !== undefined && !occurrences.includes(requestedSourceOffset))));
   useEffect(() => {
     if (!occurrences.length) return;
+    if (requestedSourceOffset !== undefined && occurrences.includes(requestedSourceOffset)) {
+      setOccurrenceIndex(occurrences.indexOf(requestedSourceOffset));
+      return;
+    }
     const closest = occurrences.reduce((best, offset, index) =>
       Math.abs(offset - readingOffset) < Math.abs(occurrences[best]! - readingOffset) ? index : best, 0);
     setOccurrenceIndex(closest);
-  }, [occurrences, readingOffset]);
+  }, [occurrences, readingOffset, requestedSourceOffset]);
   useEffect(() => {
     if (requestedUnitId || sourceOffset < 0) return;
     const matching = units.find((unit) => sourceOffset >= unit.startOffset && sourceOffset < unit.endOffset);
@@ -125,6 +132,7 @@ export function MaterialReader({ material, requestedUnitId, sourceExcerpt }: {
     </nav>}
     <article className="reading-card">
       <h1>{material?.title}</h1>
+      {(missingUnit || missingSource) && <p role="alert">{locale === 'pt-BR' ? 'A referência solicitada não foi encontrada neste material. O texto disponível aparece abaixo.' : 'The requested reference was not found in this material. The available text appears below.'}</p>}
       {active?.title && <h2>{active.title}</h2>}
       {occurrences.length > 1 && <label className={styles.occurrence}>{t.occurrence}
         <select value={occurrenceIndex} onChange={(event) => setOccurrenceIndex(Number(event.target.value))}>

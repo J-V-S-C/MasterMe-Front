@@ -6,8 +6,8 @@ import { useI18n } from '../lib/i18n';
 import styles from './library-workspace.module.css';
 
 const labels = {
-  'pt-BR': { newPlan: 'Novo roteiro', title: 'Título', goal: 'Objetivo', noGoal: 'Sem objetivo', materials: 'Materiais na ordem escolhida', add: 'Adicionar', save: 'Salvar roteiro', up: 'Subir', down: 'Descer', remove: 'Retirar', none: 'Nenhum material vinculado: há uma lacuna no acervo deste objetivo.', unverified: 'Materiais vinculados; confirme se cobrem o objetivo antes de considerar o estudo planejado.', limit: 'Máximo de 30 materiais por roteiro.', tasks: 'Ordem das tarefas', saveTasks: 'Salvar ordem das tarefas' },
-  'en-US': { newPlan: 'New plan', title: 'Title', goal: 'Goal', noGoal: 'No goal', materials: 'Materials in your chosen order', add: 'Add', save: 'Save plan', up: 'Move up', down: 'Move down', remove: 'Remove', none: 'No material linked: this goal has a gap in your collection.', unverified: 'Materials linked; confirm that they cover the goal before considering it planned.', limit: 'Maximum of 30 materials per plan.', tasks: 'Task order', saveTasks: 'Save task order' },
+  'pt-BR': { newPlan: 'Novo roteiro', title: 'Título', goal: 'Objetivo', noGoal: 'Sem objetivo', materials: 'Materiais na ordem escolhida', priority: 'A prioridade destes materiais segue a ordem que você escolheu. Artigos independentes não recebem pré-requisitos automáticos.', add: 'Adicionar', save: 'Salvar roteiro', up: 'Subir', down: 'Descer', remove: 'Retirar', none: 'Nenhum material vinculado: há uma lacuna no acervo deste objetivo.', unverified: 'Materiais vinculados; confirme se cobrem o objetivo antes de considerar o estudo planejado.', limit: 'Máximo de 30 materiais por roteiro.', tasks: 'Ordem das tarefas', saveTasks: 'Salvar ordem das tarefas' },
+  'en-US': { newPlan: 'New plan', title: 'Title', goal: 'Goal', noGoal: 'No goal', materials: 'Materials in your chosen order', priority: 'These materials follow the priority you chose. Independent articles receive no automatic prerequisites.', add: 'Add', save: 'Save plan', up: 'Move up', down: 'Move down', remove: 'Remove', none: 'No material linked: this goal has a gap in your collection.', unverified: 'Materials linked; confirm that they cover the goal before considering it planned.', limit: 'Maximum of 30 materials per plan.', tasks: 'Task order', saveTasks: 'Save task order' },
 } as const;
 
 export function PlanBuilder({ materials, goals, plans, tasks, busy, operate }: {
@@ -78,6 +78,7 @@ function PlanEditor({ plan, materials, goals, tasks, busy, operate, labels: t }:
     <label>{t.title}<input required maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
     <label>{t.goal}<select value={goalId} onChange={(event) => setGoalId(event.target.value)}><option value="">{t.noGoal}</option>{goals.map((goal) => <option value={goal.id} key={goal.id}>{goal.title}</option>)}</select></label>
     <strong>{t.materials}</strong>
+    <p>{t.priority}</p>
     <ol>{ids.map((id, index) => <li key={id}>
       {materials.find((material) => material.id === id)?.title ?? id}
       <button type="button" disabled={busy || index === 0} onClick={() => move(index, -1)} aria-label={`${t.up}: ${id}`}>↑</button>

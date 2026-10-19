@@ -47,3 +47,28 @@ test('chooses among repeated excerpts and persists scroll progress within a unit
   await waitFor(() => expect(save).toHaveBeenCalledWith('article', Math.round(content.length / 2)), { timeout: 2000 });
   outline.mockRestore(); position.mockRestore(); save.mockRestore();
 });
+
+test('opens the exact linked occurrence even when reading progress is nearer another', async () => {
+  const excerpt = 'Repeated citation';
+  const content = `Start ${excerpt} between ${excerpt} end`;
+  const outline = spyOn(api, 'outline').mockResolvedValue([
+    { id: 'whole', order: 0, title: 'Article', level: 1, startOffset: 0, endOffset: content.length, provenance: 'UNSTRUCTURED', pageNumber: null },
+  ]);
+  const position = spyOn(api, 'readingPosition').mockResolvedValue({ offset: content.lastIndexOf(excerpt) });
+  const view = render(<I18nProvider><MaterialReader material={{ id: 'article', title: 'Article', content, locale: 'en-US', createdAt: '2026-01-01' }} requestedUnitId={null} sourceExcerpt={excerpt} requestedSourceOffset={content.indexOf(excerpt)} /></I18nProvider>);
+  const occurrence = await view.findByRole('combobox', { name: 'Ocorrência do trecho' });
+  await waitFor(() => expect((occurrence as HTMLSelectElement).value).toBe('0'));
+  expect(view.getByText(excerpt, { selector: 'mark' })).toBeTruthy();
+  outline.mockRestore(); position.mockRestore();
+});
+
+test('shows an explicit warning when a linked unit and excerpt are no longer available', async () => {
+  const outline = spyOn(api, 'outline').mockResolvedValue([
+    { id: 'current', order: 0, title: 'Current section', level: 1, startOffset: 0, endOffset: 'Current source content'.length, provenance: 'HEADING', pageNumber: null },
+  ]);
+  const position = spyOn(api, 'readingPosition').mockResolvedValue({ offset: 0 });
+  const view = render(<I18nProvider><MaterialReader material={{ id: 'material', title: 'Book', content: 'Current source content', locale: 'en-US', createdAt: '2026-01-01' }} requestedUnitId="removed" sourceExcerpt="Removed excerpt" /></I18nProvider>);
+  await waitFor(() => expect(view.getByRole('alert').textContent).toContain('referência solicitada não foi encontrada'));
+  expect(view.getByText('Current source content')).toBeTruthy();
+  outline.mockRestore(); position.mockRestore();
+});
