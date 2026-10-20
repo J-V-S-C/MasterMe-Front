@@ -2,10 +2,11 @@
   --font-ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-editorial: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   color-scheme: dark;
-  --font-body: 16px;
-  --font-support: 14px;
-  --font-label: 13px;
-  --font-meta: 12px;
+  --font-body: 17px;
+  --font-support: 16px;
+  --font-label: 14px;
+  --font-meta: 14px;
+  --font-control: 16px;
   --motion-fast: 180ms;
   --motion-standard: 320ms;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
@@ -462,8 +463,17 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 .study-controls .select-field{width:100%;min-width:0;max-width:none;flex:none}
 .study-controls>.app-button{min-height:44px;align-self:end;white-space:nowrap}
 .study-controls>.toolbar-note,.study-controls>.extract-callout{grid-column:2/-1;margin:0;align-self:center}
-.study-balance{min-width:0;padding-top:14px;border-top:1px solid var(--line-faint)}
-.study-balance .credit-balance-panel{width:100%;min-width:0;box-shadow:none}
+.study-balance{min-width:0;border:1px solid var(--line-faint);border-radius:11px;background:var(--low);overflow:hidden}
+.study-work-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);align-items:start;gap:18px}
+.study-work-layout>*,.study-work-layout .workspace-grid{min-width:0;width:100%}
+@media(max-width:1050px){.study-work-layout{grid-template-columns:minmax(0,1fr)}}
+.study-balance>summary{display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 18px;color:var(--blue);font:700 var(--font-body)/1.3 var(--font-ui);cursor:pointer;list-style:none}
+.study-balance>summary::-webkit-details-marker{display:none}
+.study-balance>summary .credit-balance.compact{margin-left:auto}
+.study-balance>summary::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(2px) rotate(225deg)}
+.study-balance:not([open])>summary::after{transform:translateY(-2px) rotate(45deg)}
+.study-balance>summary:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.study-balance .credit-balance-panel{width:100%;min-width:0;border:0;border-top:1px solid var(--line-faint);border-radius:0;box-shadow:none}
 @media(max-width:900px){.study-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.study-controls>.app-button{grid-column:2;width:100%;align-self:stretch}}
 @media(max-width:700px){.study-controls{grid-template-columns:1fr;gap:12px}.study-controls>.app-button,.study-controls>.toolbar-note,.study-controls>.extract-callout{grid-column:1}.study-controls>.app-button{width:100%}}
 
@@ -521,3 +531,23 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 .map-active-section .map-concept-list li{margin:3px 0}
 @media(max-width:900px){.map-active-section .map-concept-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.map-active-section .map-concept-list{grid-template-columns:minmax(0,1fr)}}
+
+/* Study focuses on the exercise; the learner already owns the full source. */
+.workspace-grid.study-only { grid-template-columns: minmax(0, 1fr); }
+.workspace-grid.study-only .study-pane { width: min(100%, 920px); margin-inline: 0; }
+
+/* Shared editorial header rhythm across Study, Tasks, Analyze, and Create. */
+.study-context { max-width: none; margin: 0 0 24px; padding: 10px 0 22px; }
+.study-context h1 { margin: 4px 0; color: var(--blue); font-size: clamp(34px, 5vw, 50px); line-height: 1.12; }
+.study-context > div:first-child > p { margin: 0; color: var(--muted); font: italic 17px/1.5 var(--font-editorial); }
+.primary-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* A clear first action when a concept is ready but no question has started. */
+.study-start { display: grid; gap: 12px; padding: clamp(22px, 3vw, 36px); border: 1px solid var(--line-faint); border-left: 4px solid var(--blue); border-radius: 10px; background: var(--low); box-shadow: 0 2px 10px var(--shadow); }
+.study-start-kicker { color: var(--amber); font: 700 11px/1.3 var(--font-ui); letter-spacing: .11em; }
+.study-start h2 { margin: 0; color: var(--blue); font-size: clamp(25px, 3vw, 34px); line-height: 1.2; }
+.study-start p { max-width: 640px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+.study-start-action { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin-top: 8px; }
+.study-start-action .app-button { min-height: 48px; padding-inline: 20px; }
+.study-start-action small { color: var(--dim); font-size: 12px; }
+@media(max-width:600px){.study-start-action{align-items:stretch;flex-direction:column}.study-start-action .app-button{width:100%}}

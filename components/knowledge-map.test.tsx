@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Window } from 'happy-dom';
 import type { ConceptRelation, KnowledgeNode } from '../lib/api';
 import { I18nProvider } from '../lib/i18n';
+import { invalidateApiCache } from '../lib/api';
 import { EvidenceRow, KnowledgeMap, focusedGraphNodes, graphLayout, relatedConceptGroups, visibleGraphEdges } from './knowledge-map';
 
 const node = (id: string, name: string, prerequisiteIds: string[] = [], nextIds: string[] = []): KnowledgeNode => ({
@@ -17,7 +18,7 @@ beforeEach(() => {
   class ResizeObserverStub { observe() {} unobserve() {} disconnect() {} }
   Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, localStorage: window.localStorage, ResizeObserver: ResizeObserverStub, requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0), cancelAnimationFrame: (id: number) => clearTimeout(id) });
 });
-afterEach(() => { cleanup(); globalThis.fetch = originalFetch; });
+afterEach(() => { cleanup(); invalidateApiCache(); globalThis.fetch = originalFetch; });
 
 describe('Knowledge map', () => {
   test('removes transitive edges to reduce crossings', () => {
@@ -65,6 +66,16 @@ describe('Knowledge map', () => {
     expect(window.location.href).toBe(locationBeforeSelection);
   });
 
+  test('names the selected concept beside its next step', async () => {
+    const diagnosed: KnowledgeNode = { ...node('a', 'Contrato'), lastAttempt: {
+      stage: 'INITIAL', answer: 'Uma resposta', evaluation: { status: 'INCOMPLETE', missingPremises: [], logicalBreak: null, feedback: 'Falta precisão.', nextAction: 'Revise a fronteira.' }, createdAt: '2026-01-01T00:00:00.000Z',
+    } };
+    globalThis.fetch = (async (url: string) => new Response(JSON.stringify({ data: url.endsWith('/materials') ? [{ id: 'material-a', title: 'Material', content: 'Texto', locale: 'pt-BR', createdAt: '2026-01-01T00:00:00.000Z' }] : url.endsWith('/relations') || url.endsWith('/evidence') ? [] : [diagnosed] }), { status: 200 })) as typeof fetch;
+    const view = render(<I18nProvider><KnowledgeMap /></I18nProvider>);
+    fireEvent.click(await view.findByLabelText('Selecionar conceito Contrato'));
+    await waitFor(() => expect(view.container.querySelector('.inspector-diagnostic .next-step-concept')?.textContent).toBe('Conceito: Contrato'));
+  });
+
   test('lets the student request a revisit from an earlier attempt without creating a task', async () => {
     const paths: string[] = [];
     globalThis.fetch = (async (url: string, init?: RequestInit) => {
@@ -75,7 +86,7 @@ describe('Knowledge map', () => {
     expect(view.getByText(/Critérios desta tentativa/).textContent).toContain('Causa');
     const request = view.getByRole('button', { name: 'Solicitar retomada' });
     fireEvent.click(request);
-    await waitFor(() => expect(view.getByText(/Sugestão pronta na Mesa do Dia/)).toBeTruthy());
+    await waitFor(() => expect(view.getByText(/Sugestão pronta em Tarefas/)).toBeTruthy());
     expect(paths).toContain('POST /api/learning/evidence/event-a/revisit');
     expect(paths.some((path) => path.includes('/tasks'))).toBe(false);
   });
