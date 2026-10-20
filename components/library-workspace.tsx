@@ -2,17 +2,19 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { api, type ConceptCard, type EditorialUnit, type KnowledgeNode, type LearningGoal, type MaterialSummary, type Shelf, type StudyAvailability, type StudyPlan, type StudySuggestion, type StudyTask, type TaskActivity } from '../lib/api';
+import { api, type ConceptCard, type ConceptRelation, type EditorialUnit, type KnowledgeNode, type LearningGoal, type MaterialSummary, type Shelf, type StudyAvailability, type StudyPlan, type StudySuggestion, type StudyTask, type TaskActivity } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useRealtimeRefresh } from './realtime-provider';
+import { PlanBuilder } from './plan-builder';
+import { GoalEditor } from './goal-editor';
 import styles from './library-workspace.module.css';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
 const copy = {
-  'pt-BR': { title: 'Sua biblioteca', subtitle: 'Guarde fontes, organize o tempo e volte ao trecho certo.', shelves: 'Estante', cards: 'Fichário', desk: 'Mesa do Dia', calendar: 'Calendário', newShelf: 'Nova prateleira', add: 'Adicionar', remove: 'Remover', noShelf: 'Crie uma prateleira para reunir materiais.', unfiled: 'Sem prateleira', noMaterial: 'Adicione um material para começar.', source: 'Abrir fonte', outline: 'Índice do material', unstructured: 'Texto completo · sem divisão editorial detectável', fileCard: 'Guardar ficha', removeCard: 'Retirar ficha', note: 'Minha anotação', save: 'Salvar', goal: 'Objetivo', newGoal: 'Novo objetivo', plan: 'Roteiro', newPlan: 'Novo roteiro', task: 'Tarefa', newTask: 'Nova tarefa', minutes: 'Minutos', date: 'Dia', time: 'Horário', available: 'Tempo disponível', load: 'Carga planejada', excess: 'Excesso', start: 'Começar', done: 'Concluir', reopen: 'Reabrir', postpone: 'Mover', suggestions: 'Sugestões explicadas', accept: 'Adicionar ao roteiro', ignore: 'Ignorar', noSuggestions: 'Nenhuma sugestão pendente.', noTasks: 'Nenhuma tarefa para este dia.', allTasks: 'Todas as tarefas', today: 'Hoje', failed: 'Não foi possível concluir. Tente novamente.', empty: 'Escolha um material para ver o índice e os conceitos.', relation: 'Relações', noRelations: 'Ainda não há relações com fonte verificada.', material: 'Material', description: 'Descrição', deadline: 'Prazo', titleLabel: 'Título', chooseActivity: 'Atividade', reason: 'Motivo', noPlan: 'Sem roteiro', noGoal: 'Sem objetivo', everyMaterial: 'Todos os materiais' },
-  'en-US': { title: 'Your library', subtitle: 'Keep sources, organize your time, and return to the right excerpt.', shelves: 'Shelves', cards: 'Index cards', desk: 'Today’s Desk', calendar: 'Calendar', newShelf: 'New shelf', add: 'Add', remove: 'Remove', noShelf: 'Create a shelf to group materials.', unfiled: 'Unfiled', noMaterial: 'Add a material to begin.', source: 'Open source', outline: 'Material outline', unstructured: 'Full text · no reliable editorial structure detected', fileCard: 'File card', removeCard: 'Remove card', note: 'My note', save: 'Save', goal: 'Goal', newGoal: 'New goal', plan: 'Plan', newPlan: 'New plan', task: 'Task', newTask: 'New task', minutes: 'Minutes', date: 'Date', time: 'Time', available: 'Available time', load: 'Planned load', excess: 'Overload', start: 'Start', done: 'Complete', reopen: 'Reopen', postpone: 'Move', suggestions: 'Explained suggestions', accept: 'Add to plan', ignore: 'Ignore', noSuggestions: 'No pending suggestions.', noTasks: 'No tasks for this day.', allTasks: 'All tasks', today: 'Today', failed: 'Could not finish. Try again.', empty: 'Choose a material to see its outline and concepts.', relation: 'Relations', noRelations: 'No source-backed relations yet.', material: 'Material', description: 'Description', deadline: 'Deadline', titleLabel: 'Title', chooseActivity: 'Activity', reason: 'Reason', noPlan: 'No plan', noGoal: 'No goal', everyMaterial: 'All materials' },
+  'pt-BR': { title: 'Sua biblioteca', subtitle: 'Guarde fontes, organize o tempo e volte ao trecho certo.', shelves: 'Estante', cards: 'Fichário', desk: 'Mesa do Dia', calendar: 'Calendário', newShelf: 'Nova prateleira', add: 'Adicionar', remove: 'Remover', noShelf: 'Crie uma prateleira para reunir materiais.', unfiled: 'Sem prateleira', noMaterial: 'Adicione um material para começar.', deleteMaterial: 'Apagar material', deleteMaterialConfirm: 'Apagar este material e todo seu histórico de estudo?', source: 'Abrir fonte', outline: 'Índice do material', page: 'Página', unstructured: 'Texto completo · sem divisão editorial detectável', fileCard: 'Guardar ficha', removeCard: 'Retirar ficha', note: 'Minha anotação', save: 'Salvar', goal: 'Objetivo', newGoal: 'Novo objetivo', plan: 'Roteiro', newPlan: 'Novo roteiro', task: 'Tarefa', newTask: 'Nova tarefa', minutes: 'Minutos', date: 'Dia', time: 'Horário', available: 'Tempo disponível', load: 'Carga planejada', excess: 'Excesso', start: 'Começar', done: 'Concluir', reopen: 'Reabrir', postpone: 'Mover', suggestions: 'Sugestões explicadas', accept: 'Adicionar ao roteiro', ignore: 'Ignorar', noSuggestions: 'Nenhuma sugestão pendente.', noTasks: 'Nenhuma tarefa para este dia.', allTasks: 'Todas as tarefas', today: 'Hoje', failed: 'Não foi possível concluir. Tente novamente.', empty: 'Escolha um material para ver o índice e os conceitos.', relation: 'Relações', noRelations: 'Ainda não há relações com fonte verificada.', material: 'Material', description: 'Descrição', deadline: 'Prazo', titleLabel: 'Título', chooseActivity: 'Atividade', reason: 'Motivo', noPlan: 'Sem roteiro', noGoal: 'Sem objetivo', everyMaterial: 'Todos os materiais' },
+  'en-US': { title: 'Your library', subtitle: 'Keep sources, organize your time, and return to the right excerpt.', shelves: 'Shelves', cards: 'Index cards', desk: 'Today’s Desk', calendar: 'Calendar', newShelf: 'New shelf', add: 'Add', remove: 'Remove', noShelf: 'Create a shelf to group materials.', unfiled: 'Unfiled', noMaterial: 'Add a material to begin.', deleteMaterial: 'Delete material', deleteMaterialConfirm: 'Delete this material and all its study history?', source: 'Open source', outline: 'Material outline', page: 'Page', unstructured: 'Full text · no reliable editorial structure detected', fileCard: 'File card', removeCard: 'Remove card', note: 'My note', save: 'Save', goal: 'Goal', newGoal: 'New goal', plan: 'Plan', newPlan: 'New plan', task: 'Task', newTask: 'New task', minutes: 'Minutes', date: 'Date', time: 'Time', available: 'Available time', load: 'Planned load', excess: 'Overload', start: 'Start', done: 'Complete', reopen: 'Reopen', postpone: 'Move', suggestions: 'Explained suggestions', accept: 'Add to plan', ignore: 'Ignore', noSuggestions: 'No pending suggestions.', noTasks: 'No tasks for this day.', allTasks: 'All tasks', today: 'Today', failed: 'Could not finish. Try again.', empty: 'Choose a material to see its outline and concepts.', relation: 'Relations', noRelations: 'No source-backed relations yet.', material: 'Material', description: 'Description', deadline: 'Deadline', titleLabel: 'Title', chooseActivity: 'Activity', reason: 'Reason', noPlan: 'No plan', noGoal: 'No goal', everyMaterial: 'All materials' },
 } as const;
 
 type View = 'shelves' | 'cards' | 'desk' | 'calendar';
@@ -26,6 +28,11 @@ const activityLabels: Record<'pt-BR' | 'en-US', Record<TaskActivity, string>> = 
   'pt-BR': { READ: 'Ler', EXPLAIN: 'Explicar', RELATE: 'Relacionar', APPLY: 'Aplicar', REVISIT: 'Retomar', PRACTICE: 'Praticar' },
   'en-US': { READ: 'Read', EXPLAIN: 'Explain', RELATE: 'Relate', APPLY: 'Apply', REVISIT: 'Revisit', PRACTICE: 'Practice' },
 };
+
+const suggestionCopy = {
+  'pt-BR': { diagnosis: 'Tentativa anterior', proposedTask: 'Ajuste a tarefa antes de aceitar', duration: 'Duração em minutos', schedule: 'Quando estudar', plan: 'Roteiro', noPlan: 'Sem roteiro', search: 'Buscar materiais' },
+  'en-US': { diagnosis: 'Previous attempt', proposedTask: 'Edit the task before accepting', duration: 'Duration in minutes', schedule: 'When to study', plan: 'Plan', noPlan: 'No plan', search: 'Search materials' },
+} as const;
 
 export function LibraryWorkspace() {
   const { locale } = useI18n();
@@ -42,14 +49,13 @@ export function LibraryWorkspace() {
   const [deskData, setDeskData] = useState<{ tasks: StudyTask[]; load: { plannedMinutes: number; availableMinutes: number; excessMinutes: number } } | null>(null);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [outline, setOutline] = useState<EditorialUnit[]>([]);
+  const [relations, setRelations] = useState<ConceptRelation[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [shelfName, setShelfName] = useState('');
   const [materialSearch, setMaterialSearch] = useState('');
   const [goalTitle, setGoalTitle] = useState('');
   const [goalDescription, setGoalDescription] = useState('');
   const [goalDeadline, setGoalDeadline] = useState('');
-  const [planTitle, setPlanTitle] = useState('');
-  const [planGoalId, setPlanGoalId] = useState('');
   const [taskTitle, setTaskTitle] = useState('');
   const [taskActivity, setTaskActivity] = useState<TaskActivity>('READ');
   const [taskPlanId, setTaskPlanId] = useState('');
@@ -73,8 +79,8 @@ export function LibraryWorkspace() {
   useEffect(() => { void refresh().catch(() => setError(t.failed)); }, [refresh, t.failed]);
   useRealtimeRefresh(() => { void refresh().catch(() => {}); });
   useEffect(() => {
-    if (!materialId) { setNodes([]); setOutline([]); return; }
-    void Promise.all([api.knowledgeMap(materialId), api.outline(materialId)]).then(([map, units]) => { setNodes(map); setOutline(units); }).catch(() => setError(t.failed));
+    if (!materialId) { setNodes([]); setOutline([]); setRelations([]); return; }
+    void Promise.all([api.knowledgeMap(materialId), api.outline(materialId), api.relations(materialId)]).then(([map, units, links]) => { setNodes(map); setOutline(units); setRelations(links); }).catch(() => setError(t.failed));
   }, [materialId, t.failed]);
   useEffect(() => {
     const weekday = new Date(`${selectedDate}T12:00:00Z`).getUTCDay();
@@ -88,7 +94,7 @@ export function LibraryWorkspace() {
   const sortedTasks = useMemo(() => tasks.filter(({ status }) => status !== 'REMOVED'), [tasks]);
   const dayTasks = deskData?.tasks ?? [];
   const planned = deskData?.load.plannedMinutes ?? 0;
-  const sourceHref = (task: StudyTask) => task.material_id ? `/estudar?material=${task.material_id}${task.concept_id ? `&concept=${task.concept_id}` : ''}` : '/estudar';
+  const sourceHref = (task: StudyTask) => task.material_id ? `/estudar?material=${task.material_id}${task.concept_id ? `&concept=${task.concept_id}` : ''}${task.unit_id ? `&unit=${task.unit_id}` : ''}${task.study_suggestions?.[0]?.learning_evidence.source_excerpt ? `&source=${encodeURIComponent(task.study_suggestions[0].learning_evidence.source_excerpt)}${task.study_suggestions[0].learning_evidence.source_offset != null ? `&offset=${task.study_suggestions[0].learning_evidence.source_offset}` : ""}` : ''}` : '/estudar';
 
   return <div className={styles.workspace}>
     <header className={styles.hero}><span>MASTERME · ATELIÊ DE ESTUDO</span><h1>{t.title}</h1><p>{t.subtitle}</p></header>
@@ -117,6 +123,43 @@ function CardEditor({ card, busy, save, remove, labels }: { card: ConceptCard; b
   return <article className={styles.card}><h3>{card.concepts.name}</h3><blockquote>{card.concepts.source_excerpt}</blockquote><form onSubmit={(event) => { event.preventDefault(); void save(note); }} className={styles.form}><label>{labels.note}<textarea value={note} maxLength={3000} onChange={(event) => setNote(event.target.value)} /></label><div className={styles.inline}><button disabled={busy}>{labels.save}</button><button type="button" disabled={busy} onClick={() => void remove()}>{labels.removeCard}</button><Link href={`/estudar?material=${card.concepts.material_id}&concept=${card.concept_id}`}>{labels.source} →</Link></div></form></article>;
 }
 
+export function SuggestionEditor({ suggestion, plans, busy, operate, locale, labels }: {
+  suggestion: StudySuggestion;
+  plans: StudyPlan[];
+  busy: boolean;
+  operate: (action: () => Promise<unknown>) => Promise<void>;
+  locale: 'pt-BR' | 'en-US';
+  labels: { accept: string; ignore: string };
+}) {
+  const t = suggestionCopy[locale];
+  const [title, setTitle] = useState(suggestion.title);
+  const [minutes, setMinutes] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [planId, setPlanId] = useState('');
+  return <article className={styles.suggestion}>
+    <h3>{suggestion.title}</h3><p>{suggestion.reason}</p>
+    <details><summary>{t.diagnosis}</summary><p>{suggestion.learning_evidence.prompt}</p><p>{suggestion.learning_evidence.diagnosis}</p><blockquote>{suggestion.learning_evidence.source_excerpt}</blockquote></details>
+    <form className={styles.form} onSubmit={(event) => {
+      event.preventDefault();
+      void operate(() => api.decideSuggestion(suggestion.id, {
+        decision: 'ACCEPTED', title: title.trim(),
+        durationMinutes: minutes ? Number(minutes) : undefined,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        planId: planId || undefined,
+      }));
+    }}>
+      <label>{t.proposedTask}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+      <div className={styles.inline}>
+        <label>{t.duration}<input type="number" min="1" max="480" value={minutes} onInput={(event) => setMinutes(event.currentTarget.value)} /></label>
+        <label>{t.schedule}<input type="datetime-local" value={scheduledAt} onInput={(event) => setScheduledAt(event.currentTarget.value)} /></label>
+        <label>{t.plan}<select value={planId} onChange={(event) => setPlanId(event.target.value)}><option value="">{t.noPlan}</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.title}</option>)}</select></label>
+      </div>
+      <div className={styles.inline}><button disabled={busy}>{labels.accept}</button><button type="button" disabled={busy} onClick={() => void operate(() => api.decideSuggestion(suggestion.id, { decision: 'IGNORED' }))}>{labels.ignore}</button></div>
+    </form>
+  </article>;
+}
+
 function TaskRow({ task, busy, open, setStatus, labels }: { task: StudyTask; busy: boolean; open: string; setStatus: (status: StudyTask['status']) => Promise<unknown>; labels: typeof copy['pt-BR'] | typeof copy['en-US'] }) {
-  return <article className={styles.task}><div><strong>{task.title}</strong><small>{task.duration_minutes ? ` · ${task.duration_minutes} min` : ''}{task.reason ? ` · ${task.reason}` : ''}</small></div><div className={styles.inline}><Link href={open}>{labels.start} →</Link><button type="button" disabled={busy} onClick={() => void setStatus(task.status === 'DONE' ? 'PENDING' : 'DONE')}>{task.status === 'DONE' ? labels.reopen : labels.done}</button><button type="button" disabled={busy} onClick={() => void setStatus('REMOVED')}>{labels.remove}</button></div></article>;
+  const previous = task.study_suggestions?.[0]?.learning_evidence;
+  return <article className={styles.task}><div><strong>{task.title}</strong><small>{task.duration_minutes ? ` · ${task.duration_minutes} min` : ''}{task.reason ? ` · ${task.reason}` : ''}</small>{previous && <details><summary>{labels.reason}: {previous.status}</summary><p>{previous.prompt}</p><p>{previous.diagnosis}</p><blockquote>{previous.source_excerpt}</blockquote></details>}</div><div className={styles.inline}><Link href={open}>{labels.start} →</Link><button type="button" disabled={busy} onClick={() => void setStatus(task.status === 'DONE' ? 'PENDING' : 'DONE')}>{task.status === 'DONE' ? labels.reopen : labels.done}</button><button type="button" disabled={busy} onClick={() => void setStatus('REMOVED')}>{labels.remove}</button></div></article>;
 }
