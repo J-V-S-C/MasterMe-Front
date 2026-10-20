@@ -516,3 +516,8 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
   .site-menu .header-controls{display:flex;grid-column:auto;grid-row:auto;flex-wrap:wrap;justify-content:flex-start;margin:0;padding-top:10px;border-top:1px solid var(--line-faint)}
 }
 @media(max-width:420px){.brand>strong{display:none}}
+.map-active-section details,.map-active-section section{min-width:0}
+.map-active-section .map-concept-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 20px;max-width:960px;padding-left:20px}
+.map-active-section .map-concept-list li{margin:3px 0}
+@media(max-width:900px){.map-active-section .map-concept-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.map-active-section .map-concept-list{grid-template-columns:minmax(0,1fr)}}

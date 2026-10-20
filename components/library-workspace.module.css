@@ -390,3 +390,8 @@
     transition: none !important;
   }
 }
+.paper fieldset label{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text)}
+.paper fieldset input[type="checkbox"]{width:18px;height:18px;flex:none;margin:0;accent-color:#956b3c}
+.calendar :global(.fc-prev-button)::after{content:'‹';font-size:20px;line-height:1}
+.calendar :global(.fc-next-button)::after{content:'›';font-size:20px;line-height:1}
+.calendar :global(.fc-prev-button .fc-icon),.calendar :global(.fc-next-button .fc-icon){display:none}
