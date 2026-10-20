@@ -14,6 +14,21 @@ beforeEach(() => {
 afterEach(() => { cleanup(); invalidateApiCache(); globalThis.fetch = originalFetch })
 
 describe('authoritative balance', () => {
+  test('free balance shows only the daily reset even with a legacy period value', async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: {
+      planId: 'FREE', dailyLimit: 100, dailyUsed: 1, dailyRemaining: 99,
+      dailyResetsAt: '2026-10-20T00:00:00.000Z',
+      periodLimit: 100, periodUsed: 100, periodRemaining: 0,
+      periodStartsAt: '2026-10-19T00:00:00.000Z', periodEndsAt: '2026-10-20T00:00:00.000Z', validUntil: null,
+      weights: { INITIAL_EVALUATION: 1, STRESS_EVALUATION: 1, EDGE_CASE_GENERATION: 1, EDGE_CASE_EVALUATION: 1, PRACTICE_PROJECT: 1, LOCALIZATION: 1, EXTRACTION: 1, ISOMORPHIC_PROBLEM: 1 },
+      estimates: { INITIAL_EVALUATION: 49, EXTRACTION: 49, PRACTICE_PROJECT: 49 },
+      estimateAssumption: { providerAttemptsPerOperation: 2 },
+    } }), { status: 200 })) as unknown as typeof fetch
+    const view = render(<I18nProvider><BillingProvider><CreditBalance compact /><CreditBalance /></BillingProvider></I18nProvider>)
+    await waitFor(() => expect(view.getByTitle(/99 créditos restantes/)).toBeTruthy())
+    expect(view.container.querySelector('.credit-balance-panel')?.textContent).not.toContain('Período')
+  })
+
   test('shows the lowest simultaneous balance and backend estimates with a single request', async () => {
     let calls = 0
     globalThis.fetch = (async () => {

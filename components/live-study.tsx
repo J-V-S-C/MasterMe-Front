@@ -252,9 +252,11 @@ export function LiveStudy() {
       {selected && <div className="context-node"><Icon name="idea" /><span>{t('currentNode')}: <b>{selected.concept.name}</b></span></div>}
     </section>
     <section className="live-toolbar">
-      <StyledSelect label={t('material')} icon="document" value={materialId} disabled={creating} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { setError(""); saveActiveMaterialId(id); setMaterialId(id); }} />
-      <CreditBalance />
-      {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: node.concept.name + " — " + node.status }))} onValueChange={changeConcept} /><ActionButton variant="primary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton></> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">Acompanhe a extração abaixo.</p> : <div className="extract-callout"><div><strong>Extraia o contexto deste material</strong><span>Depois, você poderá escolher um conceito para estudar.</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
+      <div className="study-controls">
+        <StyledSelect label={t('material')} icon="document" value={materialId} disabled={creating} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { setError(""); saveActiveMaterialId(id); setMaterialId(id); }} />
+        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: node.concept.name + " — " + node.status }))} onValueChange={changeConcept} /><ActionButton variant="primary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton></> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">Acompanhe a extração abaixo.</p> : <div className="extract-callout"><div><strong>Extraia o contexto deste material</strong><span>Depois, você poderá escolher um conceito para estudar.</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
+      </div>
+      <div className="study-balance"><CreditBalance /></div>
     </section>
     <details className="material-creator">
       <summary><span><Icon name="document" />{t('addMaterial')}</span><small>Texto, PDF, Markdown ou TXT <Icon name="chevron" /></small></summary>

@@ -1,9 +1,10 @@
 import type { SVGProps } from 'react'
 
-export type IconName = 'book' | 'brain' | 'bolt' | 'check' | 'chevron' | 'document' | 'idea' | 'lock' | 'logout' | 'eye' | 'eyeOff' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
+export type IconName = 'book' | 'library' | 'brain' | 'bolt' | 'check' | 'chevron' | 'document' | 'idea' | 'lock' | 'logout' | 'eye' | 'eyeOff' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
 
 const paths: Record<IconName, string> = {
   book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h8',
+  library: 'M3 4v16M8 4v16M3 4h5M3 20h5M8 4h4v16H8m4-15 4-1 4 16-4 1-4-16Zm2 10 4-1',
   brain: 'M12 5.2a3 3 0 0 0-5.4 1.8A3.4 3.4 0 0 0 7 13.7a3.2 3.2 0 0 0 5 3.3M12 5.2a3 3 0 0 1 5.4 1.8 3.4 3.4 0 0 1-.4 6.7 3.2 3.2 0 0 1-5 3.3M12 5.2v12M7.5 9.5H12m0 0h4.5',
   bolt: 'm13 2-9 12h7l-1 8 9-12h-7l1-8Z',
   check: 'm5 12 4.2 4.2L19 6.5',
