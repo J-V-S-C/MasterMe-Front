@@ -1,102 +1,85 @@
-# Design system do MasterMe
+# MasterMe frontend design system
 
-Este documento registra a direção visual e os contratos de interface do frontend atual. É uma referência de decisão, não uma biblioteca de componentes pronta. O código renderizado continua sendo a fonte de verdade para valores e comportamentos implementados. Ao mudar uma decisão durável, atualize este documento junto da interface.
+This document describes the visual and interaction contract for the current product. The rendered components and theme tokens are the implementation source of truth. Read `skills/front-skill.md` before changing a frontend screen, then check this document against the affected code. Update this document when a durable decision changes.
 
-## 1. Produto, público e tarefa da interface
+## Product and audience
 
-O MasterMe é um ambiente pessoal de aprendizagem para estudantes autodidatas de programação e assuntos técnicos. A pessoa traz um material próprio, consulta a fonte, explora conceitos e relações, explica o que compreendeu e pode partir para um projeto de prática. Ela precisa distinguir familiaridade de compreensão e decidir o próximo passo sem perder autonomia.
+MasterMe is a study workspace for people learning technical subjects from material they choose. They need to understand what a concept means, test their own explanation, inspect a diagnosis, and choose a practical next action. The product does not claim that one approved answer proves mastery. The student owns the source material; the application keeps short, grounded evidence close to a question and does not reproduce an entire book as a second reader.
 
-Projetamos para alguém que já lida com textos densos, tem pouco tempo e quer evidências úteis sobre o próprio entendimento. A interface deve ajudar a retomar o contexto rapidamente, mostrar de onde veio um diagnóstico e permitir caminhos alternativos. Não pressupomos uma sequência obrigatória nem tratamos o mapa como jogo de desbloqueio. O material de origem e a decisão do estudante mantêm primazia.
+The application has four destinations in this order: **Study → Tasks → Analyze → Create**. Their functions are distinct, but they must feel like one system. A person should recognize the page header, control treatment, spacing, surface hierarchy, and action states when moving between them.
 
-Há dois contextos de uso com densidades diferentes:
-
-| Contexto | Trabalho principal | Tratamento |
+| Destination | Primary job | Main surface |
 | --- | --- | --- |
-| Landing | Entender a proposta e iniciar o estudo | Narrativa editorial, demonstração do mapa e uma ação principal clara. |
-| Aplicação autenticada | Ler, investigar, explicar, praticar e organizar | Superfícies estáveis, controles compactos, estados explícitos e conteúdo em primeiro plano. |
+| Study | Choose a material and concept, explain, and review a diagnosis | Question, context, answer, diagnosis |
+| Tasks | Decide what to finish and when | Editable list and working calendar |
+| Analyze | Inspect concept relationships and evidence | Map with contextual inspector |
+| Create | Prepare and generate a practice project | Focus controls and project preview |
 
-## 2. Filosofia e assinatura
+## Shared visual language
 
-**Clareza antes de volume.** Cada bloco deve responder a uma pergunta do estudante: o que é isto, por que importa agora, qual evidência sustenta a informação e o que posso fazer em seguida. Metadados e sinais de estado ajudam a decidir; decoração não deve disputar atenção com o material.
+The authenticated application uses a cool ink and blue-gray palette. It starts at the top of the content frame, below the header. `PageShell`, `page-main`, and `WorkspaceHeading` are shared across Study, Tasks, Analyze, and Create. The shared page opening is an editorial header: a compact amber eyebrow, a large blue heading, one supporting sentence, and a thin separator. A page can add a material selector or a small piece of status information beside the heading, but it should not replace the header with a large isolated card or center the entire workspace.
 
-**Autonomia visível.** Relações do mapa dão contexto, não impõem percurso. Explicação, projeto de prática e caso-limite são escolhas distintas. Confiança declarada, tarefa concluída e diagnóstico são evidências diferentes; cor ou microtexto não devem transformá-las numa nota global de domínio.
+The characteristic visual moment belongs to Analyze: a navigable map with an inspector that explains selected relationships. Other pages stay quieter. Tasks derives its visual meaning from dates and planned actions; Create from a focus decision and preview; Study from the question and answer. Numbering, labels, badges, and color must encode real state, sequence, or meaning.
 
-**A fonte fica por perto.** O workspace aproxima leitura, conceito, pergunta e diagnóstico. Trechos e referências precisam ser identificáveis, e mensagens de IA devem ser apresentadas como diagnóstico verificável e contestável.
+The application shell uses the available width up to 1520 px, with page padding. Domain work areas use grids when two surfaces need to be compared or used together; they collapse to one column at narrower widths. Avoid arbitrary page-level widths that leave the main work stranded in the middle of a wide screen. Readable text can have its own line-length limit inside a surface.
 
-**A assinatura visual é o raciocínio tornado navegável.** O mapa de conceitos, seus vínculos e o inspetor contextual são o elemento característico do produto. A landing demonstra essa ideia; o app a transforma em instrumento de trabalho. Evite adicionar ornamentos concorrentes em cada tela.
+## Tokens and type
 
-## 3. Linguagem visual e tokens
+Use semantic tokens from `app/themes.css`, not isolated feature colors. The current default light theme and dark override are:
 
-A base usa camadas em azul acinzentado, com superfícies próximas entre si e divisórias discretas. O azul marca interação e foco; verde indica confirmação ou explicação aprovada; âmbar chama atenção para revisão, pendência ou cautela. Cor não substitui texto, ícone ou estado acessível.
-
-Os tokens globais são definidos em `app/globals.css` e completados/sobrescritos em `app/themes.css`. Use variáveis semânticas em componentes novos, em vez de copiar hexadecimais. `data-theme="light"` troca os valores da mesma linguagem; o tema escuro é a base em `:root` e recebe ajustes adicionais em `[data-theme="dark"]`.
-
-| Papel | Escuro/base | Claro | Uso |
+| Role | Token | Light | Dark |
 | --- | --- | --- | --- |
-| `--bg` | `#0b141c` | `#f5f7fa` | Fundo da página. |
-| `--deep` | `#060f16` | `#e8edf4` | Plano mais profundo, grafo e controles. |
-| `--low` | `#141c24` | `#ffffff` | Painéis principais. |
-| `--card` | `#182028` | `#eef2f7` | Cartões e campos dentro de painéis. |
-| `--high` | `#222b33` | `#e2e8f0` | Superfície elevada ou selecionável. |
-| `--text` | `#dae3ee` | `#14202e` | Texto principal. |
-| `--muted` | `#aeb5c1` | `#4d5c6b` | Apoio e descrição. |
-| `--blue` / `--blue-ink` | `#adc6ff` / `#002e6a` | `#285da8` / `#ffffff` | Ação, seleção e foco; texto sobre azul. |
-| `--green` | `#4edea3` | `#16835d` | Confirmação e progresso aprovado. |
-| `--amber` | `#ffb95f` | `#a85a00` | Revisão e atenção. |
+| Page | `--bg` | `#faf8ff` | `#070d13` |
+| Primary surface | `--low` | `#ffffff` | `#0e1a25` |
+| Nested surface | `--deep` / `--card` | `#f2f3ff` | `#09131c` / `#132432` |
+| Primary text | `--text` | `#0d1b36` | `#edf4fb` |
+| Secondary text | `--muted` | `#434655` | `#bdcad5` |
+| Action and focus | `--blue` | `#0037b0` | `#adc6ff` |
+| Completion | `--green` | `#006b2f` | `#4edea3` |
+| Attention and eyebrow | `--amber` | `#9b4500` | `#ffb95f` |
 
-`--line`, `--line-soft` e `--line-faint` formam a hierarquia de bordas. `--accent-soft`, `--accent-medium`, `--success-soft` e `--warning-soft` são fundos de estado. `--graph-dot` e `--graph-edge` pertencem ao mapa. `--shadow`, `--header` e `--shimmer` acompanham o tema. No escuro explícito, `themes.css` escurece e azula ainda mais as superfícies; portanto, consulte o CSS antes de tomar os valores da tabela como cores finais calculadas.
+`--line-faint`, `--line-soft`, and `--line` define separator strength. `--blue-ink` supplies text on blue controls. `--accent-soft`, `--success-soft`, and `--warning-soft` distinguish selection, confirmation, and caution. Theme variants must retain readable contrast; a color never stands alone as the state indicator.
 
-A biblioteca tem um acento dourado local (`--gold` e variantes em `library-workspace.module.css`) para marcar o espaço de organização. Esse acento não substitui o azul global de ação. Gradientes e brilho são contidos e concentrados em hero ou destaque de conteúdo, sem virar fundo padrão de todo cartão.
+`--font-editorial` (Iowan Old Style, Palatino, Georgia fallback) carries page headings and selected narrative statements. `--font-ui` carries controls, data, task text, and most body copy. The shared type floor lives in `app/readable-type.css`: body text is 17 px, controls and supporting text are at least 16 px, and labels and metadata are at least 14 px. Small uppercase labels use the UI face with restrained letter spacing. Page headings use `clamp()` and reach about 50 px on wide screens; section titles are about 24 px. At narrow widths, shorten labels or allow wrapping instead of shrinking readable text. Inputs use at least 16 px type to avoid mobile zoom. Do not shrink instructions or diagnosis to metadata size.
 
-## 4. Tipografia, ritmo e forma
+Panels are quiet `--low` surfaces, usually with an 8–11 px radius, faint border or soft shadow, and around 20 px of internal spacing. Controls have clear borders, visible focus, and comfortable targets. The primary button is blue; neutral actions live on `--deep`. Motion is brief and purpose driven. Respect `prefers-reduced-motion`.
 
-`--font-ui` é a pilha de sistema para controles e leitura funcional. `--font-editorial` usa Iowan Old Style, Palatino ou Georgia para títulos de caráter editorial. A landing usa sua variante local `--landing-display`; onboarding e alguns títulos de seção também recorrem à serifada. Metadados curtos e indicadores usam monoespaçada. A mistura representa três funções: narrativa, trabalho e dado.
+## Layout by destination
 
-O corpo do app parte de `--font-body: 16px`; suporte, rótulos e metadados usam 14, 13 e 12 px. Títulos de destaque crescem com `clamp()` quando necessário. Evite reduzir texto de tarefa a tamanho de metadado e evite usar letras maiúsculas espaçadas em parágrafos. Rótulos compactos podem usar caixa alta quando ajudam a localizar uma seção.
+### Study
 
-O desenho favorece cantos moderados: controles e marcadores em torno de 5–7 px, painéis em torno de 10–11 px e blocos de destaque maiores até 18 px. Bordas suaves e mudança de superfície estabelecem agrupamentos; sombra deve indicar elevação real. Espaçamento interno acompanha densidade: mais amplo em landing/onboarding, compacto em ferramentas de estudo, sem sacrificar área de clique ou leitura.
+The top header identifies the active study material with the shared eyebrow, title, and supporting sentence. The material and concept controls form one decision band below it. The header contains navigation and account controls, without a credit control. Study shows the full credit quota beside the primary study work on wide screens and below it on narrow screens. It starts expanded and can be minimized to a row that still shows the available balance. When a concept is ready and no question is open, the main area names that concept, explains why to begin, and offers one prominent **Start studying** action directly below the controls. A saved question resumes automatically. With no saved choice, a review concept is proposed first, then an available concept; this is a suggestion, never a lock. Status labels use the active locale. Once started, the question, optional short evidence excerpt, answer, and diagnosis form a focused content column. Each next-step recommendation names its concept. **New question** is a secondary action only after a question is open. Adding another material appears below the study controls and above the next step or active question. The student refers to their own material for full reading. Removing the former reference reader must not cause the question area to float in a narrow centered sliver; it uses the shared work frame and readable internal width.
 
-## 5. Estrutura de páginas e componentes
+Concept relationships do not lock study actions. An approved explanation and an optional edge-case test remain separate events. Error and extraction states explain what can happen next.
 
-As rotas Next.js vivem em `app/`. `app/layout.tsx` importa os estilos globais; `globals.css` traz a base, `themes.css` concentra tokens, tema e ajustes compartilhados, e os outros CSS globais cobrem áreas existentes como estudo, prática, autenticação e cobrança. A landing, a biblioteca e páginas de status têm CSS Modules próprios. Para novas áreas isoladas, prefira estilo local; para tokens ou padrão realmente transversal, edite a camada global. Antes de acrescentar seletor, confira a cascata e as regras responsivas já existentes, pois parte do CSS atual contém ajustes posteriores para componentes antigos.
+### Tasks
 
-| Camada | Responsabilidade | Exemplos atuais |
-| --- | --- | --- |
-| Casca de navegação | Entrada, navegação, idioma, tema e saldo | `PageShell`, `SiteHeader`, `ThemeToggle`, `CreditBalance`. |
-| Primitivos compartilhados | Interação e feedback consistentes | `ActionButton`, `StyledSelect`, `LoadingSkeleton`. |
-| Experiências de domínio | Estado, composição e ações de uma jornada | `LiveStudy`, `KnowledgeMap`, `PracticeWorkspace`, `LibraryWorkspace`. |
-| Infraestrutura de UI | Dados e contexto, sem autoridade de negócio | provedores de billing/realtime, `lib/i18n.tsx`, chamadas em `lib/api.ts`. |
+Tasks appears immediately after Study in the main navigation. Its page header has the same hierarchy and top alignment as Analyze and Create. The add form is a control band. The work area places the task list beside a calendar on wide screens; the calendar moves below the list on narrow screens. The list remains usable with no dated tasks.
 
-`PageShell` fornece link para pular ao conteúdo e o cabeçalho nas rotas internas. `SiteHeader` expõe Estudar, Mapa, Prática e Biblioteca, com estado ativo acessível. A landing tem composição e navegação próprias; não deve herdar densidade do workspace. Não há footer global na aplicação interna.
+The calendar is a working control, not decoration: it displays dated open tasks, choosing a day selects it and fills the new task's target date, choosing an event locates that task in the list, and moving an event changes its date. The task form and edit form provide date changes by keyboard. The calendar ends at the month grid; the task list is the place to read task details. Failed updates restore the prior event position and show an error. Calendar and list reflect the same task data.
 
-Ao criar um componente, dê a ele uma responsabilidade clara e uma API pequena. Compartilhe apenas o comportamento que já se repete de fato. Variantes devem representar diferenças semânticas reais (`primary`, `secondary`, `ghost` em `ActionButton`), e não esconder uma coleção de estilos arbitrários. O componente de domínio mantém sua lógica de apresentação perto da jornada; decisões de autenticação, saldo, pagamento e ownership vêm da API.
+Open tasks appear by date, undated tasks afterward. **To do** and **Completed** are visible controls at the top of the task list, each with its count; completed tasks never require scrolling to a separate bottom section. Each row shows the task, its target date, optional material, and actions to edit, complete, reopen, or remove it. Completion changes the task's list and does not imply learning. Suggestions based on study evidence remain optional and collapsed. The task page does not dump raw book text, relation excerpts, or concept cards. Calendar navigation uses text labels so it stays legible even when icon assets do not load.
 
-## 6. Padrões de interação e estados
+### Analyze
 
-- **Ação principal:** um próximo passo dominante por contexto. O texto do botão diz o efeito concreto e mantém o mesmo verbo em confirmação e resultado.
-- **Seleção:** estado selecionado legível por forma, borda ou rótulo além da cor; `aria-current`, `aria-selected` e atributos equivalentes conforme o controle.
-- **Mapa:** nós e relações são exploráveis; seleção abre diagnóstico no mesmo contexto. Relações transitivas ficam ocultas inicialmente para reduzir cruzamentos. Uma conexão informa, mas não bloqueia conceito.
-- **Estudo:** leitura e resposta devem manter relação espacial. Diagnóstico explica a lacuna e sua referência, sem parecer nota definitiva. Caso-limite aparece como convite opcional após explicação aprovada.
-- **Barra de estudo:** material, conceito e ação de iniciar sessão formam uma linha de decisão; o saldo ocupa uma faixa própria logo abaixo. Em telas estreitas, os controles passam a uma coluna sem misturar o orçamento de créditos com a escolha pedagógica.
-- **Prática:** foco automático e escolha manual são as duas decisões expostas. O resultado mostra conceitos priorizados e justificativa. Prévia vem antes de consumo de IA quando o fluxo a oferece.
-- **Biblioteca:** Estante, Fichário e Mesa do Dia compartilham a mesma divisão de colunas e altura mínima dos painéis, mesmo vazios. Os painéis de cada vista crescem juntos quando o conteúdo exigir. Calendário reserva mais largura para a grade mensal, mantendo a mesma altura mínima. A navegação usa nomes dos espaços com descrições de sua tarefa, em cartões que lembram fichas; o acento dourado local indica a área ativa.
-- **Carregamento:** skeletons específicos de rota preservam a forma do conteúdo esperado. Evite layout shift e falso estado vazio enquanto ainda há requisição.
-- **Vazio e erro:** informe o que falta e uma ação possível. Estados de falha não devem sugerir sucesso, especialmente em extração e pagamento pendente.
+The map occupies the main area, with the inspector nearby. A selected concept or relationship has a readable explanation and short source evidence. The inspector names the selected concept beside its next-step recommendation. Connections inform the student; they do not enforce a path. Dense graphs need a usable list or focused view and visible keyboard focus. Graph layout is presentation, not an authority over study order.
 
-## 7. Conteúdo e linguagem
+### Create
 
-A interface oferece `pt-BR` e `en-US`, com preferência no navegador. Todo texto novo de jornada deve existir nos dois idiomas e usar o mecanismo de `lib/i18n.tsx` ou a estrutura localizada da página. A voz é direta, conversacional e específica: “Explicar”, “Criar projeto” e “Escolher conceitos” dizem mais do que “Enviar” ou “Continuar”. Use termos reconhecíveis pelo estudante; detalhes internos de estratégia, fila ou arquitetura não são decisões de interface.
+The material selector belongs in the shared page header. The focus controls lead to an explainable preview before generation. The result occupies the companion area. Automatic and manual focus are clear student choices. Generated projects remain available independently of a mandatory study session.
 
-Explique custo ou consequência antes de ações que consomem IA. Ao falar de progresso, diferencie confiança declarada, explicação aprovada, projeto e retomada. Não prometa aprendizado comprovado com base em uma interação. O material original permanece identificável como fonte, e diagnósticos podem ser contestados.
+## Interaction rules
 
-## 8. Responsividade, acessibilidade e movimento
+- Controls stay in predictable locations while content changes. Rows may grow for editing, but primary navigation, calendar controls, and page actions should not jump because a neighboring paragraph is longer.
+- A primary action names its outcome. Use secondary actions for edit, reopen, cancel, and remove. Destructive operations need a clear target and confirmation when they remove material or history.
+- Selection needs text, shape, or an accessible state such as `aria-current` or `aria-pressed` in addition to color.
+- Date controls use the student's local day. The task list, task date field, and calendar must agree about that day. A date is an editable target, not an automatic penalty or mastery signal.
+- Keyboard access is required for every task operation. Calendar drag is an enhancement; the date field remains the equivalent way to reschedule.
+- Empty states explain the next action. Errors remain visible near the affected work and never imply success. Loading surfaces preserve enough structure to avoid a false empty state.
+- AI-generated material is untrusted and can be wrong. Evidence must be source grounded and concise. Do not hide uncertainty behind dense text or decoration.
 
-O app usa grids que se reorganizam em uma coluna, controles que crescem ou quebram linha e navegação adaptada no cabeçalho. A landing tem largura máxima local de 1240 px; o shell interno vai até 1600 px; a biblioteca limita seu workspace a 1400 px. Esses números descrevem o layout atual, não autorizam largura fixa que gere overflow. Conferir 390, 768 e 1440 px em UI significativa, incluindo menu, mapa, formulários, estados longos e idiomas.
+## Responsive and validation contract
 
-Todo fluxo deve funcionar por teclado, com foco visível e link de salto para conteúdo. Controles precisam de nomes acessíveis, estados anunciáveis e área de interação confortável. Não depender só de cor, hover ou animação. O projeto já considera `prefers-reduced-motion`; mantenha transições curtas (`--motion-fast: 180ms`, `--motion-standard: 320ms`) e retire movimento ornamental no modo reduzido. Animação serve a orientação ou feedback, principalmente no mapa e em transições de estado.
+Check the rendered screen at 390, 768, and 1440 px. At wide widths, preserve the two-surface relationship where useful. At 768 px, allow a one-column work area without horizontal overflow. At 390 px, forms, task actions, navigation, calendar controls, and long titles must remain readable and operable. Check both themes and both locales (`pt-BR`, `en-US`), keyboard focus, selected and error states, and reduced motion.
 
-## 9. Como evoluir o sistema
-
-Antes de desenhar ou alterar UI, leia `skills/front-skill.md`, este documento, o fluxo afetado e seus estilos. Formule em poucas linhas: público, tarefa da tela, hierarquia, tokens a reutilizar e um elemento distintivo justificado pelo assunto. Faça uma crítica da proposta antes de codificar: se poderia servir indistintamente a outro produto, refine. O conteúdo real da jornada deve orientar a forma.
-
-Depois da implementação, confira tema claro e escuro, `pt-BR` e `en-US`, estados de loading/vazio/erro/sucesso, teclado, foco, movimento reduzido e os três tamanhos de viewport. Execute os testes e builds pertinentes conforme `agents.md` e `README.md`. Registre aqui somente decisões que devem sobreviver à tarefa; valores de CSS e comportamento executável continuam verificáveis no código.
+Run `bun run validate` in the affected repository. For a significant visual change, inspect the real page in a browser at those widths. If authentication prevents that inspection, report the limitation instead of claiming visual validation. Keep durable product decisions here; executable code, tests, and API contracts determine what is implemented.

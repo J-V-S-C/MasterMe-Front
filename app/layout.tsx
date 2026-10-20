@@ -7,6 +7,8 @@ import './themes.css'
 import './practice.css'
 import './auth.css'
 import './billing.css'
+import './workspace-heading.css'
+import './readable-type.css'
 import { ClientObservability } from '../components/client-observability'
 
 export const metadata: Metadata = {

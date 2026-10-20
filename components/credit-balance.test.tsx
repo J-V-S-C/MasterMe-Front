@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { cleanup, render, waitFor } from '@testing-library/react'
 import { Window } from 'happy-dom'
 import { BillingProvider } from './billing-provider'
-import { CreditBalance } from './credit-balance'
+import { CreditBalance, StudyCreditBalance } from './credit-balance'
 import { I18nProvider } from '../lib/i18n'
 import { invalidateApiCache } from '../lib/api'
 
@@ -14,6 +14,27 @@ beforeEach(() => {
 afterEach(() => { cleanup(); invalidateApiCache(); globalThis.fetch = originalFetch })
 
 describe('authoritative balance', () => {
+  test('shows the full study quota by default and lets the student minimize and restore it', async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: {
+      planId: 'FREE', dailyLimit: 100, dailyUsed: 1, dailyRemaining: 99,
+      dailyResetsAt: '2026-10-20T00:00:00.000Z', periodLimit: 0, periodUsed: 0, periodRemaining: 0,
+      periodStartsAt: '2026-10-20T00:00:00.000Z', periodEndsAt: '2026-10-20T00:00:00.000Z', validUntil: null,
+      weights: { INITIAL_EVALUATION: 1, STRESS_EVALUATION: 1, EDGE_CASE_GENERATION: 1, EDGE_CASE_EVALUATION: 1, PRACTICE_PROJECT: 1, LOCALIZATION: 1, EXTRACTION: 1, ISOMORPHIC_PROBLEM: 1 },
+      estimates: { INITIAL_EVALUATION: 49, EXTRACTION: 49, PRACTICE_PROJECT: 49 },
+      estimateAssumption: { providerAttemptsPerOperation: 2 },
+    } }), { status: 200 })) as unknown as typeof fetch
+    const view = render(<I18nProvider><BillingProvider><StudyCreditBalance /></BillingProvider></I18nProvider>)
+    const disclosure = view.container.querySelector('details.study-balance') as HTMLDetailsElement
+    await waitFor(() => expect(view.getByTitle(/99 créditos restantes/)).toBeTruthy())
+    expect(disclosure.open).toBe(true)
+    const summary = disclosure.querySelector('summary') as HTMLElement
+    summary.click()
+    expect(disclosure.open).toBe(false)
+    expect(summary.textContent).toContain('99 créditos')
+    summary.click()
+    expect(disclosure.open).toBe(true)
+  })
+
   test('free balance shows only the daily reset even with a legacy period value', async () => {
     globalThis.fetch = (async () => new Response(JSON.stringify({ data: {
       planId: 'FREE', dailyLimit: 100, dailyUsed: 1, dailyRemaining: 99,

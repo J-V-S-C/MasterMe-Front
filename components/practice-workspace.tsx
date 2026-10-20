@@ -9,6 +9,7 @@ import { useI18n } from '../lib/i18n';
 import { LoadingSkeleton } from './loading-skeleton';
 import { StyledSelect } from './styled-select';
 import { ActionButton } from './action-button';
+import { WorkspaceHeading } from './workspace-heading';
 import { useRealtimeRefresh } from './realtime-provider';
 import { useBilling } from './billing-provider';
 
@@ -119,7 +120,7 @@ export function PracticeWorkspace() {
   if (loading) return <LoadingSkeleton variant="practice" />;
   if (!materials.length) return <section className="empty-state"><Icon name="document" /><h1>{t('addMaterialFirst')}</h1><p>{t('practiceUsesConcepts')}</p><Link className="exercise-link" href="/estudar">{t('goToStudy')}</Link></section>;
   return <>
-    <section className="practice-hero"><div><span>{t('practiceKicker')}</span><h1>{t('practiceTitle')}</h1><p>{t('practiceDescription')}</p></div><StyledSelect label={t('material')} icon="document" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} /></section>
+    <WorkspaceHeading className="practice-hero" eyebrow={t('practiceKicker')} title={t('practiceTitle')} description={t('practiceDescription')} aside={<StyledSelect label={t('material')} icon="document" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} />} />
     {error && <p className="form-error practice-error" role="alert">{error}</p>}
     {loadingMaterial ? <LoadingSkeleton variant="practice" /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/estudar?material=${materialId}`}>{t('openMaterial')}</Link></section> : <div className="practice-layout">
       <section className="practice-config">

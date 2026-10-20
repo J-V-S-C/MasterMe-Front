@@ -33,3 +33,11 @@ export function CreditBalance({ compact = false }: { compact?: boolean }) {
     {unavailable && <p className="credit-stale" role="status">{t('creditUnavailable')}</p>}
   </section>
 }
+
+export function StudyCreditBalance() {
+  const { t } = useI18n()
+  return <details className="study-balance" open>
+    <summary><span>{t('creditBalance')}</span><CreditBalance compact /></summary>
+    <CreditBalance />
+  </details>
+}
