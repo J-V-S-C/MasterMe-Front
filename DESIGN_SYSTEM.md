@@ -44,6 +44,16 @@ Use semantic tokens from `app/themes.css`, not isolated feature colors. The curr
 
 Panels are quiet `--low` surfaces, usually with an 8–11 px radius, faint border or soft shadow, and around 20 px of internal spacing. Controls have clear borders, visible focus, and comfortable targets. The primary button is blue; neutral actions live on `--deep`. Motion is brief and purpose driven. Respect `prefers-reduced-motion`.
 
+## Public landing
+
+The landing is the acquisition surface at `/`; it is not part of the authenticated shell and has no navigation into the product except sign-in. It uses the same semantic tokens as the application, so the theme control switches both palettes without a second color source. No remote stylesheet or font is loaded: the content security policy allows only self-hosted assets, and the landing keeps the system UI, editorial serif, and monospace stacks. The monospace face is reserved for eyebrows, diagram labels, and specification notes; body copy stays in the UI face.
+
+The header carries the brand, the application's four area tabs with their icons — Study, Tasks, Analyze, Create — the locale select, the theme control, a separate Plans link, sign-in, and one primary call to action. The tabs scroll to the matching landing sections; they do not enter the authenticated app. Below it, the hero states the product promise — **Organize what to study. Discover what you really learned.** — and offers one primary and one secondary action before the material card. The material card links to authentication; it never pretends to accept a file or process it on the page.
+
+The signature element is the map-and-diagnostic diptych, preceded by a four-step tour of the product's areas — Study, Tasks, Analyze, Create — which share one private library. The numbering is an index, not a required order, and the copy keeps each area usable on its own. The diptych uses a labelled illustrative example (database indexes), never a borrowed paper as if it were the visitor's own source: the figure says **exemplo ilustrativo**, and the panel notes that a real diagnostic uses the visitor's material. It is a figure, not an interactive control, and it must stay legible at 390 px when the two surfaces stack. A planning section then shows dated tasks, the calendar, and optional suggestions. Its mock is decorative and `aria-hidden`; the bullets carry the meaning. Four path cards follow and state that exploration, explanation, edge cases, and practice do not block one another. A Create section then shows a practice brief with goal, deliverables, constraints, and first step, labelled as an example and explicitly not a submission flow. Pricing and the FAQ remain after it: with payments disabled the plan grid shows only the free plan, and paid-plan questions stay hidden. Claims stay factual — the page does not claim local processing, zero telemetry, or a demo flow the product does not have.
+
+Calls to action reuse `planLoginHref` and carry only a plan ID in the destination, never a price. The landing renders no session fetch or realtime connection. Language and theme preferences persist in browser storage, and the document language follows the selected locale.
+
 ## Layout by destination
 
 ### Study
