@@ -20,7 +20,6 @@
 .app-shell small,
 .app-shell .context-node,
 .app-shell .concept-summary footer,
-.app-shell .evidence-details summary,
 .app-shell .map-legend small { font-size: var(--font-meta); }
 .app-shell input,
 .app-shell select,
@@ -58,19 +57,4 @@
 .app-shell .study-start-action small { font-size: var(--font-meta); }
 .app-shell .masterme-flow-node { max-width: 220px; font-size: var(--font-support); line-height: 1.4; }
 .app-shell .react-flow__attribution { font-size: var(--font-meta); }
-.app-shell .credit-balance.compact { min-width: 138px; }
-.app-shell .credit-balance.compact > span,
-.app-shell .credit-balance.compact small { font-size: var(--font-meta); }
-.app-shell .credit-balance.compact > strong { font-size: var(--font-control); }
-.app-shell .credit-balance-panel > header span,
-.app-shell .credit-balance-panel > header small,
-.app-shell .credit-limits span,
-.app-shell .credit-limits small,
-.app-shell .credit-estimates > span,
-.app-shell .credit-estimates li,
-.app-shell .credit-stale { font-size: var(--font-meta); }
-.app-shell .credit-limits b { font-size: var(--font-control); }
 .app-shell .next-step-concept { display: block; margin: 0 0 4px; color: var(--text); font-size: var(--font-support); font-weight: 700; overflow-wrap: anywhere; }
-@media (max-width: 850px) {
-  .app-shell .credit-balance.compact { min-width: 0; }
-}
