@@ -21,7 +21,7 @@ type MarketingPlan = {
   featured?: boolean
 }
 
-type MapNode = { kicker: string; title: string; state: string; tone: 'green' | 'blue' | 'amber' | 'neutral' }
+type MapNode = { kicker: string; title: string; state: string }
 type PathCard = { tag: string; icon: IconName; title: string; description: string; footer: string }
 type CycleStep = { tag: string; title: string; description: string }
 type TaskItem = { title: string; date: string; material: string; state: string; done?: boolean }
@@ -53,7 +53,6 @@ type LandingCopy = {
     figureLabel: string
     exampleBadge: string
     graphLabel: string
-    graphStatus: string
     graphFooter: string
     nodes: readonly MapNode[]
     panelLabel: string
@@ -121,7 +120,7 @@ const landingCopy = {
       eyebrow: 'Ambiente pessoal de aprendizagem para autodidatas técnicos',
       titleLead: 'Organize o que estudar.',
       titleEmphasis: 'Descubra o que realmente aprendeu.',
-      description: 'Reúna PDFs, artigos e anotações em uma biblioteca privada. Organize o que estudar, explique com suas palavras e transforme a lacuna do diagnóstico em prática.',
+      description: 'Reúna PDFs, artigos e anotações em uma biblioteca privada. Escolha um assunto, explique o que entendeu e veja o que precisa revisar. Depois, pratique com um pequeno projeto.',
       primaryAction: 'Criar meu espaço grátis',
       secondaryAction: 'Ver como funciona',
       drop: {
@@ -139,45 +138,44 @@ const landingCopy = {
       steps: [
         { tag: 'ESTUDAR', title: 'Reúna e explique', description: 'Envie PDF, Markdown ou TXT, ou cole um texto. Escolha um conceito e responda com suas palavras.' },
         { tag: 'TAREFAS', title: 'Planeje quando voltar', description: 'Crie tarefas com data, ligue-as a um material e ajuste o calendário quando a semana mudar.' },
-        { tag: 'ANALISAR', title: 'Veja a estrutura e a lacuna', description: 'O mapa mostra as relações do material; o diagnóstico aponta a premissa que faltou.' },
-        { tag: 'CRIAR', title: 'Pratique a partir da lacuna', description: 'Gere um brief curto a partir das dificuldades e execute no seu próprio editor.' },
+        { tag: 'ANALISAR', title: 'Veja o que você entendeu', description: 'O mapa liga os assuntos do material. Depois da sua resposta, você vê o que explicou bem e o que precisa revisar.' },
+        { tag: 'CRIAR', title: 'Crie um projeto para praticar', description: 'Crie um projeto curto para praticar os assuntos que você ainda não domina. Faça o projeto no seu editor.' },
       ],
     },
     map: {
-      kicker: 'O MAPA EM AÇÃO',
-      title: 'Veja a estrutura. Depois, a lacuna.',
-      description: 'O mapa organiza os conceitos e as relações do material. Quando você explica, o diagnóstico aponta a premissa que faltou — ancorado no trecho que você enviou.',
+      kicker: 'COMO FUNCIONA O MAPA',
+      title: 'Veja como os assuntos se ligam',
+      description: 'O mapa mostra os assuntos encontrados no seu material. Abra um assunto, responda a uma pergunta e veja qual parte da explicação precisa de revisão.',
       figureLabel: 'Exemplo de mapa de conhecimento e diagnóstico',
       exampleBadge: 'EXEMPLO ILUSTRATIVO',
-      graphLabel: 'MAPA · BANCO DE DADOS',
-      graphStatus: 'Conceito ativo',
-      graphFooter: 'Nenhum nó bloqueia o próximo',
+      graphLabel: 'EXEMPLO COM UM TEXTO SOBRE BANCO DE DADOS',
+      graphFooter: 'Você pode abrir qualquer assunto do mapa',
       nodes: [
-        { kicker: 'CONCEITO BASE', title: 'Índice B-tree', state: 'Compreendido', tone: 'green' },
-        { kicker: 'EM FOCO', title: 'Seletividade da consulta', state: 'Diagnóstico aberto', tone: 'blue' },
-        { kicker: 'LACUNA DETECTADA', title: 'Ordem das colunas', state: 'Premissa omitida', tone: 'amber' },
-        { kicker: 'NÓ RELACIONADO', title: 'Leitura sequencial', state: 'Contexto, não bloqueio', tone: 'neutral' },
+        { kicker: 'ASSUNTO', title: 'Índices no banco de dados', state: 'Ajudam a encontrar registros' },
+        { kicker: 'ASSUNTO', title: 'Índice com duas colunas', state: 'Usa uma ordem definida' },
+        { kicker: 'ASSUNTO', title: 'Busca por cliente ou por data', state: 'A ordem muda o resultado' },
+        { kicker: 'ASSUNTO', title: 'Leitura sem índice', state: 'Compara os registros um a um' },
       ],
       panelLabel: 'DIAGNÓSTICO',
-      focusTitle: 'Seletividade da consulta',
+      focusTitle: 'Índice com duas colunas',
       sectionBadge: 'EXEMPLO',
       citationLabel: 'TRECHO DO MATERIAL · EXEMPLO',
-      citation: '“Um índice composto só acelera a consulta quando as colunas do filtro respeitam a ordem definida na criação do índice.”',
-      questionLabel: 'PERGUNTA GERADA DO TRECHO',
-      question: 'Por que um índice em (cliente_id, criado_em) acelera a busca por cliente, mas não a busca apenas por data de criação?',
-      diagnosisLabel: 'DIAGNÓSTICO PONTUAL',
-      diagnosisLead: 'Você explicou a busca em árvore, mas',
-      diagnosisGap: 'omitiu a ordem das colunas',
-      diagnosisTail: ': o índice é ordenado pela primeira coluna; sem ela, a segunda não restringe o intervalo.',
+      citation: '“Um índice criado primeiro por cliente e depois por data ajuda a buscar os pedidos de um cliente.”',
+      questionLabel: 'PERGUNTA SOBRE O TEXTO',
+      question: 'Se o índice começa por cliente, por que ele não ajuda tanto numa busca feita apenas pela data?',
+      diagnosisLabel: 'O QUE REVISAR',
+      diagnosisLead: 'Sua resposta explicou como encontrar registros, mas',
+      diagnosisGap: 'não explicou por que a ordem das colunas importa',
+      diagnosisTail: '. Como o índice começa por cliente, ele ajuda na busca por cliente. Uma busca só por data não usa essa primeira coluna.',
       panelFooter: 'O diagnóstico real usa o seu material, não este exemplo.',
     },
     tasks: {
       kicker: 'PLANEJAMENTO',
-      title: 'Decida o que estudar agora — e quando voltar.',
+      title: 'Decida o que estudar agora e quando revisar.',
       description: 'Transforme conceitos em tarefas com data, ligue cada uma a um material e mova o compromisso no calendário quando a semana mudar.',
       points: [
         'Data-alvo e material opcional em cada tarefa',
-        'O calendário remarca; a lista continua sendo a fonte',
+        'Mude a data da tarefa pelo calendário',
         'Sugestões opcionais a partir dos seus diagnósticos',
       ],
       figureLabel: 'Exemplo de tarefas e calendário',
@@ -194,34 +192,34 @@ const landingCopy = {
       title: 'Você escolhe a profundidade. Nada bloqueia o próximo passo.',
       description: 'Explorar, explicar, testar limites e praticar são ações independentes. O histórico registra cada uma separadamente.',
       cards: [
-        { tag: 'MAPA', icon: 'book', title: 'Explorar e ancorar', description: 'Abra qualquer conceito e siga as relações que dão contexto. Nenhum nó exige que você passe por outro.', footer: 'Sem bloqueios' },
-        { tag: 'SÍNTESE', icon: 'idea', title: 'Explicar com diagnóstico', description: 'Responda com suas palavras e receba o que ficou de fora, ancorado no material — não uma nota.', footer: 'Evidência de compreensão' },
+        { tag: 'MAPA', icon: 'book', title: 'Explore os assuntos', description: 'Abra um assunto e veja quais outros se relacionam a ele. Você pode abrir os assuntos na ordem que quiser.', footer: 'Sem bloqueios' },
+        { tag: 'SÍNTESE', icon: 'idea', title: 'Explicar com diagnóstico', description: 'Responda com suas palavras e veja o que faltou na sua explicação, com base no material.', footer: 'Evidência de compreensão' },
         { tag: 'ESTRESSE', icon: 'bolt', title: 'Testar um caso-limite', description: 'Opcional, só depois de uma explicação aprovada. Aprofunda sem revogar a aprovação.', footer: 'Opt-in voluntário' },
-        { tag: 'CÓDIGO', icon: 'sparkles', title: 'Projeto de prática', description: 'Gere um brief curto a partir das lacunas e execute no seu editor. A solução não é enviada nem avaliada.', footer: 'Disponível após a extração' },
+        { tag: 'CÓDIGO', icon: 'sparkles', title: 'Projeto de prática', description: 'Crie um projeto curto para praticar os assuntos que precisa revisar. Faça no seu editor.', footer: 'Disponível após a extração' },
       ],
     },
     create: {
       kicker: 'CRIAR',
-      title: 'Da lacuna ao projeto.',
-      description: 'As dificuldades registradas no seu material viram um brief curto de prática. Você escolhe o foco, gera o projeto e constrói no seu próprio editor.',
+      title: 'Pratique com um projeto curto.',
+      description: 'Escolha os assuntos que quer praticar. O MasterMe sugere um projeto com objetivo e primeiros passos. Você escreve o código no seu editor.',
       points: [
-        'Foco automático pelo seu desempenho ou manual, com até cinco conceitos',
-        'Brief com contexto, objetivo, entregáveis, restrições e primeiro passo',
+        'Escolha até cinco assuntos ou aceite a sugestão do MasterMe',
+        'Projeto com objetivo, o que criar e por onde começar',
         'Projetos anteriores continuam disponíveis',
       ],
-      figureLabel: 'Exemplo de brief de prática',
-      figureCaption: 'Exemplo ilustrativo · o brief real usa as lacunas do seu material.',
+      figureLabel: 'Exemplo de projeto de prática',
+      figureCaption: 'Exemplo ilustrativo. O projeto real usa os assuntos que você precisa revisar.',
       badge: 'EXEMPLO',
-      briefLabel: 'BRIEF DE PRÁTICA',
+      briefLabel: 'PROJETO DE PRÁTICA',
       briefTitle: 'Índices compostos em consultas reais',
-      briefMeta: 'Foco automático · 2 conceitos priorizados',
+      briefMeta: 'Dois assuntos escolhidos para praticar',
       goalLabel: 'OBJETIVO',
       goal: 'Comparar o plano de consulta antes e depois de criar um índice composto.',
       deliverablesLabel: 'ENTREGÁVEIS',
       deliverables: ['Script de criação do índice', 'Duas consultas com EXPLAIN, antes e depois'],
       firstStepLabel: 'PRIMEIRO PASSO',
       firstStep: 'Criar a tabela de pedidos e inserir uma amostra local.',
-      briefFooter: 'Sem solução enviada · execução no seu editor',
+      briefFooter: 'Você faz o projeto no seu editor',
     },
     pricing: {
       kicker: 'ACESSO TRANSPARENTE',
@@ -280,7 +278,7 @@ const landingCopy = {
       eyebrow: 'A personal learning environment for self-taught engineers',
       titleLead: 'Organize what to study.',
       titleEmphasis: 'Discover what you really learned.',
-      description: 'Bring PDFs, articles, and notes into a private library. Organize what to study, explain it in your own words, and turn the diagnosis gap into practice.',
+      description: 'Bring PDFs, articles, and notes into a private library. Pick a topic, explain what you understood, and see what to review. Then practice with a small project.',
       primaryAction: 'Create my free space',
       secondaryAction: 'See how it works',
       drop: {
@@ -298,45 +296,44 @@ const landingCopy = {
       steps: [
         { tag: 'STUDY', title: 'Bring it in and explain', description: 'Upload a PDF, Markdown, or TXT file, or paste text. Pick a concept and answer in your own words.' },
         { tag: 'TASKS', title: 'Plan when to come back', description: 'Create tasks with a target date, attach a material, and move the date when the week changes.' },
-        { tag: 'ANALYZE', title: 'See the structure and the gap', description: 'The map shows the material relationships; the diagnostic points to the premise you left out.' },
-        { tag: 'CREATE', title: 'Practice from the gap', description: 'Generate a short brief from the difficulties and build it in your own editor.' },
+        { tag: 'ANALYZE', title: 'See what you understood', description: 'The map links topics in the material. After you answer, you see what you explained well and what needs review.' },
+        { tag: 'CREATE', title: 'Create a project for practice', description: 'Create a small project to practice topics you still need to learn. Build it in your own editor.' },
       ],
     },
     map: {
-      kicker: 'THE MAP IN ACTION',
-      title: 'See the structure. Then the gap.',
-      description: 'The map organizes the concepts and relationships in your material. When you explain, the diagnostic points to the missing premise — grounded in the excerpt you sent.',
+      kicker: 'HOW THE MAP WORKS',
+      title: 'See how the topics connect',
+      description: 'The map shows topics found in your material. Open a topic, answer a question, and see which part of your explanation needs review.',
       figureLabel: 'Knowledge map and diagnostic example',
       exampleBadge: 'ILLUSTRATIVE EXAMPLE',
-      graphLabel: 'MAP · DATABASES',
-      graphStatus: 'Active concept',
-      graphFooter: 'No node blocks the next one',
+      graphLabel: 'EXAMPLE FROM A DATABASE ARTICLE',
+      graphFooter: 'You can open any topic on the map',
       nodes: [
-        { kicker: 'BASE CONCEPT', title: 'B-tree index', state: 'Understood', tone: 'green' },
-        { kicker: 'IN FOCUS', title: 'Query selectivity', state: 'Open diagnostic', tone: 'blue' },
-        { kicker: 'GAP DETECTED', title: 'Column order', state: 'Omitted premise', tone: 'amber' },
-        { kicker: 'RELATED NODE', title: 'Sequential read', state: 'Context, not a lock', tone: 'neutral' },
+        { kicker: 'TOPIC', title: 'Database indexes', state: 'Help find records' },
+        { kicker: 'TOPIC', title: 'Two-column index', state: 'Uses a defined order' },
+        { kicker: 'TOPIC', title: 'Search by customer or date', state: 'Column order changes the result' },
+        { kicker: 'TOPIC', title: 'Reading without an index', state: 'Checks records one by one' },
       ],
       panelLabel: 'DIAGNOSTIC',
-      focusTitle: 'Query selectivity',
+      focusTitle: 'Two-column index',
       sectionBadge: 'EXAMPLE',
       citationLabel: 'MATERIAL EXCERPT · EXAMPLE',
-      citation: '“A composite index only speeds up a query when the filter columns follow the order defined when the index was created.”',
-      questionLabel: 'QUESTION GENERATED FROM THE EXCERPT',
-      question: 'Why does an index on (customer_id, created_at) speed up a search by customer, but not a search by creation date alone?',
-      diagnosisLabel: 'POINTED DIAGNOSTIC',
-      diagnosisLead: 'You explained the tree search, but',
-      diagnosisGap: 'left out the column order',
-      diagnosisTail: ': the index is ordered by the first column; without it, the second cannot narrow the range.',
+      citation: '“An index created first by customer and then by date helps find a customer’s orders.”',
+      questionLabel: 'QUESTION ABOUT THE TEXT',
+      question: 'If the index starts with customer, why does it help less when searching only by date?',
+      diagnosisLabel: 'WHAT TO REVIEW',
+      diagnosisLead: 'Your answer explained how to find records, but',
+      diagnosisGap: 'did not explain why column order matters',
+      diagnosisTail: '. Because the index starts with customer, it helps a customer search. A date-only search skips that first column.',
       panelFooter: 'The real diagnostic uses your material, not this example.',
     },
     tasks: {
       kicker: 'PLANNING',
-      title: 'Decide what to study now — and when to come back.',
+      title: 'Decide what to study now and when to review it.',
       description: 'Turn concepts into dated tasks, attach each one to a material, and move the commitment on the calendar when the week changes.',
       points: [
         'A target date and an optional material on every task',
-        'The calendar reschedules; the list stays the source of truth',
+        'Change a task date on the calendar',
         'Optional suggestions drawn from your diagnostics',
       ],
       figureLabel: 'Tasks and calendar example',
@@ -353,34 +350,34 @@ const landingCopy = {
       title: 'You choose the depth. Nothing blocks the next step.',
       description: 'Exploring, explaining, testing limits, and practicing are independent actions. Your history records each one separately.',
       cards: [
-        { tag: 'MAP', icon: 'book', title: 'Explore and anchor', description: 'Open any concept and follow the relationships that give it context. No node requires another first.', footer: 'No locks' },
-        { tag: 'SYNTHESIS', icon: 'idea', title: 'Explain with a diagnostic', description: 'Answer in your own words and get what you left out, grounded in the material — not a score.', footer: 'Evidence of understanding' },
+        { tag: 'MAP', icon: 'book', title: 'Explore the topics', description: 'Open a topic and see which other topics relate to it. You can explore them in any order.', footer: 'No locks' },
+        { tag: 'SYNTHESIS', icon: 'idea', title: 'Explain with a diagnostic', description: 'Answer in your own words and see what your explanation missed, based on the material.', footer: 'Evidence of understanding' },
         { tag: 'STRESS', icon: 'bolt', title: 'Test an edge case', description: 'Optional, only after an approved explanation. It goes deeper without revoking the approval.', footer: 'Voluntary opt-in' },
-        { tag: 'CODE', icon: 'sparkles', title: 'Practice project', description: 'Generate a short brief from the gaps and build it in your editor. The solution is neither submitted nor graded.', footer: 'Available after extraction' },
+        { tag: 'CODE', icon: 'sparkles', title: 'Practice project', description: 'Create a small project to practice topics you need to review. Build it in your editor.', footer: 'Available after extraction' },
       ],
     },
     create: {
       kicker: 'CREATE',
-      title: 'From gap to project.',
-      description: 'The difficulties recorded in your material become a short practice brief. You choose the focus, generate the project, and build it in your own editor.',
+      title: 'Practice with a small project.',
+      description: 'Choose the topics you want to practice. MasterMe suggests a project with a goal and first steps. You write the code in your own editor.',
       points: [
-        'Automatic focus based on your performance, or manual focus with up to five concepts',
-        'A brief with context, goal, deliverables, constraints, and a first step',
+        'Choose up to five topics or accept a suggestion from MasterMe',
+        'A project with a goal, what to build, and where to start',
         'Previous projects stay available',
       ],
-      figureLabel: 'Practice brief example',
-      figureCaption: 'Illustrative example · the real brief uses the gaps in your material.',
+      figureLabel: 'Practice project example',
+      figureCaption: 'Illustrative example. The real project uses topics you need to review.',
       badge: 'EXAMPLE',
-      briefLabel: 'PRACTICE BRIEF',
+      briefLabel: 'PRACTICE PROJECT',
       briefTitle: 'Composite indexes in real queries',
-      briefMeta: 'Automatic focus · 2 prioritized concepts',
+      briefMeta: 'Two topics chosen for practice',
       goalLabel: 'GOAL',
       goal: 'Compare the query plan before and after creating a composite index.',
       deliverablesLabel: 'DELIVERABLES',
       deliverables: ['Index creation script', 'Two EXPLAIN queries, before and after'],
       firstStepLabel: 'FIRST STEP',
       firstStep: 'Create the orders table and insert a local sample.',
-      briefFooter: 'No solution submitted · runs in your editor',
+      briefFooter: 'Build the project in your own editor',
     },
     pricing: {
       kicker: 'TRANSPARENT ACCESS',
@@ -431,7 +428,19 @@ const landingCopy = {
 // eligibility, and checkout state.
 export const marketingPlans: readonly MarketingPlan[] = landingCopy['pt-BR'].plans
 
-const toneClass = (tone: MapNode['tone']) => `node${tone[0].toUpperCase()}${tone.slice(1)}`
+const landingTabs = [
+  { key: 'study', href: '#estudar', icon: 'book' },
+  { key: 'tasks', href: '#tarefas', icon: 'library' },
+  { key: 'analyze', href: '#mapa', icon: 'brain' },
+  { key: 'create', href: '#criar', icon: 'sparkles' },
+] as const
+
+function LandingNavigation({ copy, footer = false }: { copy: LandingCopy; footer?: boolean }) {
+  return <nav className={footer ? styles.footerLinks : styles.navigation} aria-label={footer ? copy.footer.navigationLabel : copy.navigationLabel}>
+    {landingTabs.map((tab) => <a href={tab.href} key={tab.key}>{!footer && <span className={styles.navIcon}><Icon name={tab.icon} /></span>}<span className={styles.navLabel}>{copy.nav[tab.key]}</span></a>)}
+    {footer && <><a href="#planos">{copy.nav.plans}</a><Link href="/entrar">{copy.signIn}</Link></>}
+  </nav>
+}
 
 export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true' }: { paymentsEnabled?: boolean } = {}) {
   const [locale, setLocaleState] = useState<Locale>('pt-BR')
@@ -460,12 +469,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
             <span className={styles.brandMark} aria-hidden="true">M</span>
             <span className={styles.brandName}>MasterMe</span>
           </Link>
-          <nav className={styles.navigation} aria-label={copy.navigationLabel}>
-            <a href="#estudar"><span className={styles.navIcon}><Icon name="book" /></span><span className={styles.navLabel}>{copy.nav.study}</span></a>
-            <a href="#tarefas"><span className={styles.navIcon}><Icon name="library" /></span><span className={styles.navLabel}>{copy.nav.tasks}</span></a>
-            <a href="#mapa"><span className={styles.navIcon}><Icon name="brain" /></span><span className={styles.navLabel}>{copy.nav.analyze}</span></a>
-            <a href="#criar"><span className={styles.navIcon}><Icon name="sparkles" /></span><span className={styles.navLabel}>{copy.nav.create}</span></a>
-          </nav>
+          <LandingNavigation copy={copy} />
           <div className={styles.headerActions}>
             <a className={styles.plansLink} href="#planos">{copy.nav.plans}</a>
             <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
@@ -520,14 +524,10 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
 
           <figure className={styles.mapFigure} aria-label={copy.map.figureLabel}>
             <div className={styles.graphPanel}>
-              <div className={styles.graphHeader}><span>{copy.map.graphLabel}</span><span className={styles.graphStatus}>{copy.map.graphStatus}</span></div>
+              <div className={styles.graphHeader}><span>{copy.map.graphLabel}</span></div>
               <div className={styles.graphCanvas}>
-                <svg className={styles.graphLinks} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <line x1="26" y1="34" x2="74" y2="34" />
-                  <line x1="74" y1="40" x2="34" y2="82" />
-                </svg>
                 <ul className={styles.graphNodes}>
-                  {copy.map.nodes.map((node) => <li className={`${styles.graphNode} ${styles[toneClass(node.tone)]}`} key={node.title}>
+                  {copy.map.nodes.map((node) => <li className={styles.graphNode} key={node.title}>
                     <span className={styles.nodeKicker}>{node.kicker}</span>
                     <strong className={styles.nodeTitle}>{node.title}</strong>
                     <span className={styles.nodeState}>{node.state}</span>
@@ -688,14 +688,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
             <Link className={styles.brand} href="/"><span className={styles.brandMark} aria-hidden="true">M</span><span className={styles.brandName}>MasterMe</span></Link>
-            <nav className={styles.footerLinks} aria-label={copy.footer.navigationLabel}>
-              <a href="#estudar">{copy.footer.study}</a>
-              <a href="#tarefas">{copy.footer.tasks}</a>
-              <a href="#mapa">{copy.footer.analyze}</a>
-              <a href="#criar">{copy.footer.create}</a>
-              <a href="#planos">{copy.footer.plans}</a>
-              <Link href="/entrar">{copy.footer.signIn}</Link>
-            </nav>
+            <LandingNavigation copy={copy} footer />
           </div>
           <div className={styles.footerBottom}>
             <p>{copy.footer.description}</p>
