@@ -6,11 +6,12 @@ export type ApiOutcome = 'success' | 'client_error' | 'server_error' | 'network_
 
 export const OBSERVABLE_ROUTES = [
   '/',
-  '/entrar',
-  '/estudar',
-  '/mapa-do-conhecimento',
-  '/pratica',
-  '/pagamento/retorno',
+  '/login',
+  '/study',
+  '/library',
+  '/knowledge-map',
+  '/practice',
+  '/payment/return',
 ] as const
 
 export type ClientTelemetryEvent =

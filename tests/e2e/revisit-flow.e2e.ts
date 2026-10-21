@@ -38,7 +38,7 @@ test('revisit acceptance survives a network failure and a stale second tab', asy
 
   const first = await context.newPage();
   const second = await context.newPage();
-  await Promise.all([first.goto('/biblioteca'), second.goto('/biblioteca')]);
+  await Promise.all([first.goto('/library'), second.goto('/library')]);
   await Promise.all([
     first.getByRole('button', { name: 'Mesa do Dia' }).click(),
     second.getByRole('button', { name: 'Mesa do Dia' }).click(),
@@ -65,7 +65,7 @@ test('a removed material link reports the missing reference instead of opening a
     if (path === '/api/billing/me') return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
     return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
   });
-  await page.goto('/estudar?material=removed');
+  await page.goto('/study?material=removed');
   await expect(page.getByRole('heading', { name: 'Referência indisponível' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Abrir biblioteca' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Different material' })).toHaveCount(0);
@@ -82,7 +82,7 @@ test('a stale material list still reports a removed linked source', async ({ pag
     if (path === '/api/billing/me') return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
     return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
   });
-  await page.goto('/estudar?material=removed');
+  await page.goto('/study?material=removed');
   await expect(page.getByRole('heading', { name: 'Referência indisponível' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Former material' })).toHaveCount(0);
 });

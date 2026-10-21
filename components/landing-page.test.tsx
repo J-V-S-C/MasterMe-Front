@@ -29,19 +29,23 @@ describe('public landing page', () => {
     const tabs = within(view.getByRole('navigation', { name: 'Seções da página' })).getAllByRole('link')
 
     expect(tabs.map((tab) => [tab.textContent, tab.getAttribute('href')])).toEqual([
-      ['Estudar', '#estudar'],
-      ['Tarefas', '#tarefas'],
-      ['Analisar', '#mapa'],
-      ['Criar', '#criar'],
+      ['Estudar', '#study'],
+      ['Tarefas', '#tasks'],
+      ['Analisar', '#analyze'],
+      ['Criar', '#create'],
     ])
-    const footerLinks = within(view.getByRole('navigation', { name: 'Navegação do rodapé' })).getAllByRole('link')
+    const footerNav = view.getByRole('navigation', { name: 'Navegação do rodapé' })
+    const footerLinks = within(footerNav).getAllByRole('link')
     expect(footerLinks.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ...tabs.map((tab) => [tab.textContent, tab.getAttribute('href')]),
-      ['Planos', '#planos'],
-      ['Entrar', '/entrar'],
     ])
+    expect(footerNav.className).toBe(view.getByRole('navigation', { name: 'Seções da página' }).className)
+    expect(footerLinks.every((link) => link.querySelector('svg'))).toBe(true)
+    const footer = view.container.querySelector('footer')
+    expect(footer?.querySelector('a[href="#plans"]')?.textContent).toBe('Planos')
+    expect(footer?.querySelector('a[href="/login"]')?.textContent).toBe('Entrar')
     expect(view.queryByText('Conceito ativo')).toBeNull()
-    for (const target of ['#estudar', '#tarefas', '#mapa', '#criar', '#planos']) {
+    for (const target of ['#study', '#tasks', '#analyze', '#create', '#plans']) {
       expect(view.container.querySelector(target)).toBeTruthy()
     }
   })
@@ -169,7 +173,7 @@ describe('public landing page', () => {
     const callsToAction = [...view.container.querySelectorAll<HTMLAnchorElement>('[data-plan-id]')]
     expect(new Set(callsToAction.map((link) => link.dataset.planId))).toEqual(new Set(['FREE']))
     for (const link of callsToAction) {
-      expect(link.href).toContain('/entrar?next=')
+      expect(link.href).toContain('/login?next=')
       expect(decodeURIComponent(link.href)).toContain(`plan=${link.dataset.planId}`)
       expect(link.href).not.toMatch(/29|249|1500|15000/)
     }

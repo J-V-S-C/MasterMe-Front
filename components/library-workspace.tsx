@@ -105,7 +105,7 @@ function TaskItem({ task, materials, locale, busy, operate, labels, selected }: 
       <label>{labels.target}<input type="date" value={targetDate} onInput={(event) => setTargetDate(event.currentTarget.value)} /></label>
       <div className={styles.actions}><button disabled={busy}>{labels.save}</button><button type="button" onClick={() => { setEditing(false); setTitle(task.title); setTargetDate(task.scheduled_at ? localDate(task.scheduled_at) : ''); }}>{labels.cancel}</button></div>
     </form> : <><div className={styles.taskCopy}><strong>{task.title}</strong><div className={styles.meta}><time dateTime={task.scheduled_at ?? undefined}>{dateLabel}</time>{material && <span>{material.title}</span>}</div></div><div className={styles.actions}>
-      {task.concept_id && task.material_id && <Link href={`/estudar?material=${task.material_id}&concept=${task.concept_id}`}>{labels.study}</Link>}
+      {task.concept_id && task.material_id && <Link href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{labels.study}</Link>}
       <button type="button" onClick={() => setEditing(true)}>{labels.edit}</button>
       <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: task.status === 'DONE' ? 'PENDING' : 'DONE' }))}>{task.status === 'DONE' ? labels.reopen : labels.complete}</button>
       <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{labels.remove}</button>

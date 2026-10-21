@@ -33,7 +33,7 @@ test('real PostgreSQL backend keeps a suggested revisit and another account sepa
     await connect(first, ownerA);
     await connect(second, ownerB);
     const student = await first.newPage();
-    await student.goto('/biblioteca');
+    await student.goto('/library');
     await student.getByRole('button', { name: 'Mesa do Dia' }).click();
     await expect(student.getByText('A aplicação mostrou uma lacuna; experimente um cenário menor antes de avançar.')).toBeVisible();
     await student.getByText('Tentativa anterior').click();
@@ -44,7 +44,7 @@ test('real PostgreSQL backend keeps a suggested revisit and another account sepa
     await expect(student.getByText('Retomar Index').first()).toBeVisible();
 
     const other = await second.newPage();
-    await other.goto('/biblioteca');
+    await other.goto('/library');
     await other.getByRole('button', { name: 'Mesa do Dia' }).click();
     await expect(other.getByText('Explain why the index narrows candidates.')).toHaveCount(0);
     await expect(other.getByText('Retomar Index')).toHaveCount(0);

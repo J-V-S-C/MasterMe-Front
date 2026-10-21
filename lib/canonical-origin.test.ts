@@ -14,7 +14,7 @@ describe('canonical origin', () => {
   })
 
   test('accepts only a local origin as the development fallback', () => {
-    expect(canonicalAppOrigin('http://localhost:3000/entrar', undefined, 'development')).toBe('http://localhost:3000')
-    expect(canonicalAppOrigin('https://attacker.example/entrar', undefined, 'development')).toBe('http://localhost:3000')
+    expect(canonicalAppOrigin('http://localhost:3000/login', undefined, 'development')).toBe('http://localhost:3000')
+    expect(canonicalAppOrigin('https://attacker.example/login', undefined, 'development')).toBe('http://localhost:3000')
   })
 })

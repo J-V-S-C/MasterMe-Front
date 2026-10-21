@@ -22,9 +22,9 @@ for (const viewport of viewports) {
       if (path === '/api/observability') return route.fulfill({ status: 204 });
       return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
     });
-    await page.goto('/biblioteca');
+    await page.goto('/library');
     await expect(page.getByRole('heading', { name: 'Sua biblioteca' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('link', { name: /Chapter one/ })).toHaveAttribute('href', '/estudar?material=material-a&unit=chapter-a');
+    await expect(page.getByRole('link', { name: /Chapter one/ })).toHaveAttribute('href', '/study?material=material-a&unit=chapter-a');
     await page.getByRole('button', { name: 'Calendário' }).click();
     await expect(page.getByRole('heading', { name: 'Novo roteiro' })).toBeVisible();
     await expect(page.getByRole('checkbox', { name: 'History of Ideas' })).toBeVisible();

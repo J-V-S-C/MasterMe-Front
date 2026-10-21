@@ -7,7 +7,7 @@ export default function NotFoundPage() {
       <span>PÁGINA NÃO ENCONTRADA</span>
       <h1 id="not-found-title">Este caminho não faz parte do mapa.</h1>
       <p>O endereço pode ter mudado ou estar incompleto.</p>
-      <div><Link className={styles.primary} href="/">Conhecer o MasterMe</Link><Link href="/estudar">Ir para o estudo</Link></div>
+      <div><Link className={styles.primary} href="/">Conhecer o MasterMe</Link><Link href="/study">Ir para o estudo</Link></div>
     </section>
   </main>
 }

@@ -8,7 +8,7 @@ import { invalidateApiCache } from '../lib/api'
 
 const originalFetch = globalThis.fetch
 beforeEach(() => {
-  const window = new Window({ url: 'https://masterme.test/estudar' })
+  const window = new Window({ url: 'https://masterme.test/study' })
   Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, localStorage: window.localStorage })
 })
 afterEach(() => { cleanup(); invalidateApiCache(); globalThis.fetch = originalFetch })

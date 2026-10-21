@@ -8,10 +8,10 @@ import { useI18n } from '../lib/i18n'
 import { ThemeToggle } from './theme-toggle'
 
 const links = [
-  { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/estudar', id: 'study', icon: 'book' },
-  { label: 'navLibrary', accessibleLabel: 'navLibraryLabel', href: '/biblioteca', id: 'library', icon: 'library' },
-  { label: 'navMap', accessibleLabel: 'navMapLabel', href: '/mapa-do-conhecimento', id: 'map', icon: 'brain' },
-  { label: 'navPractice', accessibleLabel: 'navPracticeLabel', href: '/pratica', id: 'practice', icon: 'sparkles' },
+  { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/study', id: 'study', icon: 'book' },
+  { label: 'navLibrary', accessibleLabel: 'navLibraryLabel', href: '/library', id: 'library', icon: 'library' },
+  { label: 'navMap', accessibleLabel: 'navMapLabel', href: '/knowledge-map', id: 'map', icon: 'brain' },
+  { label: 'navPractice', accessibleLabel: 'navPracticeLabel', href: '/practice', id: 'practice', icon: 'sparkles' },
 ] as const
 
 export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'practice' | 'library' }) {
@@ -25,7 +25,7 @@ export function SiteHeader({ active = 'study' }: { active?: 'study' | 'map' | 'p
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
   return <header className="site-header"><div className="header-content">
-    <Link className="brand" href="/estudar" aria-label={t('brandLabel')}><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
+    <Link className="brand" href="/study" aria-label={t('brandLabel')}><span className="brand-mark"><i>M</i></span><strong>MASTERME</strong></Link>
     <button className="mobile-menu-toggle" type="button" aria-label={t('menu')} aria-controls="site-menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><span aria-hidden="true"><i /><i /><i /></span></button>
     <div id="site-menu" className={`site-menu${menuOpen ? ' open' : ''}`}>
     <nav className="primary-nav" aria-label={t('mainNavigation')}>{links.map((link) => <Link className={active === link.id ? 'active' : ''} aria-label={t(link.accessibleLabel)} aria-current={active === link.id ? 'page' : undefined} href={link.href} key={link.id} onClick={() => setMenuOpen(false)}><span className="nav-icon"><Icon name={link.icon} /></span><span className="nav-label">{t(link.label)}</span></Link>)}</nav>

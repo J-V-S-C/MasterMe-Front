@@ -5,6 +5,18 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: ['127.0.0.1'],
   experimental: { useTypeScriptCli: false },
+  async redirects() {
+    // Keep existing bookmarks and payment-provider return URLs working while
+    // the backend switches its configured return path to /payment/return.
+    return [
+      { source: '/entrar', destination: '/login', permanent: true },
+      { source: '/estudar', destination: '/study', permanent: true },
+      { source: '/biblioteca', destination: '/library', permanent: true },
+      { source: '/mapa-do-conhecimento', destination: '/knowledge-map', permanent: true },
+      { source: '/pratica', destination: '/practice', permanent: true },
+      { source: '/pagamento/retorno', destination: '/payment/return', permanent: true },
+    ]
+  },
   async headers() {
     return [{
       source: '/(.*)',

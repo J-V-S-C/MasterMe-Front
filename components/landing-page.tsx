@@ -429,16 +429,15 @@ const landingCopy = {
 export const marketingPlans: readonly MarketingPlan[] = landingCopy['pt-BR'].plans
 
 const landingTabs = [
-  { key: 'study', href: '#estudar', icon: 'book' },
-  { key: 'tasks', href: '#tarefas', icon: 'library' },
-  { key: 'analyze', href: '#mapa', icon: 'brain' },
-  { key: 'create', href: '#criar', icon: 'sparkles' },
+  { key: 'study', href: '#study', icon: 'book' },
+  { key: 'tasks', href: '#tasks', icon: 'library' },
+  { key: 'analyze', href: '#analyze', icon: 'brain' },
+  { key: 'create', href: '#create', icon: 'sparkles' },
 ] as const
 
-function LandingNavigation({ copy, footer = false }: { copy: LandingCopy; footer?: boolean }) {
-  return <nav className={footer ? styles.footerLinks : styles.navigation} aria-label={footer ? copy.footer.navigationLabel : copy.navigationLabel}>
-    {landingTabs.map((tab) => <a href={tab.href} key={tab.key}>{!footer && <span className={styles.navIcon}><Icon name={tab.icon} /></span>}<span className={styles.navLabel}>{copy.nav[tab.key]}</span></a>)}
-    {footer && <><a href="#planos">{copy.nav.plans}</a><Link href="/entrar">{copy.signIn}</Link></>}
+function LandingNavigation({ copy, label }: { copy: LandingCopy; label: string }) {
+  return <nav className={styles.navigation} aria-label={label}>
+    {landingTabs.map((tab) => <a href={tab.href} key={tab.key}><span className={styles.navIcon}><Icon name={tab.icon} /></span><span className={styles.navLabel}>{copy.nav[tab.key]}</span></a>)}
   </nav>
 }
 
@@ -461,7 +460,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
   const copy = landingCopy[locale]
   return (
     <div className={styles.landing}>
-      <a className={styles.skipLink} href="#conteudo-principal">{copy.skipContent}</a>
+      <a className={styles.skipLink} href="#main-content">{copy.skipContent}</a>
 
       <header className={styles.header}>
         <div className={styles.headerInner}>
@@ -469,29 +468,29 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
             <span className={styles.brandMark} aria-hidden="true">M</span>
             <span className={styles.brandName}>MasterMe</span>
           </Link>
-          <LandingNavigation copy={copy} />
+          <LandingNavigation copy={copy} label={copy.navigationLabel} />
           <div className={styles.headerActions}>
-            <a className={styles.plansLink} href="#planos">{copy.nav.plans}</a>
+            <a className={styles.plansLink} href="#plans">{copy.nav.plans}</a>
             <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
               <option value="pt-BR">PT</option><option value="en-US">EN</option>
             </select>
             <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
-            <Link className={styles.signIn} href={loginHrefFor('/estudar')}>{copy.signIn}</Link>
+            <Link className={styles.signIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
             <Link className={`${styles.primaryAction} ${styles.headerAction}`} href={planLoginHref('FREE')} data-plan-id="FREE">{copy.startFree}</Link>
           </div>
         </div>
       </header>
 
-      <main id="conteudo-principal" className={styles.main}>
+      <main id="main-content" className={styles.main}>
         <section className={styles.hero} aria-labelledby="landing-title">
           <p className={styles.eyebrow}>{copy.hero.eyebrow}</p>
           <h1 id="landing-title">{copy.hero.titleLead}<br /><em>{copy.hero.titleEmphasis}</em></h1>
           <p className={styles.heroDescription}>{copy.hero.description}</p>
           <div className={styles.heroActions}>
             <Link className={styles.primaryAction} href={planLoginHref('FREE')} data-plan-id="FREE">{copy.hero.primaryAction} <Icon name="chevron" /></Link>
-            <a className={styles.secondaryAction} href="#como-funciona">{copy.hero.secondaryAction}</a>
+            <a className={styles.secondaryAction} href="#how-it-works">{copy.hero.secondaryAction}</a>
           </div>
-          <Link className={styles.dropCard} href={loginHrefFor('/estudar')}>
+          <Link className={styles.dropCard} href={loginHrefFor('/study')}>
             <span className={styles.dropMeta}><span>{copy.hero.drop.kicker}</span><span>{copy.hero.drop.formats}</span></span>
             <strong className={styles.dropTitle}>{copy.hero.drop.title}</strong>
             <span className={styles.dropDescription}>{copy.hero.drop.description}</span>
@@ -499,7 +498,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </Link>
         </section>
 
-        <section className={styles.cycle} id="como-funciona" aria-labelledby="cycle-title">
+        <section className={styles.cycle} id="how-it-works" aria-labelledby="cycle-title">
           <header className={styles.sectionHeading}>
             <p className={styles.kicker}>{copy.cycle.kicker}</p>
             <h2 id="cycle-title">{copy.cycle.title}</h2>
@@ -515,7 +514,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </ol>
         </section>
 
-        <section className={styles.map} id="mapa" aria-labelledby="map-title">
+        <section className={styles.map} id="analyze" aria-labelledby="map-title">
           <header className={styles.sectionHeading}>
             <p className={styles.kicker}>{copy.map.kicker}</p>
             <h2 id="map-title">{copy.map.title}</h2>
@@ -559,7 +558,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </figure>
         </section>
 
-        <section className={styles.tasks} id="tarefas" aria-labelledby="tasks-title">
+        <section className={styles.tasks} id="tasks" aria-labelledby="tasks-title">
           <div className={styles.tasksCopy}>
             <header className={styles.sectionHeading}>
               <p className={styles.kicker}>{copy.tasks.kicker}</p>
@@ -592,7 +591,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </figure>
         </section>
 
-        <section className={styles.paths} id="estudar" aria-labelledby="paths-title">
+        <section className={styles.paths} id="study" aria-labelledby="paths-title">
           <header className={`${styles.sectionHeading} ${styles.centered}`}>
             <p className={styles.kicker}>{copy.paths.kicker}</p>
             <h2 id="paths-title">{copy.paths.title}</h2>
@@ -609,7 +608,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </div>
         </section>
 
-        <section className={styles.create} id="criar" aria-labelledby="create-title">
+        <section className={styles.create} id="create" aria-labelledby="create-title">
           <div className={styles.createCopy}>
             <header className={styles.sectionHeading}>
               <p className={styles.kicker}>{copy.create.kicker}</p>
@@ -644,7 +643,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </figure>
         </section>
 
-        <section className={styles.pricing} id="planos" aria-labelledby="pricing-title">
+        <section className={styles.pricing} id="plans" aria-labelledby="pricing-title">
           <header className={styles.sectionHeading}>
             <p className={styles.kicker}>{copy.pricing.kicker}</p>
             <h2 id="pricing-title">{copy.pricing.title}</h2>
@@ -666,7 +665,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           <p className={styles.creditNote}>{copy.pricing.creditNote}</p>
         </section>
 
-        <section className={styles.faq} id="perguntas" aria-labelledby="faq-title">
+        <section className={styles.faq} id="faq" aria-labelledby="faq-title">
           <header className={`${styles.sectionHeading} ${styles.centered}`}>
             <p className={styles.kicker}>{copy.faq.kicker}</p>
             <h2 id="faq-title">{copy.faq.title}</h2>
@@ -688,7 +687,11 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
             <Link className={styles.brand} href="/"><span className={styles.brandMark} aria-hidden="true">M</span><span className={styles.brandName}>MasterMe</span></Link>
-            <LandingNavigation copy={copy} footer />
+            <LandingNavigation copy={copy} label={copy.footer.navigationLabel} />
+            <div className={styles.footerActions}>
+              <a href="#plans">{copy.nav.plans}</a>
+              <Link href="/login">{copy.signIn}</Link>
+            </div>
           </div>
           <div className={styles.footerBottom}>
             <p>{copy.footer.description}</p>
