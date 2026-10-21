@@ -34,12 +34,16 @@ describe('public landing page', () => {
       ['Analisar', '#mapa'],
       ['Criar', '#criar'],
     ])
-    const footerLinks = within(view.getByRole('navigation', { name: 'Navegação do rodapé' })).getAllByRole('link')
+    const footerNav = view.getByRole('navigation', { name: 'Navegação do rodapé' })
+    const footerLinks = within(footerNav).getAllByRole('link')
     expect(footerLinks.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ...tabs.map((tab) => [tab.textContent, tab.getAttribute('href')]),
-      ['Planos', '#planos'],
-      ['Entrar', '/entrar'],
     ])
+    expect(footerNav.className).toBe(view.getByRole('navigation', { name: 'Seções da página' }).className)
+    expect(footerLinks.every((link) => link.querySelector('svg'))).toBe(true)
+    const footer = view.container.querySelector('footer')
+    expect(footer?.querySelector('a[href="#planos"]')?.textContent).toBe('Planos')
+    expect(footer?.querySelector('a[href="/entrar"]')?.textContent).toBe('Entrar')
     expect(view.queryByText('Conceito ativo')).toBeNull()
     for (const target of ['#estudar', '#tarefas', '#mapa', '#criar', '#planos']) {
       expect(view.container.querySelector(target)).toBeTruthy()

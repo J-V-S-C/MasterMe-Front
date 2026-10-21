@@ -435,10 +435,9 @@ const landingTabs = [
   { key: 'create', href: '#criar', icon: 'sparkles' },
 ] as const
 
-function LandingNavigation({ copy, footer = false }: { copy: LandingCopy; footer?: boolean }) {
-  return <nav className={footer ? styles.footerLinks : styles.navigation} aria-label={footer ? copy.footer.navigationLabel : copy.navigationLabel}>
-    {landingTabs.map((tab) => <a href={tab.href} key={tab.key}>{!footer && <span className={styles.navIcon}><Icon name={tab.icon} /></span>}<span className={styles.navLabel}>{copy.nav[tab.key]}</span></a>)}
-    {footer && <><a href="#planos">{copy.nav.plans}</a><Link href="/entrar">{copy.signIn}</Link></>}
+function LandingNavigation({ copy, label }: { copy: LandingCopy; label: string }) {
+  return <nav className={styles.navigation} aria-label={label}>
+    {landingTabs.map((tab) => <a href={tab.href} key={tab.key}><span className={styles.navIcon}><Icon name={tab.icon} /></span><span className={styles.navLabel}>{copy.nav[tab.key]}</span></a>)}
   </nav>
 }
 
@@ -469,7 +468,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
             <span className={styles.brandMark} aria-hidden="true">M</span>
             <span className={styles.brandName}>MasterMe</span>
           </Link>
-          <LandingNavigation copy={copy} />
+          <LandingNavigation copy={copy} label={copy.navigationLabel} />
           <div className={styles.headerActions}>
             <a className={styles.plansLink} href="#planos">{copy.nav.plans}</a>
             <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
@@ -688,7 +687,11 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
             <Link className={styles.brand} href="/"><span className={styles.brandMark} aria-hidden="true">M</span><span className={styles.brandName}>MasterMe</span></Link>
-            <LandingNavigation copy={copy} footer />
+            <LandingNavigation copy={copy} label={copy.footer.navigationLabel} />
+            <div className={styles.footerActions}>
+              <a href="#planos">{copy.nav.plans}</a>
+              <Link href="/entrar">{copy.signIn}</Link>
+            </div>
           </div>
           <div className={styles.footerBottom}>
             <p>{copy.footer.description}</p>

@@ -1139,27 +1139,28 @@
 }
 
 .footerTop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+}
+
+.footerActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 14px;
 }
 
-.footerLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  font-size: 13px;
-}
-
-.footerLinks a {
+.footerActions a {
   color: var(--muted);
+  font-size: 14px;
   text-decoration: none;
   transition: color var(--motion-fast);
 }
 
-.footerLinks a:hover { color: var(--text); }
+.footerActions a:hover { color: var(--text); }
 
 .footerBottom {
   display: flex;
@@ -1189,8 +1190,6 @@
 @media (max-width: 1050px) {
   .navigation a:nth-child(2),
   .navigation a:nth-child(3) { display: inline-flex; }
-  .footerLinks a:nth-child(2),
-  .footerLinks a:nth-child(3) { display: inline; }
 }
 
 @media (max-width: 1100px) {
@@ -1215,6 +1214,12 @@
   .headerActions { grid-area: actions; justify-self: end; margin-left: 0; }
   .navigation { grid-area: navigation; width: 100%; max-width: 560px; margin-inline: auto; }
   .navigation a { flex: 1; }
+  .footerTop {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "brand actions" "navigation navigation";
+    gap: 12px;
+  }
+  .footerActions { grid-area: actions; }
   .tasks,
   .create { grid-template-columns: minmax(0, 1fr); }
   .cycle,
@@ -1269,6 +1274,9 @@
   .navIcon { width: 20px; height: 20px; }
   .navIcon svg { width: 13px; height: 13px; }
   .localeSelect { min-width: 44px; padding: 5px 4px; }
+  .footerTop { gap: 12px 8px; }
+  .footerActions { gap: 12px; }
+  .footerActions a { font-size: 12.5px; }
   .footerBottom { flex-direction: column; align-items: flex-start; }
 }
 
@@ -1290,5 +1298,5 @@
   .dropCard,
   .pathGrid article,
   .planAction,
-  .footerLinks a { transition: none; }
+  .footerActions a { transition: none; }
 }

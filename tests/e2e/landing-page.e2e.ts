@@ -13,7 +13,7 @@ const expectedDevelopmentConsoleErrors = [
 ]
 
 for (const viewport of viewports) {
-  test(`landing comunica caminhos independentes sem overflow em ${viewport.name}`, async ({ page }) => {
+  test(`landing keeps all four tabs visible without overflow on ${viewport.name}`, async ({ page }) => {
     const unexpectedConsoleErrors: string[] = []
     page.on('console', (message) => {
       if (message.type() !== 'error') return
@@ -23,15 +23,23 @@ for (const viewport of viewports) {
     await page.setViewportSize(viewport)
     await page.goto('/')
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Ler até reconhecer não é o mesmo que conseguir explicar.' })).toBeVisible()
-    await expect(page.getByRole('figure', { name: 'Demonstração de um mapa de conhecimento' })).toBeVisible()
-    await expect(page.getByText('Começar pela prática')).toBeVisible()
-    await expect(page.getByText(/sem iniciar uma explicação/i)).toBeVisible()
-    await expect(page.getByText(/após uma explicação aprovada.*nunca por obrigação/i)).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: /Organize o que estudar/ })).toBeVisible()
+    await expect(page.getByRole('figure', { name: 'Exemplo de mapa de conhecimento e diagnóstico' })).toBeVisible()
+    const headerTabs = page.getByRole('navigation', { name: 'Seções da página' })
+    const footerTabs = page.getByRole('navigation', { name: 'Navegação do rodapé' })
+    for (const tab of ['Estudar', 'Tarefas', 'Analisar', 'Criar']) {
+      await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
+      await expect(footerTabs.getByRole('link', { name: tab })).toBeVisible()
+    }
+    await expect(page.locator('footer').getByRole('link', { name: 'Planos' })).toBeVisible()
+    await expect(page.locator('footer').getByRole('link', { name: 'Entrar' })).toBeVisible()
+    expect(await headerTabs.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      await footerTabs.evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
     const scrollWidth = await page.locator('html').evaluate((element) => element.scrollWidth)
     expect(scrollWidth).toBeLessThanOrEqual(viewport.width)
 
-    const methodLink = page.getByRole('link', { name: 'Conhecer o método' })
+    const methodLink = page.getByRole('link', { name: 'Ver como funciona' })
     await methodLink.focus()
     await expect(methodLink).toBeFocused()
     await page.keyboard.press('Enter')
