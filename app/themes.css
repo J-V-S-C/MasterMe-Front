@@ -524,7 +524,6 @@ img,svg{max-width:100%}.page-main{width:min(100%,1520px);padding-inline:clamp(16
 
 /* Study focuses on the exercise; the learner already owns the full source. */
 .workspace-grid.study-only { grid-template-columns: minmax(0, 1fr); }
-.workspace-grid.study-only .study-pane { width: min(100%, 920px); margin-inline: 0; }
 
 /* Shared editorial header rhythm across Study, Tasks, Analyze, and Create. */
 .study-context { max-width: none; margin: 0 0 24px; padding: 10px 0 22px; }
