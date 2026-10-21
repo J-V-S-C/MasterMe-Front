@@ -242,15 +242,6 @@
   letter-spacing: .03em;
 }
 
-.eyebrow::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--amber);
-}
-
 .hero h1 {
   max-width: 34ch;
   margin: 0 0 16px;
@@ -652,8 +643,6 @@
   border: 1px solid var(--line-faint);
   border-radius: 10px;
   background-color: var(--deep);
-  background-image: radial-gradient(circle, var(--graph-dot) .8px, transparent .8px);
-  background-size: 22px 22px;
 }
 
 .graphHeader {
@@ -670,21 +659,6 @@
   text-transform: uppercase;
 }
 
-.graphStatus {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--blue);
-}
-
-.graphStatus::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .graphCanvas {
   position: relative;
   flex: 1;
@@ -693,28 +667,18 @@
   padding: 20px 0;
 }
 
-.graphLinks {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: var(--graph-edge);
-  stroke-width: 1.2;
-  stroke-dasharray: 4 4;
-  vector-effect: non-scaling-stroke;
-}
-
 .graphNodes {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+
+.graphNode:first-child { grid-column: 1 / -1; }
 
 .graphNode {
   display: grid;
@@ -743,27 +707,6 @@
   color: var(--dim);
   font: 500 12.5px/1.4 var(--font-ui);
 }
-
-.nodeGreen .nodeKicker,
-.nodeGreen .nodeState { color: var(--green); }
-.nodeGreen .nodeState::before { content: "✓ "; }
-
-.nodeBlue {
-  padding: 11px;
-  border: 2px solid var(--blue);
-  background: var(--low);
-  box-shadow: 0 10px 24px var(--shadow);
-}
-
-.nodeBlue .nodeKicker,
-.nodeBlue .nodeState { color: var(--blue); }
-.nodeBlue .nodeState::before { content: "● "; }
-
-.nodeAmber .nodeKicker,
-.nodeAmber .nodeState { color: var(--amber); }
-.nodeAmber .nodeState::before { content: "! "; }
-
-.nodeNeutral .nodeState::before { content: "→ "; }
 
 .graphFooter {
   margin: 0;
@@ -1019,9 +962,8 @@
   line-height: 1.5;
 }
 
-.briefBlock ul { padding-left: 15px; }
-
-.briefBlock li::marker { color: var(--amber); }
+.briefBlock ul { padding-left: 0; list-style: none; }
+.briefBlock li + li { margin-top: 4px; }
 
 .briefFooter {
   margin: 0;
@@ -1298,6 +1240,7 @@
   .footerInner { width: min(var(--landing-max), calc(100% - 32px)); }
   .signIn { display: none; }
   .graphNodes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .graphNode:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 560px) {
@@ -1311,7 +1254,6 @@
   .cycleList li:first-child { border-top: none; }
   .tasksMock { grid-template-columns: minmax(0, 1fr); }
   .graphNodes { grid-template-columns: minmax(0, 1fr); }
-  .graphLinks { display: none; }
   .graphCanvas { padding: 14px 0; }
   .hero h1 { max-width: none; font-size: clamp(30px, 8.4vw, 38px); }
   .dropCard { padding: 16px; }

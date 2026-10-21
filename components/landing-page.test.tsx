@@ -34,6 +34,13 @@ describe('public landing page', () => {
       ['Analisar', '#mapa'],
       ['Criar', '#criar'],
     ])
+    const footerLinks = within(view.getByRole('navigation', { name: 'Navegação do rodapé' })).getAllByRole('link')
+    expect(footerLinks.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ...tabs.map((tab) => [tab.textContent, tab.getAttribute('href')]),
+      ['Planos', '#planos'],
+      ['Entrar', '/entrar'],
+    ])
+    expect(view.queryByText('Conceito ativo')).toBeNull()
     for (const target of ['#estudar', '#tarefas', '#mapa', '#criar', '#planos']) {
       expect(view.container.querySelector(target)).toBeTruthy()
     }
@@ -80,33 +87,32 @@ describe('public landing page', () => {
     expect(view.getByRole('heading', { name: /quatro áreas\. o mesmo material/i })).toBeTruthy()
     expect(view.getByText('Reúna e explique')).toBeTruthy()
     expect(view.getByText('Planeje quando voltar')).toBeTruthy()
-    expect(view.getByText('Veja a estrutura e a lacuna')).toBeTruthy()
-    expect(view.getByText('Pratique a partir da lacuna')).toBeTruthy()
+    expect(view.getByText('Veja o que você entendeu')).toBeTruthy()
+    expect(view.getByText('Crie um projeto para praticar')).toBeTruthy()
 
-    expect(view.getByRole('heading', { name: /veja a estrutura\. depois, a lacuna/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /veja como os assuntos se ligam/i })).toBeTruthy()
     expect(view.getByRole('figure', { name: 'Exemplo de mapa de conhecimento e diagnóstico' })).toBeTruthy()
-    expect(view.getByText('Índice B-tree')).toBeTruthy()
-    expect(view.getAllByText('Seletividade da consulta')).toHaveLength(2)
-    expect(view.getByText('Ordem das colunas')).toBeTruthy()
-    expect(view.getByText('Premissa omitida')).toBeTruthy()
-    expect(view.getByText(/omitiu a ordem das colunas/i)).toBeTruthy()
-    expect(view.getByText(/nenhum nó bloqueia o próximo/i)).toBeTruthy()
+    expect(view.getByText('Índices no banco de dados')).toBeTruthy()
+    expect(view.getAllByText('Índice com duas colunas')).toHaveLength(2)
+    expect(view.getByText('Busca por cliente ou por data')).toBeTruthy()
+    expect(view.getByText(/não explicou por que a ordem das colunas importa/i)).toBeTruthy()
+    expect(view.getByText(/você pode abrir qualquer assunto do mapa/i)).toBeTruthy()
     expect(view.queryByText(/raft/i)).toBeNull()
 
     expect(view.getByRole('heading', { name: /decida o que estudar agora/i })).toBeTruthy()
     expect(view.getByText('Revisar índices compostos')).toBeTruthy()
-    expect(view.getByText(/o calendário remarca/i)).toBeTruthy()
+    expect(view.getByText(/mude a data da tarefa pelo calendário/i)).toBeTruthy()
 
     expect(view.getByRole('heading', { name: /você escolhe a profundidade/i })).toBeTruthy()
-    expect(view.getByText('Explorar e ancorar')).toBeTruthy()
+    expect(view.getByText('Explore os assuntos')).toBeTruthy()
     expect(view.getByText('Explicar com diagnóstico')).toBeTruthy()
     expect(view.getByText('Testar um caso-limite')).toBeTruthy()
     expect(view.getByText('Projeto de prática')).toBeTruthy()
     expect(view.getByText(/sem revogar a aprovação/i)).toBeTruthy()
-    expect(view.getByRole('heading', { name: /da lacuna ao projeto/i })).toBeTruthy()
-    expect(view.getByRole('figure', { name: 'Exemplo de brief de prática' })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /pratique com um projeto curto/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Exemplo de projeto de prática' })).toBeTruthy()
     expect(view.getByText('Índices compostos em consultas reais')).toBeTruthy()
-    expect(view.getByText(/sem solução enviada/i)).toBeTruthy()
+    expect(view.getByText(/você faz o projeto no seu editor/i)).toBeTruthy()
     expect(view.getByText('Quem acessa o meu material?')).toBeTruthy()
   })
 
@@ -115,20 +121,19 @@ describe('public landing page', () => {
     fireEvent.change(view.getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
 
     expect(view.getByRole('heading', { name: /four areas\. the same material/i })).toBeTruthy()
-    expect(view.getByRole('heading', { name: /see the structure\. then the gap/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /see how the topics connect/i })).toBeTruthy()
     expect(view.getByRole('figure', { name: 'Knowledge map and diagnostic example' })).toBeTruthy()
-    expect(view.getByText('B-tree index')).toBeTruthy()
-    expect(view.getByText('Omitted premise')).toBeTruthy()
-    expect(view.getByText(/left out the column order/i)).toBeTruthy()
-    expect(view.getByText(/no node blocks the next one/i)).toBeTruthy()
+    expect(view.getByText('Database indexes')).toBeTruthy()
+    expect(view.getByText(/did not explain why column order matters/i)).toBeTruthy()
+    expect(view.getByText(/you can open any topic on the map/i)).toBeTruthy()
     expect(view.getByRole('heading', { name: /decide what to study now/i })).toBeTruthy()
     expect(view.getByText('Review composite indexes')).toBeTruthy()
     expect(view.getByRole('heading', { name: /you choose the depth/i })).toBeTruthy()
-    expect(view.getByText('Explore and anchor')).toBeTruthy()
+    expect(view.getByText('Explore the topics')).toBeTruthy()
     expect(view.getByText('Test an edge case')).toBeTruthy()
     expect(view.getByText(/without revoking the approval/i)).toBeTruthy()
-    expect(view.getByRole('heading', { name: /from gap to project/i })).toBeTruthy()
-    expect(view.getByRole('figure', { name: 'Practice brief example' })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /practice with a small project/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Practice project example' })).toBeTruthy()
     expect(view.getByText('Composite indexes in real queries')).toBeTruthy()
     expect(within(view.getByRole('navigation', { name: 'Page sections' })).getAllByRole('link').map((tab) => tab.textContent)).toEqual([
       'Study',
