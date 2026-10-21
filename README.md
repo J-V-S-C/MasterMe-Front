@@ -82,7 +82,7 @@ Initial objectives in 28-day window per route/build: LCP p75 ≤ 2.5 s, INP p75 
 
 - Authentication uses secure Supabase cookies with renewal in Next proxy.
 - The header and the study space use `/api/billing/me` as an authoritative source for plan, daily/period credits, and conservative estimates per operation.
-- Paid CTAs reach `/estudar?plan=...`, confirm the server catalog, and only open HTTPS URLs from InfinitePay's allowed host. Return on `/pagamento/retorno` never releases access before API reconciliation.
+- Paid CTAs reach `/study?plan=...`, confirm the server catalog, and only open HTTPS URLs from InfinitePay's allowed host. Return on `/payment/return` never releases access before API reconciliation. The frontend uses English route names; redirects from the previous Portuguese paths preserve bookmarks and existing payment-provider return URLs until the backend return path is updated.
 - The interface accepts `pt-BR` and `en-US`; the preference is only in the browser.
 - New materials inform the language chosen to the API. Old content in another language is only translated after explicit confirmation, as the operation consumes an AI call and preserves the map identifiers and sessions.
 - The map selects nodes locally and shows the diagnosis in the same context; transitive relationships are hidden by default to reduce crossings.

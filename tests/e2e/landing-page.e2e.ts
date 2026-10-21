@@ -43,7 +43,26 @@ for (const viewport of viewports) {
     await methodLink.focus()
     await expect(methodLink).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(/#como-funciona$/)
+    await expect(page).toHaveURL(/#how-it-works$/)
     expect(unexpectedConsoleErrors).toEqual([])
   })
 }
+
+test('legacy paths redirect to English routes and preserve payment references', async ({ request }) => {
+  const routes = [
+    ['/entrar', '/login'],
+    ['/estudar', '/study'],
+    ['/biblioteca', '/library'],
+    ['/mapa-do-conhecimento', '/knowledge-map'],
+    ['/pratica', '/practice'],
+    ['/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111', '/payment/return?orderId=11111111-1111-4111-8111-111111111111'],
+  ] as const
+
+  for (const [legacy, current] of routes) {
+    const response = await request.get(legacy, { maxRedirects: 0 })
+    expect(response.status()).toBe(308)
+    const location = response.headers().location
+    expect(location).toBeTruthy()
+    expect(new URL(location, 'http://localhost').pathname + new URL(location, 'http://localhost').search).toBe(current)
+  }
+})

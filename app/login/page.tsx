@@ -37,7 +37,7 @@ function LoginContent() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [callbackError, setCallbackError] = useState('')
-  const [destination, setDestination] = useState('/estudar')
+  const [destination, setDestination] = useState('/study')
   const authMessage = (code?: string) => {
     const messages = {
       AUTH_REQUEST_TOO_LARGE: 'authRequestTooLarge', AUTH_INVALID_SIGNUP_INPUT: 'authInvalidSignupInput',

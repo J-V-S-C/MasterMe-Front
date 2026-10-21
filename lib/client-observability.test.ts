@@ -22,13 +22,14 @@ afterEach(() => {
 
 describe('private client telemetry', () => {
   test('normalizes only allowlisted routes and never preserves query', () => {
-    expect(normalizeClientRoute('/estudar/')).toBe('/estudar')
-    expect(normalizeClientRoute('/estudar?email=person@example.com')).toBeNull()
+    expect(normalizeClientRoute('/study/')).toBe('/study')
+    expect(normalizeClientRoute('/library')).toBe('/library')
+    expect(normalizeClientRoute('/study?email=person@example.com')).toBeNull()
     expect(normalizeClientRoute('/materials/11111111-1111-4111-8111-111111111111')).toBeNull()
   })
 
   test('accepts only the closed schema and rounds the value', () => {
-    expect(parseClientTelemetry({ kind: 'web_vital', name: 'LCP', rating: 'good', value: 1234.56789, route: '/estudar', build: 'abc1234' })).toEqual({ kind: 'web_vital', name: 'LCP', rating: 'good', value: 1234.568, route: '/estudar', build: 'abc1234' })
+    expect(parseClientTelemetry({ kind: 'web_vital', name: 'LCP', rating: 'good', value: 1234.56789, route: '/study', build: 'abc1234' })).toEqual({ kind: 'web_vital', name: 'LCP', rating: 'good', value: 1234.568, route: '/study', build: 'abc1234' })
     expect(parseClientTelemetry({ kind: 'client_error', errorType: 'render', route: '/', build: 'abc1234', email: 'person@example.com' })).toBeNull()
     expect(parseClientTelemetry({ kind: 'web_vital', name: 'CUSTOM', rating: 'good', value: 1, route: '/', build: 'abc1234' })).toBeNull()
   })
@@ -37,7 +38,7 @@ describe('private client telemetry', () => {
     expect(deterministicSample('same-key', 0.1)).toBe(deterministicSample('same-key', 0.1))
     const payloads: string[] = []
     Object.defineProperty(navigator, 'sendBeacon', { configurable: true, value: (_url: string, data: Blob) => { void data.text().then((body) => payloads.push(body)); return true } })
-    window.history.replaceState({}, '', '/estudar?email=person@example.com')
+    window.history.replaceState({}, '', '/study?email=person@example.com')
     let seed = 0
     while (!deterministicSample(String(seed), 0.1)) seed += 1
     window.sessionStorage.setItem('masterme:observability-sample', String(seed))

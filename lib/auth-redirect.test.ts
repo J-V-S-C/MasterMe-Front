@@ -4,37 +4,39 @@ import { isPublicPage } from './public-routes'
 
 describe('internal authentication redirects', () => {
   test('preserves only known destinations and plans', () => {
-    expect(safeInternalDestination('/estudar')).toBe('/estudar')
-    expect(safeInternalDestination('/mapa-do-conhecimento')).toBe('/mapa-do-conhecimento')
-    expect(safeInternalDestination('/pratica')).toBe('/pratica')
-    expect(safeInternalDestination('/estudar?plan=ESSENTIAL')).toBe('/estudar?plan=ESSENTIAL')
-    expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')).toBe('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111')
+    expect(safeInternalDestination('/study')).toBe('/study')
+    expect(safeInternalDestination('/library')).toBe('/library')
+    expect(safeInternalDestination('/knowledge-map')).toBe('/knowledge-map')
+    expect(safeInternalDestination('/practice')).toBe('/practice')
+    expect(safeInternalDestination('/study?plan=ESSENTIAL')).toBe('/study?plan=ESSENTIAL')
+    expect(safeInternalDestination('/payment/return?orderId=11111111-1111-4111-8111-111111111111')).toBe('/payment/return?orderId=11111111-1111-4111-8111-111111111111')
   })
 
   test('rejects external origin, protocol-relative URLs, plans and unknown parameters', () => {
-    expect(safeInternalDestination('https://example.com/estudar')).toBe('/estudar')
-    expect(safeInternalDestination('//example.com/estudar')).toBe('/estudar')
-    expect(safeInternalDestination('javascript:alert(1)')).toBe('/estudar')
-    expect(safeInternalDestination('/estudar?plan=UNLIMITED')).toBe('/estudar')
-    expect(safeInternalDestination('/estudar?plan=FREE&plan=PRO')).toBe('/estudar')
-    expect(safeInternalDestination('/estudar?returnTo=https://example.com')).toBe('/estudar')
-    expect(safeInternalDestination('/pagamento/retorno?orderId=invalid')).toBe('/estudar')
-    expect(safeInternalDestination('/pagamento/retorno?orderId=11111111-1111-4111-8111-111111111111&next=https://example.com')).toBe('/estudar')
+    expect(safeInternalDestination('https://example.com/study')).toBe('/study')
+    expect(safeInternalDestination('//example.com/study')).toBe('/study')
+    expect(safeInternalDestination('javascript:alert(1)')).toBe('/study')
+    expect(safeInternalDestination('/study?plan=UNLIMITED')).toBe('/study')
+    expect(safeInternalDestination('/study?plan=FREE&plan=PRO')).toBe('/study')
+    expect(safeInternalDestination('/study?returnTo=https://example.com')).toBe('/study')
+    expect(safeInternalDestination('/payment/return?orderId=invalid')).toBe('/study')
+    expect(safeInternalDestination('/payment/return?orderId=11111111-1111-4111-8111-111111111111&next=https://example.com')).toBe('/study')
   })
 
   test('builds CTA using only the plan identifier', () => {
-    expect(decodeURIComponent(planLoginHref('PRO'))).toBe('/entrar?next=/estudar?plan=PRO')
-    expect(loginHrefFor('/pratica')).toBe('/entrar?next=%2Fpratica')
+    expect(decodeURIComponent(planLoginHref('PRO'))).toBe('/login?next=/study?plan=PRO')
+    expect(loginHrefFor('/practice')).toBe('/login?next=%2Fpractice')
   })
 })
 
 describe('public routes', () => {
   test('keeps only acquisition and authentication outside the gate', () => {
     expect(isPublicPage('/')).toBe(true)
-    expect(isPublicPage('/entrar')).toBe(true)
+    expect(isPublicPage('/login')).toBe(true)
     expect(isPublicPage('/auth/callback')).toBe(true)
-    expect(isPublicPage('/estudar')).toBe(false)
-    expect(isPublicPage('/mapa-do-conhecimento')).toBe(false)
-    expect(isPublicPage('/pratica')).toBe(false)
+    expect(isPublicPage('/study')).toBe(false)
+    expect(isPublicPage('/library')).toBe(false)
+    expect(isPublicPage('/knowledge-map')).toBe(false)
+    expect(isPublicPage('/practice')).toBe(false)
   })
 })

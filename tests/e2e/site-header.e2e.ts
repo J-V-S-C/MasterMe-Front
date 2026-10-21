@@ -5,7 +5,7 @@ for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await page.route('**/api/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
     await page.route('**/api/auth/session', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
-    await page.goto('/estudar')
+    await page.goto('/study')
 
     const menu = page.getByRole('button', { name: 'Abrir menu' })
     const nav = page.getByRole('navigation', { name: 'Navegação principal' })

@@ -13,7 +13,7 @@ const catalog = { currency: 'BRL', billingType: 'ONE_TIME', plans: [
 ], creditWeights: {}, fallbackPolicy: '' }
 
 beforeEach(() => {
-  const window = new Window({ url: 'https://masterme.test/estudar' })
+  const window = new Window({ url: 'https://masterme.test/study' })
   Object.defineProperty(window.navigator, 'sendBeacon', { configurable: true, value: () => true })
   Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, localStorage: window.localStorage, sessionStorage: window.sessionStorage, crypto: window.crypto })
 })

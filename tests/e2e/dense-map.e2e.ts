@@ -24,7 +24,7 @@ for (const viewport of viewports) {
       return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
     });
     const started = Date.now();
-    await page.goto('/mapa-do-conhecimento');
+    await page.goto('/knowledge-map');
     await expect(page.getByRole('heading', { name: 'Mapa deste material' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Expandir mapa (20 conceitos)' })).toBeVisible();
     const timeToMapMs = Date.now() - started;
@@ -66,7 +66,7 @@ test('a relation can be reconstructed by keyboard on mobile without blocking the
     if (path === '/api/billing/me') return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
     return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
   });
-  await page.goto('/mapa-do-conhecimento');
+  await page.goto('/knowledge-map');
   const inspect = page.getByRole('button', { name: relation.statement });
   await inspect.focus();
   await page.keyboard.press('Enter');

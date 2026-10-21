@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { handleObservability, validatedDestination } from './route'
 
 let ip = 1
-const event = { kind: 'web_vital', name: 'LCP', rating: 'good', value: 1200.1234, route: '/estudar', build: 'client-forged' }
+const event = { kind: 'web_vital', name: 'LCP', rating: 'good', value: 1200.1234, route: '/study', build: 'client-forged' }
 const request = (body: string, headers: Record<string, string> = {}) => new Request('https://masterme.app/api/observability?secret=no', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': `2001:db8::${ip++}`, ...headers }, body })
 const allow = { limit: async () => ({ success: true }) }
 const handle = (incoming: Request, overrides: Parameters<typeof handleObservability>[1] = {}) => handleObservability(incoming, { limiter: allow, ...overrides })
