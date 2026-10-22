@@ -4,12 +4,13 @@ export const PLAN_IDS = ['FREE', 'ESSENTIAL', 'PRO'] as const
 
 export type PlanId = (typeof PLAN_IDS)[number]
 
-const defaultDestination = '/estudar'
+const defaultDestination = '/study'
 const allowedDestinations = new Set([
-  '/estudar',
-  '/mapa-do-conhecimento',
-  '/pratica',
-  '/pagamento/retorno',
+  '/study',
+  '/library',
+  '/knowledge-map',
+  '/practice',
+  '/payment/return',
 ])
 const allowedPlans = new Set<string>(PLAN_IDS)
 const internalOrigin = 'https://masterme.internal'
@@ -23,7 +24,7 @@ export function safeInternalDestination(candidate: string | null | undefined): s
       return defaultDestination
     }
 
-    if (parsed.pathname === '/pagamento/retorno') {
+    if (parsed.pathname === '/payment/return') {
       const payment = paymentReturnReference(parsed.searchParams)
       if (!payment) return defaultDestination
       const query = new URLSearchParams({ orderId: payment.orderId })
@@ -50,9 +51,9 @@ export function safeInternalDestination(candidate: string | null | undefined): s
 }
 
 export function loginHrefFor(destination: string): string {
-  return `/entrar?next=${encodeURIComponent(safeInternalDestination(destination))}`
+  return `/login?next=${encodeURIComponent(safeInternalDestination(destination))}`
 }
 
 export function planLoginHref(planId: PlanId): string {
-  return loginHrefFor(`/estudar?plan=${planId}`)
+  return loginHrefFor(`/study?plan=${planId}`)
 }

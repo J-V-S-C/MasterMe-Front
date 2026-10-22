@@ -1,4 +1,4 @@
-const publicPages = new Set(['/', '/entrar', '/auth/callback'])
+const publicPages = new Set(['/', '/login', '/auth/callback'])
 
 export function isPublicPage(pathname: string): boolean {
   return publicPages.has(pathname)

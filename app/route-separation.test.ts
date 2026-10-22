@@ -17,21 +17,21 @@ describe('separation between acquisition and product', () => {
     expect(source).toContain('<RealtimeProvider>')
   })
 
-  test('authenticated navigation uses /estudar instead of the landing page', async () => {
+  test('authenticated navigation uses /study instead of the landing page', async () => {
     const header = await Bun.file(new URL('../components/site-header.tsx', import.meta.url)).text()
     const map = await Bun.file(new URL('../components/knowledge-map.tsx', import.meta.url)).text()
     const practice = await Bun.file(new URL('../components/practice-workspace.tsx', import.meta.url)).text()
-    expect(header).toContain("href: '/estudar'")
-    expect(map).toContain('href="/estudar"')
-    expect(map).toContain('href={`/estudar?material=')
-    expect(practice).toContain('href="/estudar"')
-    expect(practice).toContain('href={`/estudar?material=')
+    expect(header).toContain("href: '/study'")
+    expect(map).toContain('href="/study"')
+    expect(map).toContain('href={`/study?material=')
+    expect(practice).toContain('href="/study"')
+    expect(practice).toContain('href={`/study?material=')
   })
 
   test('payment return stays within the authenticated product', async () => {
     const publicRoutes = await Bun.file(new URL('../lib/public-routes.ts', import.meta.url)).text()
-    const paymentPage = await Bun.file(new URL('./(product)/pagamento/retorno/page.tsx', import.meta.url)).text()
-    expect(publicRoutes).not.toContain('pagamento/retorno')
+    const paymentPage = await Bun.file(new URL('./(product)/payment/return/page.tsx', import.meta.url)).text()
+    expect(publicRoutes).not.toContain('/payment/return')
     expect(paymentPage).toContain('<PaymentReturn />')
   })
 })

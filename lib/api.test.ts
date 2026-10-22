@@ -69,7 +69,7 @@ describe('frontend HTTP contract', () => {
     globalThis.fetch = (async (url: string) => {
       if (url === '/api/billing/me') {
         balanceRequests += 1;
-        return new Response(JSON.stringify({ data: { planId: 'FREE', dailyLimit: 24, dailyUsed: 0, dailyRemaining: 24, periodLimit: 120, periodUsed: 0, periodRemaining: 120 } }), { status: 200 });
+        return new Response(JSON.stringify({ data: { planId: 'FREE', dailyLimit: 100, dailyUsed: 0, dailyRemaining: 100, periodLimit: 100, periodUsed: 0, periodRemaining: 100 } }), { status: 200 });
       }
       return new Response(JSON.stringify({ data: { id: 'session-a' } }), { status: 200 });
     }) as typeof fetch;

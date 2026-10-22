@@ -11,6 +11,8 @@ dist/
 # Tests and TypeScript caches
 coverage/
 test-results/
+playwright-report/
+blob-report/
 *.lcov
 *.tsbuildinfo
 

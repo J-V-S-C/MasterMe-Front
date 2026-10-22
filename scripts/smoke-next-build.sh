@@ -18,7 +18,7 @@ for attempt in $(seq 1 30); do
   if headers="$(curl --fail --silent --show-error --max-time 2 --dump-header - --output /dev/null "http://127.0.0.1:${port}/")"; then
     grep --ignore-case --quiet '^x-content-type-options: nosniff' <<<"$headers"
     grep --ignore-case --quiet '^content-security-policy:' <<<"$headers"
-    curl --fail --silent --show-error --max-time 2 "http://127.0.0.1:${port}/entrar" >/dev/null
+    curl --fail --silent --show-error --max-time 2 "http://127.0.0.1:${port}/login" >/dev/null
     exit 0
   fi
   if ! kill -0 "$server_pid" >/dev/null 2>&1; then

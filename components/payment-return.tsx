@@ -31,7 +31,7 @@ export function PaymentReturn() {
     }
     finally { checking.current = false }
   }, [payment, refresh])
-  useEffect(() => { if (search.toString()) router.replace('/pagamento/retorno', { scroll: false }) }, [router, search])
+  useEffect(() => { if (search.toString()) router.replace('/payment/return', { scroll: false }) }, [router, search])
   useEffect(() => { if (payment) void check() }, [payment, check])
 
   if (!payment) return <ReturnCard kind="error" title={t('paymentInvalidReturn')} description={t('paymentErrorDescription')} />
@@ -46,6 +46,6 @@ function ReturnCard({ kind, title, description, onRetry }: { kind: 'checking' | 
   return <section className={`payment-return-card ${kind}`} aria-live="polite" aria-busy={kind === 'checking'}>
     <div className="payment-return-icon"><Icon name={kind === 'success' ? 'check' : kind === 'error' ? 'warning' : 'sparkles'} /></div>
     <span>{t('paymentReturnEyebrow')}</span><h1>{title}</h1><p>{description}</p>
-    <div>{onRetry && <ActionButton variant="primary" onClick={() => void onRetry()}>{t('paymentRetry')}</ActionButton>}<Link className="app-button secondary" href="/estudar">{t('paymentGoStudy')}</Link></div>
+    <div>{onRetry && <ActionButton variant="primary" onClick={() => void onRetry()}>{t('paymentRetry')}</ActionButton>}<Link className="app-button secondary" href="/study">{t('paymentGoStudy')}</Link></div>
   </section>
 }
