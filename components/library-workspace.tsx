@@ -1,114 +1,150 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { api, type ConceptCard, type EditorialUnit, type KnowledgeNode, type LearningGoal, type MaterialSummary, type Shelf, type StudyAvailability, type StudyPlan, type StudySuggestion, type StudyTask, type TaskActivity } from '../lib/api';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { api, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useRealtimeRefresh } from './realtime-provider';
 import styles from './library-workspace.module.css';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import { WorkspaceHeading } from './workspace-heading';
 
 const copy = {
-  'pt-BR': { title: 'Sua biblioteca', subtitle: 'Guarde fontes, organize o tempo e volte ao trecho certo.', shelves: 'Estante', cards: 'Fichário', desk: 'Mesa do Dia', calendar: 'Calendário', newShelf: 'Nova prateleira', add: 'Adicionar', remove: 'Remover', noShelf: 'Crie uma prateleira para reunir materiais.', unfiled: 'Sem prateleira', noMaterial: 'Adicione um material para começar.', source: 'Abrir fonte', outline: 'Índice do material', unstructured: 'Texto completo · sem divisão editorial detectável', fileCard: 'Guardar ficha', removeCard: 'Retirar ficha', note: 'Minha anotação', save: 'Salvar', goal: 'Objetivo', newGoal: 'Novo objetivo', plan: 'Roteiro', newPlan: 'Novo roteiro', task: 'Tarefa', newTask: 'Nova tarefa', minutes: 'Minutos', date: 'Dia', time: 'Horário', available: 'Tempo disponível', load: 'Carga planejada', excess: 'Excesso', start: 'Começar', done: 'Concluir', reopen: 'Reabrir', postpone: 'Mover', suggestions: 'Sugestões explicadas', accept: 'Adicionar ao roteiro', ignore: 'Ignorar', noSuggestions: 'Nenhuma sugestão pendente.', noTasks: 'Nenhuma tarefa para este dia.', allTasks: 'Todas as tarefas', today: 'Hoje', failed: 'Não foi possível concluir. Tente novamente.', empty: 'Escolha um material para ver o índice e os conceitos.', relation: 'Relações', noRelations: 'Ainda não há relações com fonte verificada.', material: 'Material', description: 'Descrição', deadline: 'Prazo', titleLabel: 'Título', chooseActivity: 'Atividade', reason: 'Motivo', noPlan: 'Sem roteiro', noGoal: 'Sem objetivo', everyMaterial: 'Todos os materiais' },
-  'en-US': { title: 'Your library', subtitle: 'Keep sources, organize your time, and return to the right excerpt.', shelves: 'Shelves', cards: 'Index cards', desk: 'Today’s Desk', calendar: 'Calendar', newShelf: 'New shelf', add: 'Add', remove: 'Remove', noShelf: 'Create a shelf to group materials.', unfiled: 'Unfiled', noMaterial: 'Add a material to begin.', source: 'Open source', outline: 'Material outline', unstructured: 'Full text · no reliable editorial structure detected', fileCard: 'File card', removeCard: 'Remove card', note: 'My note', save: 'Save', goal: 'Goal', newGoal: 'New goal', plan: 'Plan', newPlan: 'New plan', task: 'Task', newTask: 'New task', minutes: 'Minutes', date: 'Date', time: 'Time', available: 'Available time', load: 'Planned load', excess: 'Overload', start: 'Start', done: 'Complete', reopen: 'Reopen', postpone: 'Move', suggestions: 'Explained suggestions', accept: 'Add to plan', ignore: 'Ignore', noSuggestions: 'No pending suggestions.', noTasks: 'No tasks for this day.', allTasks: 'All tasks', today: 'Today', failed: 'Could not finish. Try again.', empty: 'Choose a material to see its outline and concepts.', relation: 'Relations', noRelations: 'No source-backed relations yet.', material: 'Material', description: 'Description', deadline: 'Deadline', titleLabel: 'Title', chooseActivity: 'Activity', reason: 'Reason', noPlan: 'No plan', noGoal: 'No goal', everyMaterial: 'All materials' },
+  'pt-BR': { title: 'Suas tarefas de estudo', intro: 'Defina o que fazer e quando pretende concluir.', task: 'Tarefa', taskPlaceholder: 'Ex.: Revisar os exemplos do capítulo 3', target: 'Data para concluir', material: 'Material', optionalMaterial: 'Sem material específico', add: 'Adicionar tarefa', open: 'A fazer', done: 'Concluídas', unscheduled: 'Sem data', empty: 'Nenhuma tarefa em andamento. Adicione a próxima ação acima.', doneEmpty: 'Nenhuma tarefa concluída ainda.', complete: 'Concluir', reopen: 'Reabrir', remove: 'Remover', save: 'Salvar', edit: 'Editar', cancel: 'Cancelar', study: 'Estudar conceito', suggestions: 'Sugestões de estudo', suggestionHint: 'Ideias opcionais baseadas nas suas explicações.', calendar: 'Calendário', allTasks: 'Todas as tarefas', today: 'Hoje', previous: 'Anterior', next: 'Próximo', accept: 'Adicionar tarefa', ignore: 'Ignorar', failed: 'Não foi possível salvar. Tente novamente.' },
+  'en-US': { title: 'Your study tasks', intro: 'Decide what to do and when you aim to finish.', task: 'Task', taskPlaceholder: 'E.g. Review the examples in chapter 3', target: 'Target completion date', material: 'Material', optionalMaterial: 'No specific material', add: 'Add task', open: 'To do', done: 'Completed', unscheduled: 'No date', empty: 'No tasks in progress. Add your next action above.', doneEmpty: 'No completed tasks yet.', complete: 'Complete', reopen: 'Reopen', remove: 'Remove', save: 'Save', edit: 'Edit', cancel: 'Cancel', study: 'Study concept', suggestions: 'Study suggestions', suggestionHint: 'Optional ideas based on your explanations.', calendar: 'Calendar', allTasks: 'All tasks', today: 'Today', previous: 'Previous', next: 'Next', accept: 'Add task', ignore: 'Ignore', failed: 'Could not save. Try again.' },
 } as const;
 
-type View = 'shelves' | 'cards' | 'desk' | 'calendar';
-const activities: TaskActivity[] = ['READ', 'EXPLAIN', 'RELATE', 'APPLY', 'REVISIT', 'PRACTICE'];
-const activityLabels: Record<'pt-BR' | 'en-US', Record<TaskActivity, string>> = {
-  'pt-BR': { READ: 'Ler', EXPLAIN: 'Explicar', RELATE: 'Relacionar', APPLY: 'Aplicar', REVISIT: 'Retomar', PRACTICE: 'Praticar' },
-  'en-US': { READ: 'Read', EXPLAIN: 'Explain', RELATE: 'Relate', APPLY: 'Apply', REVISIT: 'Revisit', PRACTICE: 'Practice' },
+const suggestionCopy = {
+  'pt-BR': { diagnosis: 'Tentativa anterior', proposedTask: 'Ajuste a tarefa antes de aceitar', duration: 'Duração em minutos', schedule: 'Quando estudar', plan: 'Roteiro', noPlan: 'Sem roteiro' },
+  'en-US': { diagnosis: 'Previous attempt', proposedTask: 'Edit the task before accepting', duration: 'Duration in minutes', schedule: 'When to study', plan: 'Plan', noPlan: 'No plan' },
+} as const;
+
+const localDate = (value: string) => {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+const dateAtNoon = (value: string) => new Date(`${value}T12:00:00`).toISOString();
 
 export function LibraryWorkspace() {
   const { locale } = useI18n();
   const t = copy[locale];
-  const [view, setView] = useState<View>('shelves');
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
-  const [shelves, setShelves] = useState<Shelf[]>([]);
-  const [cards, setCards] = useState<ConceptCard[]>([]);
-  const [goals, setGoals] = useState<LearningGoal[]>([]);
-  const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [suggestions, setSuggestions] = useState<StudySuggestion[]>([]);
-  const [availability, setAvailability] = useState<StudyAvailability[]>([]);
-  const [deskData, setDeskData] = useState<{ tasks: StudyTask[]; load: { plannedMinutes: number; availableMinutes: number; excessMinutes: number } } | null>(null);
-  const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
-  const [outline, setOutline] = useState<EditorialUnit[]>([]);
+  const [title, setTitle] = useState('');
+  const [targetDate, setTargetDate] = useState('');
   const [materialId, setMaterialId] = useState('');
-  const [shelfName, setShelfName] = useState('');
-  const [materialSearch, setMaterialSearch] = useState('');
-  const [goalTitle, setGoalTitle] = useState('');
-  const [goalDescription, setGoalDescription] = useState('');
-  const [goalDeadline, setGoalDeadline] = useState('');
-  const [planTitle, setPlanTitle] = useState('');
-  const [planGoalId, setPlanGoalId] = useState('');
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskActivity, setTaskActivity] = useState<TaskActivity>('READ');
-  const [taskPlanId, setTaskPlanId] = useState('');
-  const [taskMaterialId, setTaskMaterialId] = useState('');
-  const [taskMinutes, setTaskMinutes] = useState('40');
-  const [taskDateTime, setTaskDateTime] = useState('');
-  const [selectedDate, setSelectedDate] = useState(() => new Intl.DateTimeFormat('en-CA').format(new Date()));
-  const [availableMinutes, setAvailableMinutes] = useState(40);
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [selectedDate, setSelectedDate] = useState(() => localDate(new Date().toISOString()));
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [listView, setListView] = useState<'open' | 'done'>('open');
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [materialsData, shelvesData, cardsData, goalsData, plansData, tasksData, suggestionsData, availabilityData] = await Promise.all([
-      api.materials(), api.shelves(), api.cards(), api.goals(), api.plans(), api.tasks(), api.suggestions(), api.availability(),
-    ]);
-    setMaterials(materialsData); setShelves(shelvesData); setCards(cardsData); setGoals(goalsData);
-    setPlans(plansData); setTasks(tasksData); setSuggestions(suggestionsData); setAvailability(availabilityData);
-    setMaterialId((current) => current && materialsData.some(({ id }) => id === current) ? current : materialsData[0]?.id ?? '');
+    const [materialRows, taskRows, suggestionRows] = await Promise.all([api.materials(), api.tasks(), api.suggestions()]);
+    setMaterials(materialRows); setTasks(taskRows); setSuggestions(suggestionRows);
   }, []);
   useEffect(() => { void refresh().catch(() => setError(t.failed)); }, [refresh, t.failed]);
   useRealtimeRefresh(() => { void refresh().catch(() => {}); });
-  useEffect(() => {
-    if (!materialId) { setNodes([]); setOutline([]); return; }
-    void Promise.all([api.knowledgeMap(materialId), api.outline(materialId)]).then(([map, units]) => { setNodes(map); setOutline(units); }).catch(() => setError(t.failed));
-  }, [materialId, t.failed]);
-  useEffect(() => {
-    const weekday = new Date(`${selectedDate}T12:00:00Z`).getUTCDay();
-    setAvailableMinutes(availability.find((item) => item.weekday === weekday)?.minutes ?? 0);
-  }, [availability, selectedDate]);
-  useEffect(() => { if (view === 'desk') void api.desk(selectedDate, timezone).then(setDeskData).catch(() => setError(t.failed)); }, [view, selectedDate, timezone, tasks, availability, t.failed]);
-  const operate = async (action: () => Promise<unknown>) => { setBusy(true); setError(''); try { await action(); await refresh(); } catch { setError(t.failed); } finally { setBusy(false); } };
-  const submit = (event: FormEvent, action: () => Promise<unknown>) => { event.preventDefault(); void operate(action); };
-  const currentMaterial = materials.find(({ id }) => id === materialId);
-  const visibleMaterials = materials.filter(({ title }) => title.toLocaleLowerCase(locale).includes(materialSearch.trim().toLocaleLowerCase(locale)));
-  const sortedTasks = useMemo(() => tasks.filter(({ status }) => status !== 'REMOVED'), [tasks]);
-  const dayTasks = deskData?.tasks ?? [];
-  const planned = deskData?.load.plannedMinutes ?? 0;
-  const sourceHref = (task: StudyTask) => task.material_id ? `/estudar?material=${task.material_id}${task.concept_id ? `&concept=${task.concept_id}` : ''}` : '/estudar';
+  const operate = async (action: () => Promise<unknown>) => {
+    setBusy(true); setError('');
+    try { await action(); await refresh(); return true; } catch { setError(t.failed); return false; } finally { setBusy(false); }
+  };
+  const create = (event: FormEvent) => {
+    event.preventDefault();
+    const nextTitle = title.trim();
+    if (!nextTitle) return;
+    void operate(async () => {
+      await api.createTask({ title: nextTitle, activityType: 'READ', materialId: materialId || undefined, scheduledAt: targetDate ? dateAtNoon(targetDate) : undefined });
+      setTitle(''); setTargetDate(''); setMaterialId('');
+    });
+  };
+  const openTasks = useMemo(() => tasks.filter((task) => task.status === 'PENDING').sort((a, b) =>
+    (a.scheduled_at ?? '9999').localeCompare(b.scheduled_at ?? '9999') || a.sort_order - b.sort_order), [tasks]);
+  const doneTasks = useMemo(() => tasks.filter((task) => task.status === 'DONE'), [tasks]);
+  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === 'PENDING');
 
   return <div className={styles.workspace}>
-    <header className={styles.hero}><span>MASTERME · ATELIÊ DE ESTUDO</span><h1>{t.title}</h1><p>{t.subtitle}</p></header>
-    <nav className={styles.tabs} aria-label={t.title}>{(['shelves', 'cards', 'desk', 'calendar'] as View[]).map((item) => <button key={item} type="button" aria-current={view === item ? 'page' : undefined} onClick={() => setView(item)}>{t[item]}</button>)}</nav>
+    <WorkspaceHeading eyebrow={locale === 'pt-BR' ? 'PLANEJAMENTO' : 'PLANNING'} title={t.title} description={t.intro} aside={<div className={styles.heroMeta}><strong>{openTasks.length}</strong><span>{t.open}</span></div>} />
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    {view === 'shelves' && <div className={styles.columns}>
-      <section className={styles.paper}><h2>{t.shelves}</h2><label>Buscar materiais<input type="search" value={materialSearch} onChange={(event) => setMaterialSearch(event.target.value)} /></label><form onSubmit={(event) => submit(event, async () => { await api.createShelf(shelfName.trim()); setShelfName(''); })} className={styles.inline}><label className={styles.grow}>{t.newShelf}<input required maxLength={80} value={shelfName} onChange={(event) => setShelfName(event.target.value)} /></label><button disabled={busy}>{t.add}</button></form>
-        {!shelves.length && <p>{t.noShelf}</p>}
-        {shelves.map((shelf) => <article className={styles.shelf} key={shelf.id}><div className={styles.row}><h3>{shelf.name}</h3><button type="button" disabled={busy} onClick={() => void operate(() => api.deleteShelf(shelf.id))}>{t.remove}</button></div><ul>{visibleMaterials.filter(({ id }) => shelf.shelf_materials.some((link) => link.material_id === id)).map((material) => <li key={material.id}><button type="button" onClick={() => setMaterialId(material.id)}>{material.title}</button><button type="button" disabled={busy} onClick={() => void operate(() => api.setShelfMaterial(shelf.id, material.id, false))} aria-label={`${t.remove} ${material.title}`}>×</button></li>)}</ul><label>{t.add} {t.material}<select value="" onChange={(event) => { if (event.target.value) void operate(() => api.setShelfMaterial(shelf.id, event.target.value, true)); }}><option value="">—</option>{materials.filter(({ id }) => !shelf.shelf_materials.some((link) => link.material_id === id)).map((material) => <option key={material.id} value={material.id}>{material.title}</option>)}</select></label></article>)}
-        <h3>{t.unfiled}</h3><ul>{visibleMaterials.filter(({ id }) => !shelves.some((shelf) => shelf.shelf_materials.some((link) => link.material_id === id))).map((material) => <li key={material.id}><button type="button" onClick={() => setMaterialId(material.id)}>{material.title}</button></li>)}</ul>{!materials.length && <p>{t.noMaterial}</p>}
+    <form className={styles.create} onSubmit={create}>
+      <label className={styles.titleField}>{t.task}<input ref={titleInputRef} required maxLength={160} value={title} placeholder={t.taskPlaceholder} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+      <label>{t.target}<input type="date" value={targetDate} onInput={(event) => setTargetDate(event.currentTarget.value)} /></label>
+      <label>{t.material}<select value={materialId} onChange={(event) => setMaterialId(event.target.value)}><option value="">{t.optionalMaterial}</option>{materials.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+      <button disabled={busy}>{t.add}</button>
+    </form>
+    <div className={styles.layout}>
+      <section className={styles.list} aria-label={t.allTasks}><header><div><span className={styles.kicker}>{t.allTasks}</span><h2>{listView === 'open' ? t.open : t.done}</h2></div></header>
+        <div className={styles.listSwitch} aria-label={t.allTasks}><button type="button" aria-pressed={listView === 'open'} onClick={() => setListView('open')}>{t.open} <span>{openTasks.length}</span></button><button type="button" aria-pressed={listView === 'done'} onClick={() => setListView('done')}>{t.done} <span>{doneTasks.length}</span></button></div>
+        {listView === 'open' ? <>{!openTasks.length && <p className={styles.empty}>{t.empty}</p>}{openTasks.map((task) => <TaskItem key={task.id} task={task} materials={materials} locale={locale} busy={busy} operate={operate} labels={t} selected={selectedTaskId === task.id} />)}</> : <>{!doneTasks.length && <p className={styles.empty}>{t.doneEmpty}</p>}{doneTasks.map((task) => <TaskItem key={task.id} task={task} materials={materials} locale={locale} busy={busy} operate={operate} labels={t} selected={selectedTaskId === task.id} />)}</>}
       </section>
-      <section className={styles.paper}><h2>{t.outline}</h2><label>{t.material}<select value={materialId} onChange={(event) => setMaterialId(event.target.value)}>{materials.map((material) => <option key={material.id} value={material.id}>{material.title}</option>)}</select></label>{currentMaterial ? <><ol className={styles.outline}>{outline.map((unit) => <li key={unit.id} style={{ marginInlineStart: `${Math.max(0, unit.level - 1) * 16}px` }}>{unit.title ?? t.unstructured}</li>)}</ol><Link href={`/estudar?material=${materialId}`}>{t.source} →</Link><h3>{t.relation}</h3><p className={styles.muted}>{t.noRelations}</p><h3>{t.cards}</h3><ul>{nodes.map(({ concept }) => <li key={concept.id} className={styles.concept}><strong>{concept.name}</strong><p>{concept.description}</p><button type="button" disabled={busy} onClick={() => void operate(() => cards.some((card) => card.concept_id === concept.id) ? api.deleteCard(concept.id) : api.saveCard(concept.id, ''))}>{cards.some((card) => card.concept_id === concept.id) ? t.removeCard : t.fileCard}</button></li>)}</ul></> : <p>{t.empty}</p>}</section>
-    </div>}
-    {view === 'cards' && <section className={styles.paper}><h2>{t.cards}</h2>{!cards.length && <p>{t.empty}</p>}{cards.map((card) => <CardEditor key={card.concept_id} card={card} busy={busy} save={(note) => operate(() => api.saveCard(card.concept_id, note))} remove={() => operate(() => api.deleteCard(card.concept_id))} labels={t} />)}</section>}
-    {view === 'desk' && <div className={styles.columns}><section className={styles.paper}><h2>{t.desk}</h2><div className={styles.inline}><label>{t.date}<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label><form onSubmit={(event) => submit(event, () => api.setAvailability(new Date(`${selectedDate}T12:00:00Z`).getUTCDay(), availableMinutes, timezone))} className={styles.inline}><label>{t.available}<input type="number" min="0" max="1440" value={availableMinutes} onChange={(event) => setAvailableMinutes(Number(event.target.value))} /></label><button disabled={busy}>{t.save}</button></form></div><p>{t.load}: <strong>{planned} / {deskData?.load.availableMinutes ?? 0} min</strong>{(deskData?.load.excessMinutes ?? 0) > 0 && <strong className={styles.overload}> · {t.excess}: {deskData?.load.excessMinutes} min</strong>}</p>{!dayTasks.length && <p>{t.noTasks}</p>}{dayTasks.map((task) => <TaskRow key={task.id} task={task} busy={busy} open={sourceHref(task)} setStatus={(status) => operate(() => api.updateTask(task.id, { status }))} labels={t} />)}</section><section className={styles.paper}><h2>{t.suggestions}</h2>{!suggestions.some(({ status }) => status === 'PENDING') && <p>{t.noSuggestions}</p>}{suggestions.filter(({ status }) => status === 'PENDING').map((suggestion) => <article className={styles.suggestion} key={suggestion.id}><h3>{suggestion.title}</h3><p>{suggestion.reason}</p><blockquote>{suggestion.learning_evidence.source_excerpt}</blockquote><div className={styles.inline}><button disabled={busy} onClick={() => void operate(() => api.decideSuggestion(suggestion.id, 'ACCEPTED'))}>{t.accept}</button><button disabled={busy} onClick={() => void operate(() => api.decideSuggestion(suggestion.id, 'IGNORED'))}>{t.ignore}</button></div></article>)}</section></div>}
-    {view === 'calendar' && <div className={styles.columns}><section className={styles.paper}><h2>{t.goal} & {t.plan}</h2><form onSubmit={(event) => submit(event, async () => { await api.createGoal(goalTitle.trim(), goalDescription.trim(), goalDeadline || undefined); setGoalTitle(''); setGoalDescription(''); setGoalDeadline(''); })} className={styles.form}><h3>{t.newGoal}</h3><label>{t.titleLabel}<input required maxLength={160} value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} /></label><label>{t.description}<textarea maxLength={2000} value={goalDescription} onChange={(event) => setGoalDescription(event.target.value)} /></label><label>{t.deadline}<input type="date" value={goalDeadline} onChange={(event) => setGoalDeadline(event.target.value)} /></label><button disabled={busy}>{t.add}</button></form><ul>{goals.map((goal) => <li key={goal.id}><strong>{goal.title}</strong>{goal.deadline && <small> · {new Date(goal.deadline).toLocaleDateString(locale)}</small>}<p>{goal.description}</p></li>)}</ul><form onSubmit={(event) => submit(event, async () => { await api.createPlan(planTitle.trim(), planGoalId || undefined); setPlanTitle(''); })} className={styles.form}><h3>{t.newPlan}</h3><label>{t.titleLabel}<input required maxLength={160} value={planTitle} onChange={(event) => setPlanTitle(event.target.value)} /></label><label>{t.goal}<select value={planGoalId} onChange={(event) => setPlanGoalId(event.target.value)}><option value="">{t.noGoal}</option>{goals.map((goal) => <option value={goal.id} key={goal.id}>{goal.title}</option>)}</select></label><button disabled={busy}>{t.add}</button></form><ul>{plans.map((plan) => <li key={plan.id}>{plan.title}</li>)}</ul></section>
-      <section className={styles.paper}><h2>{t.calendar}</h2><div className={styles.calendar}><FullCalendar plugins={[dayGridPlugin, interactionPlugin]} initialView="dayGridMonth" locale={locale} height="auto" events={sortedTasks.filter((task) => task.scheduled_at).map((task) => ({ id: task.id, title: task.title, start: task.scheduled_at ?? undefined, backgroundColor: task.status === 'DONE' ? '#4a725f' : '#956b3c' }))} editable eventDrop={(info) => { const start = info.event.start; if (!start) return; void api.updateTask(info.event.id, { scheduledAt: start.toISOString() }).then(() => refresh()).catch(() => { info.revert(); setError(t.failed); }); }} dateClick={(info) => { setSelectedDate(info.dateStr); setView('desk'); }} /></div><form onSubmit={(event) => submit(event, async () => { await api.createTask({ title: taskTitle.trim(), activityType: taskActivity, planId: taskPlanId || undefined, materialId: taskMaterialId || undefined, durationMinutes: taskMinutes ? Number(taskMinutes) : undefined, scheduledAt: taskDateTime ? new Date(taskDateTime).toISOString() : undefined }); setTaskTitle(''); })} className={styles.form}><h3>{t.newTask}</h3><label>{t.titleLabel}<input required maxLength={160} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} /></label><div className={styles.inline}><label>{t.chooseActivity}<select value={taskActivity} onChange={(event) => setTaskActivity(event.target.value as TaskActivity)}>{activities.map((activity) => <option key={activity} value={activity}>{activityLabels[locale][activity]}</option>)}</select></label><label>{t.plan}<select value={taskPlanId} onChange={(event) => setTaskPlanId(event.target.value)}><option value="">{t.noPlan}</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.title}</option>)}</select></label></div><label>{t.material}<select value={taskMaterialId} onChange={(event) => setTaskMaterialId(event.target.value)}><option value="">{t.everyMaterial}</option>{materials.map((material) => <option key={material.id} value={material.id}>{material.title}</option>)}</select></label><div className={styles.inline}><label>{t.minutes}<input type="number" min="1" max="480" value={taskMinutes} onChange={(event) => setTaskMinutes(event.target.value)} /></label><label>{t.date} / {t.time}<input type="datetime-local" value={taskDateTime} onChange={(event) => setTaskDateTime(event.target.value)} /></label></div><button disabled={busy}>{t.add}</button></form><h3>{t.allTasks}</h3><ul>{sortedTasks.map((task) => <li key={task.id} className={styles.task}><TaskRow task={task} busy={busy} open={sourceHref(task)} setStatus={(status) => operate(() => api.updateTask(task.id, { status }))} labels={t} /><label>{t.postpone}<input type="datetime-local" defaultValue={task.scheduled_at ? new Date(task.scheduled_at).toISOString().slice(0, 16) : ''} onChange={(event) => { if (event.target.value) void operate(() => api.updateTask(task.id, { scheduledAt: new Date(event.target.value).toISOString() })); }} /></label></li>)}</ul></section></div>}
+      <aside className={styles.calendarPanel} aria-label={t.calendar}>
+        <header><span className={styles.kicker}>{t.calendar}</span><h2>{t.target}</h2></header>
+        <div className={styles.calendar}><FullCalendar plugins={[dayGridPlugin, interactionPlugin]} initialView="dayGridMonth" locale={locale} height="auto" editable eventDurationEditable={false} buttonIcons={false} eventDrop={(info) => { if (!info.event.start) return; void operate(() => api.updateTask(info.event.id, { scheduledAt: dateAtNoon(localDate(info.event.start!.toISOString())) })).then((saved) => { if (!saved) info.revert(); }); }} headerToolbar={{ left: 'prev,next', center: 'title', right: 'today' }} buttonText={{ today: t.today, prev: t.previous, next: t.next }} dayCellClassNames={(arg) => localDate(arg.date.toISOString()) === selectedDate ? styles.selectedDay : ''} events={openTasks.filter((task) => task.scheduled_at).map((task) => ({ id: task.id, title: task.title, start: task.scheduled_at ? localDate(task.scheduled_at) : undefined, allDay: true }))} dateClick={(info) => { setSelectedDate(info.dateStr); setTargetDate(info.dateStr); titleInputRef.current?.focus(); }} eventClick={(info) => { setListView('open'); setSelectedTaskId(info.event.id); requestAnimationFrame(() => { const row = document.getElementById(`task-${info.event.id}`); row?.scrollIntoView({ block: 'center' }); row?.focus(); }); }} /></div>
+      </aside>
+    </div>
+    {pendingSuggestions.length > 0 && <details className={styles.archive}><summary>{t.suggestions} · {pendingSuggestions.length}</summary><p>{t.suggestionHint}</p>{pendingSuggestions.map((suggestion) => <SuggestionEditor key={suggestion.id} suggestion={suggestion} plans={[]} busy={busy} operate={async (action) => { await operate(action); }} locale={locale} labels={t} />)}</details>}
   </div>;
 }
 
-function CardEditor({ card, busy, save, remove, labels }: { card: ConceptCard; busy: boolean; save: (note: string) => Promise<unknown>; remove: () => Promise<unknown>; labels: typeof copy['pt-BR'] | typeof copy['en-US'] }) {
-  const [note, setNote] = useState(card.note);
-  return <article className={styles.card}><h3>{card.concepts.name}</h3><blockquote>{card.concepts.source_excerpt}</blockquote><form onSubmit={(event) => { event.preventDefault(); void save(note); }} className={styles.form}><label>{labels.note}<textarea value={note} maxLength={3000} onChange={(event) => setNote(event.target.value)} /></label><div className={styles.inline}><button disabled={busy}>{labels.save}</button><button type="button" disabled={busy} onClick={() => void remove()}>{labels.removeCard}</button><Link href={`/estudar?material=${card.concepts.material_id}&concept=${card.concept_id}`}>{labels.source} →</Link></div></form></article>;
+function TaskItem({ task, materials, locale, busy, operate, labels, selected }: { task: StudyTask; materials: MaterialSummary[]; locale: 'pt-BR' | 'en-US'; busy: boolean; operate: (action: () => Promise<unknown>) => Promise<boolean>; labels: typeof copy['pt-BR'] | typeof copy['en-US']; selected: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [targetDate, setTargetDate] = useState(task.scheduled_at ? localDate(task.scheduled_at) : '');
+  useEffect(() => {
+    if (!editing) { setTitle(task.title); setTargetDate(task.scheduled_at ? localDate(task.scheduled_at) : ''); }
+  }, [editing, task.title, task.scheduled_at]);
+  const material = materials.find((item) => item.id === task.material_id);
+  const dateLabel = task.scheduled_at ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(task.scheduled_at)) : labels.unscheduled;
+  return <article id={`task-${task.id}`} tabIndex={-1} className={`${styles.task} ${selected ? styles.selectedTask : ''}`}>
+    {editing ? <form className={styles.editForm} onSubmit={(event) => { event.preventDefault(); void operate(() => api.updateTask(task.id, { title: title.trim(), scheduledAt: targetDate ? dateAtNoon(targetDate) : null })).then((saved) => { if (saved) setEditing(false); }); }}>
+      <label>{labels.task}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+      <label>{labels.target}<input type="date" value={targetDate} onInput={(event) => setTargetDate(event.currentTarget.value)} /></label>
+      <div className={styles.actions}><button disabled={busy}>{labels.save}</button><button type="button" onClick={() => { setEditing(false); setTitle(task.title); setTargetDate(task.scheduled_at ? localDate(task.scheduled_at) : ''); }}>{labels.cancel}</button></div>
+    </form> : <><div className={styles.taskCopy}><strong>{task.title}</strong><div className={styles.meta}><time dateTime={task.scheduled_at ?? undefined}>{dateLabel}</time>{material && <span>{material.title}</span>}</div></div><div className={styles.actions}>
+      {task.concept_id && task.material_id && <Link href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{labels.study}</Link>}
+      <button type="button" onClick={() => setEditing(true)}>{labels.edit}</button>
+      <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: task.status === 'DONE' ? 'PENDING' : 'DONE' }))}>{task.status === 'DONE' ? labels.reopen : labels.complete}</button>
+      <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{labels.remove}</button>
+    </div></>}
+  </article>;
 }
 
-function TaskRow({ task, busy, open, setStatus, labels }: { task: StudyTask; busy: boolean; open: string; setStatus: (status: StudyTask['status']) => Promise<unknown>; labels: typeof copy['pt-BR'] | typeof copy['en-US'] }) {
-  return <article className={styles.task}><div><strong>{task.title}</strong><small>{task.duration_minutes ? ` · ${task.duration_minutes} min` : ''}{task.reason ? ` · ${task.reason}` : ''}</small></div><div className={styles.inline}><Link href={open}>{labels.start} →</Link><button type="button" disabled={busy} onClick={() => void setStatus(task.status === 'DONE' ? 'PENDING' : 'DONE')}>{task.status === 'DONE' ? labels.reopen : labels.done}</button><button type="button" disabled={busy} onClick={() => void setStatus('REMOVED')}>{labels.remove}</button></div></article>;
+export function SuggestionEditor({ suggestion, plans, busy, operate, locale, labels }: {
+  suggestion: StudySuggestion;
+  plans: StudyPlan[];
+  busy: boolean;
+  operate: (action: () => Promise<unknown>) => Promise<void>;
+  locale: 'pt-BR' | 'en-US';
+  labels: { accept: string; ignore: string };
+}) {
+  const t = suggestionCopy[locale];
+  const [title, setTitle] = useState(suggestion.title);
+  const [minutes, setMinutes] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [planId, setPlanId] = useState('');
+  return <article className={styles.suggestion}>
+    <h3>{suggestion.title}</h3><p>{suggestion.reason}</p>
+    <details><summary>{t.diagnosis}</summary><p>{suggestion.learning_evidence.prompt}</p><p>{suggestion.learning_evidence.diagnosis}</p></details>
+    <form className={styles.form} onSubmit={(event) => {
+      event.preventDefault();
+      void operate(() => api.decideSuggestion(suggestion.id, {
+        decision: 'ACCEPTED', title: title.trim(),
+        durationMinutes: minutes ? Number(minutes) : undefined,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        planId: planId || undefined,
+      }));
+    }}>
+      <label>{t.proposedTask}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+      <div className={styles.inline}>
+        <label>{t.duration}<input type="number" min="1" max="480" value={minutes} onInput={(event) => setMinutes(event.currentTarget.value)} /></label>
+        <label>{t.schedule}<input type="datetime-local" value={scheduledAt} onInput={(event) => setScheduledAt(event.currentTarget.value)} /></label>
+        <label>{t.plan}<select value={planId} onChange={(event) => setPlanId(event.target.value)}><option value="">{t.noPlan}</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.title}</option>)}</select></label>
+      </div>
+      <div className={styles.inline}><button disabled={busy}>{labels.accept}</button><button type="button" disabled={busy} onClick={() => void operate(() => api.decideSuggestion(suggestion.id, { decision: 'IGNORED' }))}>{labels.ignore}</button></div>
+    </form>
+  </article>;
 }

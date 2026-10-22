@@ -16,7 +16,7 @@ export function CheckoutQueryExperience() {
     const current = new URLSearchParams(serializedSearch)
     if (current.getAll('plan').length === 0) return
     setConsumedPlan(requestedPlan(current))
-    router.replace('/estudar', { scroll: false })
+    router.replace('/study', { scroll: false })
   }, [serializedSearch, router])
   if (consumedPlan === undefined) return null
   return <CheckoutExperience plan={consumedPlan} />

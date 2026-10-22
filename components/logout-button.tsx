@@ -9,7 +9,7 @@ export function LogoutButton() {
   const router = useRouter()
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
-    router.replace('/entrar')
+    router.replace('/login')
     router.refresh()
   }
   return <button className="header-logout" type="button" onClick={() => void logout()} aria-label={t('logout')} title={t('logout')}><Icon name="logout" /></button>

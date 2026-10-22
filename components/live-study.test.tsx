@@ -11,6 +11,13 @@ const node: KnowledgeNode = { concept: { id: 'concept-a', materialId: 'material-
 const session: StudySession = { id: 'session-a', conceptId: 'concept-a', state: 'EXPLANATION_PASSED', question: node.question, edgeCaseStatus: 'NOT_REQUESTED', edgeCaseChallenge: null, attempts: [{ stage: 'INITIAL', answer: 'Resposta', evaluation: { status: 'PASSED', missingPremises: [], logicalBreak: null, feedback: 'Boa explicação.' }, createdAt: '2026-01-01T00:00:00.000Z' }], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
 
 describe('study interface', () => {
+  test('names the evaluated concept beside the next step', () => {
+    const evaluated = { ...session, attempts: [{ ...session.attempts[0]!, evaluation: { ...session.attempts[0]!.evaluation, nextAction: 'Revise a fronteira do contrato.' } }] };
+    const view = render(<I18nProvider><SessionView session={evaluated} answer="" words={0} onAnswerChange={() => {}} onSubmit={() => {}} selectedNode={node} submitting={false} onRetry={() => {}} error="" onRequestEdgeCase={async () => {}} /></I18nProvider>);
+    expect(view.container.querySelector('.diagnostic-points .next-step-concept')?.textContent).toBe('Conceito: Contrato');
+    expect(view.getByText('Revise a fronteira do contrato.')).toBeTruthy();
+  });
+
   test('shows concept context directly below the question', () => {
     const active = { ...session, state: 'QUESTION_READY' as const, attempts: [] };
     const view = render(<I18nProvider><SessionView session={active} answer="" words={0} onAnswerChange={() => {}} onSubmit={() => {}} selectedNode={node} submitting={false} onRetry={() => {}} error="" onRequestEdgeCase={async () => {}} /></I18nProvider>);

@@ -7,14 +7,16 @@ import './themes.css'
 import './practice.css'
 import './auth.css'
 import './billing.css'
+import './workspace-heading.css'
+import './readable-type.css'
 import { ClientObservability } from '../components/client-observability'
 
 export const metadata: Metadata = {
   title: {
-    default: 'MasterMe — Aprenda explicando',
+    default: 'MasterMe — Organize o que estudar',
     template: '%s · MasterMe',
   },
-  description: 'Transforme materiais técnicos em mapas de conhecimento, diagnósticos e projetos de prática.',
+  description: 'Transforme PDFs, artigos e documentação técnica em mapas conceituais, diagnósticos ancorados e prática.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

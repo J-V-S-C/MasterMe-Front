@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { Window } from 'happy-dom'
 import { LandingPage, marketingPlans } from './landing-page'
 
@@ -24,14 +24,42 @@ afterEach(() => {
 })
 
 describe('public landing page', () => {
+  test('header tabs mirror the application destinations', () => {
+    const view = render(<LandingPage />)
+    const tabs = within(view.getByRole('navigation', { name: 'Seções da página' })).getAllByRole('link')
+
+    expect(tabs.map((tab) => [tab.textContent, tab.getAttribute('href')])).toEqual([
+      ['Estudar', '#study'],
+      ['Tarefas', '#tasks'],
+      ['Analisar', '#analyze'],
+      ['Criar', '#create'],
+    ])
+    const footerNav = view.getByRole('navigation', { name: 'Navegação do rodapé' })
+    const footerLinks = within(footerNav).getAllByRole('link')
+    expect(footerLinks.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ...tabs.map((tab) => [tab.textContent, tab.getAttribute('href')]),
+    ])
+    expect(footerNav.className).toBe(view.getByRole('navigation', { name: 'Seções da página' }).className)
+    expect(footerLinks.every((link) => link.querySelector('svg'))).toBe(true)
+    const footer = view.container.querySelector('footer')
+    expect(footer?.querySelector('a[href="#plans"]')?.textContent).toBe('Planos')
+    expect(footer?.querySelector('a[href="/login"]')?.textContent).toBe('Entrar')
+    expect(view.queryByText('Conceito ativo')).toBeNull()
+    for (const target of ['#study', '#tasks', '#analyze', '#create', '#plans']) {
+      expect(view.container.querySelector(target)).toBeTruthy()
+    }
+  })
+
   test('free launch shows only the usable free plan', () => {
     const view = render(<LandingPage />)
-    expect(view.getByRole('heading', { level: 1, name: /pare de apenas reler/i })).toBeTruthy()
+    expect(view.getByRole('heading', { level: 1, name: /organize o que estudar/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /comece grátis\. amplie só se precisar/i })).toBeTruthy()
     expect(view.getByText('R$ 0')).toBeTruthy()
     expect(view.queryByText('R$ 29,90')).toBeNull()
     expect(view.queryByText('R$ 249')).toBeNull()
-    expect(view.getByText('24 créditos por dia')).toBeTruthy()
-    expect(view.getAllByText('Os limites diário e do período valem simultaneamente.')).toHaveLength(1)
+    expect(view.getByText('100 créditos por dia')).toBeTruthy()
+    expect(view.queryByText(/créditos por mês/)).toBeNull()
+    expect(view.queryByText('Os limites diário e do período valem simultaneamente.')).toBeNull()
     expect(marketingPlans.every((plan) => !plan.periodLimit.trimStart().startsWith('+'))).toBe(true)
   })
 
@@ -48,51 +76,83 @@ describe('public landing page', () => {
 
     fireEvent.change(language, { target: { value: 'en-US' } })
 
-    expect(view.getByRole('heading', { level: 1, name: /stop merely rereading/i })).toBeTruthy()
+    expect(view.getByRole('heading', { level: 1, name: /organize what to study/i })).toBeTruthy()
     expect(view.getByRole('heading', { name: 'Frequently asked questions' })).toBeTruthy()
-    expect(view.getAllByText('Daily and period limits apply simultaneously.')).toHaveLength(1)
+    expect(view.getByText('100 credits per day')).toBeTruthy()
+    expect(view.queryByText('Daily and period limits apply simultaneously.')).toBeNull()
     expect(view.queryByText('Perguntas frequentes')).toBeNull()
     expect(window.localStorage.getItem('masterme:locale')).toBe('en-US')
     expect(document.documentElement.lang).toBe('en-US')
   })
 
-  test('shows the problem, diagnosis and unrestricted study paths on the map', () => {
+  test('explains the full loop, the map, the diagnosis, and the planning step', () => {
     const view = render(<LandingPage />)
 
-    expect(view.getByRole('heading', { name: /ler até reconhecer não é o mesmo/i })).toBeTruthy()
-    expect(view.getByRole('heading', { level: 3, name: 'Explique ou construa' })).toBeTruthy()
-    expect(view.getByText(/gere um projeto de prática diretamente do material/i)).toBeTruthy()
-    expect(view.getByText(/você lembra da frase. mas consegue sustentar a ideia/i)).toBeTruthy()
-    expect(view.getByRole('figure', { name: 'Demonstração de um mapa de conhecimento' })).toBeTruthy()
-    expect(view.getByText(/as conexões ajudam você a investigar; elas nunca bloqueiam/i)).toBeTruthy()
-    expect(view.getByText('Explorar livremente')).toBeTruthy()
-    expect(view.getByText('Explicar com suas palavras')).toBeTruthy()
-    expect(view.getByText('Começar pela prática')).toBeTruthy()
-    expect(view.getByText(/sem iniciar uma explicação/i)).toBeTruthy()
+    expect(view.getByRole('heading', { name: /quatro áreas\. o mesmo material/i })).toBeTruthy()
+    expect(view.getByText('Reúna e explique')).toBeTruthy()
+    expect(view.getByText('Planeje quando voltar')).toBeTruthy()
+    expect(view.getByText('Veja o que você entendeu')).toBeTruthy()
+    expect(view.getByText('Crie um projeto para praticar')).toBeTruthy()
+
+    expect(view.getByRole('heading', { name: /veja como os assuntos se ligam/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Exemplo de mapa de conhecimento e diagnóstico' })).toBeTruthy()
+    expect(view.getByText('Índices no banco de dados')).toBeTruthy()
+    expect(view.getAllByText('Índice com duas colunas')).toHaveLength(2)
+    expect(view.getByText('Busca por cliente ou por data')).toBeTruthy()
+    expect(view.getByText(/não explicou por que a ordem das colunas importa/i)).toBeTruthy()
+    expect(view.getByText(/você pode abrir qualquer assunto do mapa/i)).toBeTruthy()
+    expect(view.queryByText(/raft/i)).toBeNull()
+
+    expect(view.getByRole('heading', { name: /decida o que estudar agora/i })).toBeTruthy()
+    expect(view.getByText('Revisar índices compostos')).toBeTruthy()
+    expect(view.getByText(/mude a data da tarefa pelo calendário/i)).toBeTruthy()
+
+    expect(view.getByRole('heading', { name: /você escolhe a profundidade/i })).toBeTruthy()
+    expect(view.getByText('Explore os assuntos')).toBeTruthy()
+    expect(view.getByText('Explicar com diagnóstico')).toBeTruthy()
     expect(view.getByText('Testar um caso-limite')).toBeTruthy()
-    expect(view.getByText(/após uma explicação aprovada.*solicite.*nunca por obrigação/i)).toBeTruthy()
+    expect(view.getByText('Projeto de prática')).toBeTruthy()
+    expect(view.getByText(/sem revogar a aprovação/i)).toBeTruthy()
+    expect(view.getByRole('heading', { name: /pratique com um projeto curto/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Exemplo de projeto de prática' })).toBeTruthy()
+    expect(view.getByText('Índices compostos em consultas reais')).toBeTruthy()
+    expect(view.getByText(/você faz o projeto no seu editor/i)).toBeTruthy()
+    expect(view.getByText('Quem acessa o meu material?')).toBeTruthy()
   })
 
-  test('translates the map story and paths to English', () => {
+  test('translates the loop, map story, tasks, and paths to English', () => {
     const view = render(<LandingPage />)
     fireEvent.change(view.getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
 
-    expect(view.getByRole('heading', { name: /recognizing a sentence is not the same/i })).toBeTruthy()
-    expect(view.getByRole('heading', { level: 3, name: 'Explain or build' })).toBeTruthy()
-    expect(view.getByText(/generate a practice project directly from the material/i)).toBeTruthy()
-    expect(view.getByRole('figure', { name: 'Knowledge map demonstration' })).toBeTruthy()
-    expect(view.getByText('Explore freely')).toBeTruthy()
-    expect(view.getByText('Start with practice')).toBeTruthy()
-    expect(view.getByText(/without starting an explanation/i)).toBeTruthy()
+    expect(view.getByRole('heading', { name: /four areas\. the same material/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /see how the topics connect/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Knowledge map and diagnostic example' })).toBeTruthy()
+    expect(view.getByText('Database indexes')).toBeTruthy()
+    expect(view.getByText(/did not explain why column order matters/i)).toBeTruthy()
+    expect(view.getByText(/you can open any topic on the map/i)).toBeTruthy()
+    expect(view.getByRole('heading', { name: /decide what to study now/i })).toBeTruthy()
+    expect(view.getByText('Review composite indexes')).toBeTruthy()
+    expect(view.getByRole('heading', { name: /you choose the depth/i })).toBeTruthy()
+    expect(view.getByText('Explore the topics')).toBeTruthy()
     expect(view.getByText('Test an edge case')).toBeTruthy()
-    expect(view.getByText(/after an approved explanation.*request.*never because you have to/i)).toBeTruthy()
+    expect(view.getByText(/without revoking the approval/i)).toBeTruthy()
+    expect(view.getByRole('heading', { name: /practice with a small project/i })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Practice project example' })).toBeTruthy()
+    expect(view.getByText('Composite indexes in real queries')).toBeTruthy()
+    expect(within(view.getByRole('navigation', { name: 'Page sections' })).getAllByRole('link').map((tab) => tab.textContent)).toEqual([
+      'Study',
+      'Tasks',
+      'Analyze',
+      'Create',
+    ])
+    expect(view.getByText('Who can access my material?')).toBeTruthy()
   })
 
   test('restores the saved locale without authentication or SSE', async () => {
     window.localStorage.setItem('masterme:locale', 'en-US')
     const view = render(<LandingPage />)
 
-    await waitFor(() => expect(view.getByRole('heading', { level: 1, name: /stop merely rereading/i })).toBeTruthy())
+    await waitFor(() => expect(view.getByRole('heading', { level: 1, name: /organize what to study/i })).toBeTruthy())
     expect(view.getByRole('combobox', { name: 'Language' })).toHaveProperty('value', 'en-US')
     expect(document.documentElement.lang).toBe('en-US')
   })
@@ -113,7 +173,7 @@ describe('public landing page', () => {
     const callsToAction = [...view.container.querySelectorAll<HTMLAnchorElement>('[data-plan-id]')]
     expect(new Set(callsToAction.map((link) => link.dataset.planId))).toEqual(new Set(['FREE']))
     for (const link of callsToAction) {
-      expect(link.href).toContain('/entrar?next=')
+      expect(link.href).toContain('/login?next=')
       expect(decodeURIComponent(link.href)).toContain(`plan=${link.dataset.planId}`)
       expect(link.href).not.toMatch(/29|249|1500|15000/)
     }

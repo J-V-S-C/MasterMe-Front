@@ -5,7 +5,7 @@ import { invalidateApiCache } from '../lib/api'
 
 export const DATA_CHANGED_EVENT = 'masterme:data-changed'
 const activityTypes = [
-  'material.created', 'material.queued', 'material.progress', 'material.ready', 'material.failed', 'material.cancelled', 'material.localized',
+  'material.created', 'material.deleted', 'material.queued', 'material.progress', 'material.ready', 'material.failed', 'material.cancelled', 'material.localized',
   'session.created', 'session.updated', 'confidence.updated', 'confidence.deleted', 'practice.created',
 ] as const
 
