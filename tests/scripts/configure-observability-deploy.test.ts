@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
-import { deploymentObservabilityVariables } from './configure-observability-deploy'
+import { deploymentObservabilityVariables } from '../../scripts/configure-observability-deploy'
 
 describe('observability deployment configuration', () => {
   test('requires SHA and a consistent URL/allowlist pair', () => {
@@ -11,7 +11,7 @@ describe('observability deployment configuration', () => {
   })
 
   test('workflow injects variables and stores the token only after the build', async () => {
-    const workflow = await readFile(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8')
+    const workflow = await readFile(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8')
     expect(workflow).toContain('bun scripts/configure-observability-deploy.ts wrangler.jsonc')
     expect(workflow.indexOf('bun run build:vinext')).toBeLessThan(workflow.indexOf('wrangler secret put OBSERVABILITY_INGEST_TOKEN'))
     expect(workflow).toContain('rg --quiet --fixed-strings')

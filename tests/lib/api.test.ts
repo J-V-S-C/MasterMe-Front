@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { api, invalidateApiCache, MAX_UPLOAD_BYTES, uploadMaterial } from './api';
+import { api, invalidateApiCache, MAX_UPLOAD_BYTES, uploadMaterial } from '../../lib/api';
 
 const originalFetch = globalThis.fetch;
 const originalXhr = globalThis.XMLHttpRequest;

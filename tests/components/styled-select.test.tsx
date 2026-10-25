@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { Window } from 'happy-dom'
-import { StyledSelect } from './styled-select'
+import { StyledSelect } from '../../components/styled-select'
 
 beforeEach(() => { const window = new Window(); Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, Node: window.Node, PointerEvent: window.PointerEvent }) })
 afterEach(() => cleanup())

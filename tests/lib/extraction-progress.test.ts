@@ -5,7 +5,7 @@ import {
   parseExtractionEvent,
   progressFromEvent,
   progressFromStatus,
-} from './extraction-progress'
+} from '../../lib/extraction-progress'
 
 describe('extraction progress', () => {
   test('keeps the job pending after extraction is queued', () => {

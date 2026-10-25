@@ -12,7 +12,7 @@
     "validate": "bun run validate:palette && bun run typecheck && bun test && bun run build && bun run build:vinext",
     "validate:palette": "bun scripts/check-palette.ts",
     "validate:dependencies": "bun audit --production",
-    "validate:guardrails": "bun test scripts/quality-guardrails.test.ts",
+    "validate:guardrails": "bun test tests/scripts/quality-guardrails.test.ts",
     "lint": "next lint",
     "dev:vinext": "vinext dev --port 3001",
     "build:vinext": "vinext build",

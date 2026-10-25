@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test, spyOn } from 'bun:test';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { api, type MaterialSummary, type StudyPlan, type StudyTask } from '../lib/api';
-import { I18nProvider } from '../lib/i18n';
-import { PlanBuilder } from './plan-builder';
+import { api, type MaterialSummary, type StudyPlan, type StudyTask } from '../../lib/api';
+import { I18nProvider } from '../../lib/i18n';
+import { PlanBuilder } from '../../components/plan-builder';
 
 const materials: MaterialSummary[] = [
   { id: 'first', title: 'First source', locale: 'en-US', createdAt: '2026-01-01' },

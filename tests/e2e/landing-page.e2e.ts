@@ -50,6 +50,25 @@ for (const viewport of viewports) {
   })
 }
 
+test('landing task preview keeps the chosen hour and duration on the board', async ({ page }) => {
+  await page.goto('/')
+  const preview = page.getByRole('figure', { name: 'EXEMPLO INTERATIVO' })
+  await preview.getByRole('button', { name: '24 de outubro 2026' }).click()
+  await preview.getByRole('tab', { name: 'Tempo' }).click()
+  const hour = preview.getByRole('slider', { name: 'Horário' })
+  await hour.focus()
+  await hour.press('Home')
+  await hour.press('ArrowRight')
+  await hour.press('ArrowRight')
+  await expect(hour).toHaveValue('10')
+  await preview.getByRole('button', { name: '90 min' }).click()
+  await preview.getByRole('button', { name: 'Ver no quadro' }).click()
+  await expect(preview.getByRole('tab', { name: 'Quadro' })).toHaveAttribute('aria-selected', 'true')
+  await expect(preview.getByRole('tabpanel').getByText('24 out · 10:00 · 90 min')).toBeVisible()
+  await preview.getByRole('button', { name: 'Em andamento' }).click()
+  await expect(preview.getByRole('button', { name: 'Em andamento' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('legacy paths redirect to English routes and preserve payment references', async ({ request }) => {
   const routes = [
     ['/entrar', '/login'],

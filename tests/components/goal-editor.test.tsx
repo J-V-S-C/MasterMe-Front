@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { api } from '../lib/api';
-import { I18nProvider } from '../lib/i18n';
-import { GoalEditor } from './goal-editor';
+import { api } from '../../lib/api';
+import { I18nProvider } from '../../lib/i18n';
+import { GoalEditor } from '../../components/goal-editor';
 
 beforeEach(() => {
   const window = new Window();

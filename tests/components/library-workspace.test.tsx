@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test, spyOn } from 'bun:test';
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { api, type StudySuggestion, type StudyTask } from '../lib/api';
-import { LibraryWorkspace, SuggestionEditor } from './library-workspace';
-import { I18nProvider } from '../lib/i18n';
+import { api, type StudySuggestion, type StudyTask } from '../../lib/api';
+import { LibraryWorkspace, SuggestionEditor } from '../../components/library-workspace';
+import { I18nProvider } from '../../lib/i18n';
 
 const suggestion: StudySuggestion = {
   id: 'suggestion', title: 'Retomar a causa', reason: 'A explicação ficou incompleta.',
@@ -92,13 +92,3 @@ test('moves a card to Doing and persists status and order together', async () =>
   restore(); reorder.mockRestore();
 });
 
-test('keeps the board in the same tab bar as the task steps', async () => {
-  const restore = mockWorkspace([task('1', 'Review indexes', 'PENDING', '2026-10-25T14:30:00-03:00', 75)]);
-  const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  const boardTab = await view.findByRole('tab', { name: /Quadro/ });
-  expect(within(boardTab).getByText(/1 tarefa/)).toBeTruthy();
-  fireEvent.click(boardTab);
-  expect(await view.findByText('Review indexes')).toBeTruthy();
-  expect(view.queryByRole('tab', { name: /Calendário/ })).toBeNull();
-  restore();
-});

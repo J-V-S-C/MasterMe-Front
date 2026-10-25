@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { ApiError, type BillingOrder } from './api'
-import { reconcilePaymentReturn } from './payment-return'
+import { ApiError, type BillingOrder } from '../../lib/api'
+import { reconcilePaymentReturn } from '../../lib/payment-return'
 
 const paidOrder: BillingOrder = { id: '11111111-1111-4111-8111-111111111111', planId: 'PRO', amountInCents: 24_900, status: 'PAID', checkoutUrl: null, createdAt: '', updatedAt: '' }
 const payment = { orderId: paidOrder.id }

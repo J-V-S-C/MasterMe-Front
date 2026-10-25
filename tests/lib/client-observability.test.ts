@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
-import { configureClientObservability, deterministicSample, normalizeClientRoute, parseClientTelemetry, reportApiRequest, reportWebVital } from './client-observability'
+import { configureClientObservability, deterministicSample, normalizeClientRoute, parseClientTelemetry, reportApiRequest, reportWebVital } from '../../lib/client-observability'
 
 const originalFetch = globalThis.fetch
 const originalWindow = globalThis.window

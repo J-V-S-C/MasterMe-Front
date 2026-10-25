@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { checkoutIntentKey, clearCheckoutIntent, paymentReturnReference, requestedPlan, safeInfinitePayCheckoutUrl } from './billing-security'
+import { checkoutIntentKey, clearCheckoutIntent, paymentReturnReference, requestedPlan, safeInfinitePayCheckoutUrl } from '../../lib/billing-security'
 
 const memoryStorage = () => {
   const values = new Map<string, string>()
