@@ -13,7 +13,7 @@ const expectedDevelopmentConsoleErrors = [
 ]
 
 for (const viewport of viewports) {
-  test(`landing keeps all four tabs visible without overflow on ${viewport.name}`, async ({ page }) => {
+  test(`landing navigation fits ${viewport.name}`, async ({ page }) => {
     const unexpectedConsoleErrors: string[] = []
     page.on('console', (message) => {
       if (message.type() !== 'error') return
@@ -25,10 +25,12 @@ for (const viewport of viewports) {
 
     await expect(page.getByRole('heading', { level: 1, name: /Organize o que estudar/ })).toBeVisible()
     await expect(page.getByRole('figure', { name: 'Exemplo de mapa de conhecimento e diagnóstico' })).toBeVisible()
-    const headerTabs = page.getByRole('navigation', { name: 'Seções da página' })
+    const headerTabs = page.locator('header nav[aria-label="Seções da página"]')
     const footerTabs = page.getByRole('navigation', { name: 'Navegação do rodapé' })
+    if (viewport.width <= 760) await expect(headerTabs).toBeHidden()
+    else await expect(headerTabs).toBeVisible()
     for (const tab of ['Estudar', 'Tarefas', 'Analisar', 'Criar']) {
-      await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
+      if (viewport.width > 760) await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
       await expect(footerTabs.getByRole('link', { name: tab })).toBeVisible()
     }
     await expect(page.locator('footer').getByRole('link', { name: 'Planos' })).toBeVisible()

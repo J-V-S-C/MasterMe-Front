@@ -24,6 +24,11 @@ export function ThemeToggle({
     const selected = preferredTheme()
     setTheme(selected)
     document.documentElement.dataset.theme = selected
+    const observer = new window.MutationObserver(() => {
+      setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
   }, [])
 
   const toggleTheme = () => {

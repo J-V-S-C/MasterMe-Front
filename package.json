@@ -9,7 +9,8 @@
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "test": "bun test",
     "test:e2e": "playwright test",
-    "validate": "bun run typecheck && bun test && bun run build && bun run build:vinext",
+    "validate": "bun run validate:palette && bun run typecheck && bun test && bun run build && bun run build:vinext",
+    "validate:palette": "bun scripts/check-palette.ts",
     "validate:dependencies": "bun audit --production",
     "validate:guardrails": "bun test scripts/quality-guardrails.test.ts",
     "lint": "next lint",
@@ -19,6 +20,9 @@
     "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@fullcalendar/core": "6.1.22",
     "@fullcalendar/daygrid": "^6.1.22",
     "@fullcalendar/interaction": "^6.1.22",

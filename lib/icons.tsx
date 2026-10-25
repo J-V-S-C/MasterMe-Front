@@ -1,14 +1,17 @@
 import type { SVGProps } from 'react'
 
-export type IconName = 'book' | 'library' | 'brain' | 'bolt' | 'check' | 'chevron' | 'document' | 'idea' | 'lock' | 'logout' | 'eye' | 'eyeOff' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
+export type IconName = 'book' | 'library' | 'brain' | 'bolt' | 'calendar' | 'check' | 'chevron' | 'clock' | 'columns' | 'document' | 'idea' | 'lock' | 'logout' | 'eye' | 'eyeOff' | 'mic' | 'moon' | 'sparkles' | 'sun' | 'warning'
 
 const paths: Record<IconName, string> = {
   book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h8',
   library: 'M3 4v16M8 4v16M3 4h5M3 20h5M8 4h4v16H8m4-15 4-1 4 16-4 1-4-16Zm2 10 4-1',
   brain: 'M12 5.2a3 3 0 0 0-5.4 1.8A3.4 3.4 0 0 0 7 13.7a3.2 3.2 0 0 0 5 3.3M12 5.2a3 3 0 0 1 5.4 1.8 3.4 3.4 0 0 1-.4 6.7 3.2 3.2 0 0 1-5 3.3M12 5.2v12M7.5 9.5H12m0 0h4.5',
   bolt: 'm13 2-9 12h7l-1 8 9-12h-7l1-8Z',
+  calendar: 'M4 6h16v15H4V6Zm0 4h16M8 3v6m8-6v6',
   check: 'm5 12 4.2 4.2L19 6.5',
   chevron: 'm9 18 6-6-6-6',
+  clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2',
+  columns: 'M3 4h18v16H3V4Zm6 0v16m6-16v16',
   document: 'M6 2.8h8l4 4V21H6V2.8Zm8 0V7h4M9 11h6M9 15h6',
   idea: 'M9 18h6m-5 3h4m-2-19a7 7 0 0 0-4.4 12.4c.8.7 1.4 1.5 1.6 2.6h5.6c.2-1.1.8-1.9 1.6-2.6A7 7 0 0 0 12 2Z',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3m-11 0h12v10H6V11Zm6 4v2',

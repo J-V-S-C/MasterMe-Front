@@ -42,12 +42,30 @@ describe('public landing page', () => {
     expect(footerNav.className).toBe(view.getByRole('navigation', { name: 'Seções da página' }).className)
     expect(footerLinks.every((link) => link.querySelector('svg'))).toBe(true)
     const footer = view.container.querySelector('footer')
+    const mobileNav = view.getByRole('navigation', { name: 'Menu de seções', hidden: true })
+    expect(within(mobileNav).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['#study', '#tasks', '#analyze', '#create'])
+    expect(view.container.querySelector('header a[href="#plans"]')).toBeNull()
+    expect(view.queryByText('Ambiente pessoal de aprendizagem para autodidatas técnicos')).toBeNull()
     expect(footer?.querySelector('a[href="#plans"]')?.textContent).toBe('Planos')
     expect(footer?.querySelector('a[href="/login"]')?.textContent).toBe('Entrar')
     expect(view.queryByText('Conceito ativo')).toBeNull()
     for (const target of ['#study', '#tasks', '#analyze', '#create', '#plans']) {
       expect(view.container.querySelector(target)).toBeTruthy()
     }
+  })
+
+  test('mobile menu keeps every section and closes after a section is chosen', () => {
+    const view = render(<LandingPage />)
+    const menu = view.container.querySelector<HTMLDetailsElement>('header details')!
+    const links = within(menu).getAllByRole('link', { hidden: true })
+    expect(links.slice(0, 4).map((link) => link.getAttribute('href'))).toEqual(['#study', '#tasks', '#analyze', '#create'])
+    expect(links[4]?.getAttribute('href')?.startsWith('/login')).toBe(true)
+    expect(within(menu).getByRole('combobox', { name: 'Idioma', hidden: true })).toBeTruthy()
+    expect(within(menu).getByRole('button', { name: 'Usar tema claro', hidden: true })).toBeTruthy()
+
+    menu.setAttribute('open', '')
+    fireEvent.click(links[1]!)
+    expect(menu.hasAttribute('open')).toBe(false)
   })
 
   test('free launch shows only the usable free plan', () => {
@@ -72,7 +90,7 @@ describe('public landing page', () => {
 
   test('switches all content to English and persists the preference', async () => {
     const view = render(<LandingPage />)
-    const language = view.getByRole('combobox', { name: 'Idioma' })
+    const language = within(view.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' })
 
     fireEvent.change(language, { target: { value: 'en-US' } })
 
@@ -103,9 +121,9 @@ describe('public landing page', () => {
     expect(view.getByText(/você pode abrir qualquer assunto do mapa/i)).toBeTruthy()
     expect(view.queryByText(/raft/i)).toBeNull()
 
-    expect(view.getByRole('heading', { name: /decida o que estudar agora/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /dê um dia à tarefa/i })).toBeTruthy()
     expect(view.getByText('Revisar índices compostos')).toBeTruthy()
-    expect(view.getByText(/mude a data da tarefa pelo calendário/i)).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'EXEMPLO INTERATIVO' })).toBeTruthy()
 
     expect(view.getByRole('heading', { name: /você escolhe a profundidade/i })).toBeTruthy()
     expect(view.getByText('Explore os assuntos')).toBeTruthy()
@@ -122,7 +140,7 @@ describe('public landing page', () => {
 
   test('translates the loop, map story, tasks, and paths to English', () => {
     const view = render(<LandingPage />)
-    fireEvent.change(view.getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
+    fireEvent.change(within(view.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
 
     expect(view.getByRole('heading', { name: /four areas\. the same material/i })).toBeTruthy()
     expect(view.getByRole('heading', { name: /see how the topics connect/i })).toBeTruthy()
@@ -130,7 +148,7 @@ describe('public landing page', () => {
     expect(view.getByText('Database indexes')).toBeTruthy()
     expect(view.getByText(/did not explain why column order matters/i)).toBeTruthy()
     expect(view.getByText(/you can open any topic on the map/i)).toBeTruthy()
-    expect(view.getByRole('heading', { name: /decide what to study now/i })).toBeTruthy()
+    expect(view.getByRole('heading', { name: /give the task a date/i })).toBeTruthy()
     expect(view.getByText('Review composite indexes')).toBeTruthy()
     expect(view.getByRole('heading', { name: /you choose the depth/i })).toBeTruthy()
     expect(view.getByText('Explore the topics')).toBeTruthy()
@@ -148,24 +166,53 @@ describe('public landing page', () => {
     expect(view.getByText('Who can access my material?')).toBeTruthy()
   })
 
+  test('task preview carries the chosen date and time into the board without saving', () => {
+    const view = render(<LandingPage />)
+    const preview = within(view.getByRole('figure', { name: 'EXEMPLO INTERATIVO' }))
+
+    fireEvent.click(preview.getByRole('button', { name: '24 de outubro 2026' }))
+    expect(preview.getByText('24 out · 18:00 · 60 min')).toBeTruthy()
+
+    fireEvent.click(preview.getByRole('tab', { name: 'Tempo' }))
+    fireEvent.change(preview.getByRole('slider', { name: 'Horário' }), { target: { value: '10' } })
+    fireEvent.click(preview.getByRole('button', { name: '90 min' }))
+    fireEvent.click(preview.getByRole('button', { name: 'Ver no quadro' }))
+    expect(preview.getByRole('tab', { name: 'Quadro' }).getAttribute('aria-selected')).toBe('true')
+    expect(preview.getAllByText('24 out · 10:00 · 90 min')).toHaveLength(2)
+
+    fireEvent.click(preview.getByRole('button', { name: 'Em andamento' }))
+    expect(preview.getByRole('button', { name: 'Em andamento' }).getAttribute('aria-pressed')).toBe('true')
+    expect(preview.getByText('Você está explorando um exemplo. Nada é salvo.')).toBeTruthy()
+  })
+
   test('restores the saved locale without authentication or SSE', async () => {
     window.localStorage.setItem('masterme:locale', 'en-US')
     const view = render(<LandingPage />)
 
     await waitFor(() => expect(view.getByRole('heading', { level: 1, name: /organize what to study/i })).toBeTruthy())
-    expect(view.getByRole('combobox', { name: 'Language' })).toHaveProperty('value', 'en-US')
+    expect(within(view.container.querySelector('footer')!).getByRole('combobox', { name: 'Language' })).toHaveProperty('value', 'en-US')
     expect(document.documentElement.lang).toBe('en-US')
   })
 
   test('theme button describes its action without contradictory pressed state', () => {
     const view = render(<LandingPage />)
-    const toggle = view.getByRole('button', { name: 'Usar tema claro' })
+    const toggle = within(view.container.querySelector('footer')!).getByRole('button', { name: 'Usar tema claro' })
     expect(toggle.hasAttribute('aria-pressed')).toBe(false)
 
     fireEvent.click(toggle)
 
-    expect(view.getByRole('button', { name: 'Usar tema escuro' })).toBeTruthy()
+    expect(within(view.container.querySelector('footer')!).getByRole('button', { name: 'Usar tema escuro' })).toBeTruthy()
     expect(window.localStorage.getItem('theme')).toBe('light')
+  })
+
+  test('menu and footer theme controls stay in sync', async () => {
+    const view = render(<LandingPage />)
+    const menu = view.container.querySelector<HTMLDetailsElement>('header details')!
+    const footer = view.container.querySelector<HTMLElement>('footer')!
+
+    fireEvent.click(within(menu).getByRole('button', { name: 'Usar tema claro', hidden: true }))
+
+    await waitFor(() => expect(within(footer).getByRole('button', { name: 'Usar tema escuro' })).toBeTruthy())
   })
 
   test('CTAs carry only known IDs without prices in the destination', () => {

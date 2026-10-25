@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test, spyOn } from 'bun:test';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { api, type StudySuggestion } from '../lib/api';
+import { api, type StudySuggestion, type StudyTask } from '../lib/api';
 import { LibraryWorkspace, SuggestionEditor } from './library-workspace';
 import { I18nProvider } from '../lib/i18n';
 
@@ -13,9 +13,21 @@ const suggestion: StudySuggestion = {
 
 beforeEach(() => {
   const window = new Window();
-  Object.assign(globalThis, { window, document: window.document, navigator: window.navigator });
+  Object.assign(globalThis, { window, document: window.document, navigator: window.navigator, Node: window.Node, PointerEvent: window.PointerEvent, requestAnimationFrame: window.requestAnimationFrame.bind(window), cancelAnimationFrame: window.cancelAnimationFrame.bind(window) });
 });
 afterEach(() => { cleanup(); });
+
+const task = (id: string, title: string, status: StudyTask['status'] = 'PENDING', scheduledAt: string | null = null, duration: number | null = null): StudyTask => ({
+  id, sort_order: Number(id) || 0, title, activity_type: 'READ', plan_id: null, material_id: null, concept_id: null, unit_id: null,
+  duration_minutes: duration, scheduled_at: scheduledAt, status, reason: '',
+});
+
+function mockWorkspace(rows: StudyTask[] = []) {
+  const materials = spyOn(api, 'materials').mockResolvedValue([]);
+  const tasks = spyOn(api, 'tasks').mockResolvedValue(rows);
+  const suggestions = spyOn(api, 'suggestions').mockResolvedValue([]);
+  return () => { materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); };
+}
 
 test('lets the student edit a suggested task before accepting it', async () => {
   const decide = spyOn(api, 'decideSuggestion').mockResolvedValue(suggestion);
@@ -25,69 +37,68 @@ test('lets the student edit a suggested task before accepting it', async () => {
   fireEvent.change(view.getByLabelText('Roteiro'), { target: { value: 'plan' } });
   fireEvent.click(view.getByRole('button', { name: 'Adicionar ao roteiro' }));
   await waitFor(() => expect(decide).toHaveBeenCalledWith('suggestion', {
-    decision: 'ACCEPTED', title: 'Ler outra vez', durationMinutes: 40,
-    scheduledAt: undefined, planId: 'plan',
+    decision: 'ACCEPTED', title: 'Ler outra vez', durationMinutes: 40, scheduledAt: undefined, planId: 'plan',
   }));
   decide.mockRestore();
 });
 
-test('creates a dated task and keeps the task list free of raw source text', async () => {
-  const materials = spyOn(api, 'materials').mockResolvedValue([]);
-  const tasks = spyOn(api, 'tasks').mockResolvedValue([]);
-  const suggestions = spyOn(api, 'suggestions').mockResolvedValue([]);
-  const create = spyOn(api, 'createTask').mockResolvedValue({ id: 'new', sort_order: 0, title: 'Review chapter', activity_type: 'READ', plan_id: null, material_id: null, concept_id: null, unit_id: null, duration_minutes: null, scheduled_at: null, status: 'PENDING', reason: '' });
-  const { LibraryWorkspace } = await import('./library-workspace');
+test('creates a task from the visual date and detail controls', async () => {
+  const restore = mockWorkspace();
+  const create = spyOn(api, 'createTask').mockResolvedValue(task('1', 'Review chapter'));
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
   await view.findByRole('heading', { name: 'Suas tarefas de estudo' });
   fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review chapter' } });
-  fireEvent.input(view.getByLabelText('Data para concluir'), { target: { value: '2026-10-25' } });
-  expect((view.getByLabelText('Tarefa') as HTMLInputElement).value).toBe('Review chapter');
-  expect((view.getByLabelText('Data para concluir') as HTMLInputElement).value).toBe('2026-10-25');
+  fireEvent.click(view.getByRole('button', { name: 'Amanhã' }));
+  fireEvent.click(view.getByRole('tab', { name: /Detalhes/ }));
+  fireEvent.input(view.getByLabelText('Horário'), { target: { value: '870' } });
+  fireEvent.click(view.getByRole('button', { name: '45min' }));
   fireEvent.submit(view.getByRole('button', { name: 'Adicionar tarefa' }).closest('form')!);
-  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Review chapter', activityType: 'READ', scheduledAt: expect.any(String) })));
-  expect(view.queryByText('Shelves')).toBeNull();
-  materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); create.mockRestore();
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Review chapter', durationMinutes: 45, scheduledAt: expect.any(String) })));
+  expect(new Date(create.mock.calls[0]![0].scheduledAt!).getHours()).toBe(14);
+  expect(new Date(create.mock.calls[0]![0].scheduledAt!).getMinutes()).toBe(30);
+  restore(); create.mockRestore();
 });
 
-test('shows planned dates and lets a task be completed', async () => {
-  const materials = spyOn(api, 'materials').mockResolvedValue([]);
-  const task = { id: 'existing', sort_order: 0, title: 'Read chapter', activity_type: 'READ' as const, plan_id: null, material_id: null, concept_id: null, unit_id: null, duration_minutes: null, scheduled_at: '2026-10-25T12:00:00.000Z', status: 'PENDING' as const, reason: '' };
-  const tasks = spyOn(api, 'tasks').mockResolvedValue([task]);
-  const suggestions = spyOn(api, 'suggestions').mockResolvedValue([]);
-  const update = spyOn(api, 'updateTask').mockResolvedValue({ ...task, status: 'DONE' });
-  const { LibraryWorkspace } = await import('./library-workspace');
-  const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  await view.findAllByText('Read chapter');
-  expect(view.container.querySelector('time')?.getAttribute('dateTime')).toBe(task.scheduled_at);
-  fireEvent.click(view.getByRole('button', { name: 'Concluir' }));
-  await waitFor(() => expect(update).toHaveBeenCalledWith('existing', { status: 'DONE' }));
-  materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); update.mockRestore();
-});
-
-test('calendar has no redundant day summary and the task date remains editable', async () => {
-  const materials = spyOn(api, 'materials').mockResolvedValue([]);
+test('keeps a selected material and concept after adding a task', async () => {
+  const materials = spyOn(api, 'materials').mockResolvedValue([{ id: 'material', title: 'Databases', locale: 'en-US', createdAt: '' }]);
   const tasks = spyOn(api, 'tasks').mockResolvedValue([]);
   const suggestions = spyOn(api, 'suggestions').mockResolvedValue([]);
-  const { LibraryWorkspace } = await import('./library-workspace');
+  const concepts = spyOn(api, 'concepts').mockResolvedValue([{ id: 'concept', materialId: 'material', name: 'Indexes', description: '', kind: 'NODE', sourceExcerpt: '', fundamentalPremises: [], edgeCases: [], prerequisiteIds: [], nextIds: [], generatedLocale: 'en-US' }]);
+  const create = spyOn(api, 'createTask').mockResolvedValue(task('1', 'Review indexes'));
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
   await view.findByRole('heading', { name: 'Suas tarefas de estudo' });
-  fireEvent.input(view.getByLabelText('Data para concluir'), { target: { value: '2026-10-25' } });
-  await waitFor(() => expect((view.getByLabelText('Data para concluir') as HTMLInputElement).value).toBe('2026-10-25'));
-  expect(view.queryByText('Neste dia')).toBeNull();
-  materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore();
+  fireEvent.click(view.getByRole('tab', { name: /Detalhes/ }));
+  fireEvent.click(view.getByRole('combobox', { name: /Material/i }));
+  fireEvent.click(view.getByRole('option', { name: 'Databases' }));
+  await waitFor(() => expect(view.getByRole('combobox', { name: /Conceito/i }).hasAttribute('disabled')).toBe(false));
+  fireEvent.click(view.getByRole('combobox', { name: /Conceito/i }));
+  fireEvent.click(view.getByRole('option', { name: 'Indexes' }));
+  fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review indexes' } });
+  fireEvent.submit(view.getByRole('button', { name: 'Adicionar tarefa' }).closest('form')!);
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ materialId: 'material', conceptId: 'concept' })));
+  expect(view.getByRole('combobox', { name: /Conceito Indexes/i })).toBeTruthy();
+  materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); concepts.mockRestore(); create.mockRestore();
 });
 
-test('completed tasks are reachable from the visible list switch', async () => {
-  const materials = spyOn(api, 'materials').mockResolvedValue([]);
-  const completed = { id: 'done', sort_order: 0, title: 'Explain atomicity', activity_type: 'READ' as const, plan_id: null, material_id: null, concept_id: null, unit_id: null, duration_minutes: null, scheduled_at: '2026-10-20T12:00:00.000Z', status: 'DONE' as const, reason: '' };
-  const tasks = spyOn(api, 'tasks').mockResolvedValue([completed]);
-  const suggestions = spyOn(api, 'suggestions').mockResolvedValue([]);
+test('moves a card to Doing and persists status and order together', async () => {
+  const restore = mockWorkspace([task('1', 'First'), task('2', 'Second')]);
+  const reorder = spyOn(api, 'reorderTasks').mockResolvedValue([]);
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  const completedSwitch = await view.findByRole('button', { name: 'Concluídas 1' });
-  expect(completedSwitch.getAttribute('aria-pressed')).toBe('false');
-  fireEvent.click(completedSwitch);
-  expect(completedSwitch.getAttribute('aria-pressed')).toBe('true');
-  expect(view.getByText('Explain atomicity')).toBeTruthy();
-  expect(view.getByRole('button', { name: 'Reabrir' })).toBeTruthy();
-  materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore();
+  fireEvent.click(await view.findByRole('tab', { name: /Quadro/ }));
+  await view.findByText('First');
+  const card = view.container.querySelector('#task-1')!;
+  fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Fazendo' }));
+  await waitFor(() => expect(reorder).toHaveBeenCalledWith(expect.arrayContaining(['1', '2']), expect.objectContaining({ '1': 'IN_PROGRESS' })));
+  restore(); reorder.mockRestore();
+});
+
+test('keeps the board in the same tab bar as the task steps', async () => {
+  const restore = mockWorkspace([task('1', 'Review indexes', 'PENDING', '2026-10-25T14:30:00-03:00', 75)]);
+  const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
+  const boardTab = await view.findByRole('tab', { name: /Quadro/ });
+  expect(within(boardTab).getByText(/1 tarefa/)).toBeTruthy();
+  fireEvent.click(boardTab);
+  expect(await view.findByText('Review indexes')).toBeTruthy();
+  expect(view.queryByRole('tab', { name: /Calendário/ })).toBeNull();
+  restore();
 });

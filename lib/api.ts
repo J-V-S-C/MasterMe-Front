@@ -216,7 +216,7 @@ export type ConceptCard = { concept_id: string; note: string; concepts: { name: 
 export type LearningGoal = { id: string; title: string; description: string; deadline: string | null };
 export type StudyPlan = { id: string; title: string; goal_id: string | null; study_plan_materials: Array<{ material_id: string; ordinal: number }> };
 export type TaskActivity = 'READ' | 'EXPLAIN' | 'RELATE' | 'APPLY' | 'REVISIT' | 'PRACTICE';
-export type StudyTask = { id: string; sort_order: number; title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'DONE' | 'REMOVED'; reason: string; study_suggestions?: Array<{ learning_evidence: { id: string; prompt: string; diagnosis: string; source_excerpt: string; source_offset?: number | null; status: string; created_at: string } }> };
+export type StudyTask = { id: string; sort_order: number; title: string; activity_type: TaskActivity; plan_id: string | null; material_id: string | null; concept_id: string | null; concepts?: { name: string } | null; unit_id: string | null; duration_minutes: number | null; scheduled_at: string | null; status: 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'REMOVED'; reason: string; study_suggestions?: Array<{ learning_evidence: { id: string; prompt: string; diagnosis: string; source_excerpt: string; source_offset?: number | null; status: string; created_at: string } }> };
 export type StudyAvailability = { weekday: number; minutes: number; timezone: string };
 export type StudySuggestion = { id: string; title: string; reason: string; status: 'PENDING' | 'ACCEPTED' | 'IGNORED'; task_id: string | null; learning_evidence: { id: string; material_id: string; prompt: string; diagnosis: string; source_excerpt: string; source_offset?: number | null; activity_type: string; status: string; created_at: string } };
 export type LearningEvidence = { id: string; material_id: string; concept_id: string | null; relation_id: string | null; previous_evidence_id: string | null; activity_type: 'COMPREHENSION' | 'RELATION' | 'APPLICATION' | 'RETENTION'; prompt: string; prompt_version: string; criteria: string[]; hints_used: string[]; answer: string; status: EvaluationStatus | 'SELF_REPORTED' | 'CONTESTED'; assisted: boolean; diagnosis: string; source_excerpt: string; source_offset?: number | null; created_at: string; evidence_contestations?: Array<{ id: string; reason: string; created_at: string }> };
@@ -386,9 +386,10 @@ export const api = {
   createPlan: (title: string, goalId?: string, materialIds: string[] = []) => call<StudyPlan>('/learning/plans', 'POST', { title, goalId, materialIds }),
   updatePlan: (id: string, input: { title?: string; goalId?: string | null; materialIds?: string[] }) => call<StudyPlan>(`/learning/plans/${id}`, 'PATCH', input),
   reorderPlanTasks: (id: string, taskIds: string[]) => call<StudyTask[]>(`/learning/plans/${id}/tasks/order`, 'PUT', { taskIds }),
+  reorderTasks: (taskIds: string[], statuses?: Record<string, 'PENDING' | 'IN_PROGRESS' | 'DONE'>) => call<StudyTask[]>('/learning/tasks/order', 'PUT', { taskIds, statuses }),
   tasks: () => call<StudyTask[]>('/learning/tasks'),
   createTask: (input: { title: string; activityType: TaskActivity; planId?: string; materialId?: string; conceptId?: string; unitId?: string; durationMinutes?: number; scheduledAt?: string; reason?: string }) => call<StudyTask>('/learning/tasks', 'POST', input),
-  updateTask: (id: string, input: { title?: string; durationMinutes?: number | null; scheduledAt?: string | null; status?: StudyTask['status'] }) => call<StudyTask>(`/learning/tasks/${id}`, 'PATCH', input),
+  updateTask: (id: string, input: { title?: string; materialId?: string | null; conceptId?: string | null; durationMinutes?: number | null; scheduledAt?: string | null; status?: StudyTask['status'] }) => call<StudyTask>(`/learning/tasks/${id}`, 'PATCH', input),
   availability: () => call<StudyAvailability[]>('/learning/availability'),
   setAvailability: (weekday: number, minutes: number, timezone: string) => call<StudyAvailability>('/learning/availability', 'PUT', { weekday, minutes, timezone }),
   desk: (date: string, timezone: string) => call<{ tasks: StudyTask[]; load: { plannedMinutes: number; availableMinutes: number; excessMinutes: number } }>(`/learning/desk?date=${encodeURIComponent(date)}&timezone=${encodeURIComponent(timezone)}`),
@@ -411,6 +412,7 @@ export const api = {
     call<MaterialProcessingStatus>(`/materials/${materialId}/status`),
   knowledgeMap: (id: string) =>
     call<KnowledgeNode[]>(`/materials/${id}/knowledge-map`),
+  concepts: (id: string) => call<Concept[]>(`/materials/${id}/concepts`),
   localizeMaterial: (id: string, locale: SupportedLocale) =>
     call<Concept[]>(`/materials/${id}/localize`, 'POST', { locale }),
   startSession: (conceptId: string) =>
