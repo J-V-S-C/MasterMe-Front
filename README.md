@@ -27,6 +27,8 @@ bun run build
 BACKEND_URL=https://masterme-api.duckdns.org bun run build:vinext
 ```
 
+Install the versioned pre-commit hook once per clone with `git config --local core.hooksPath .githooks`. It runs `scripts/ci-local.sh` before every commit: validation, dependency audit, and the built Next.js smoke test. Stage all changes before committing; a failed gate aborts the commit.
+
 ## Visual validation with Playwright MCP
 
 Playwright MCP is the project's manual inspection browser. It complements, but does not replace, automated tests: use it to observe the rendered interface, capture screenshots, interact with controls, and investigate console or network errors.
