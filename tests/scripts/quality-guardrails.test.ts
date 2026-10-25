@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
 
-const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
+const read = (path: string) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 describe('frontend release guardrails', () => {
   test('CI uses a single validation, audit and build smoke test', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { buildBackendHeaders, InvalidProxyHeaderError } from './bff-headers'
+import { buildBackendHeaders, InvalidProxyHeaderError } from '../../lib/bff-headers'
 
 describe('BFF header allowlist', () => {
   test('forwards Idempotency-Key only to authenticated checkout', () => {

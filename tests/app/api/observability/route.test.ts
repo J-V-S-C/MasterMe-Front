@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
-import { handleObservability, validatedDestination } from './route'
+import { handleObservability, validatedDestination } from '../../../../app/api/observability/route'
 
 let ip = 1
 const event = { kind: 'web_vital', name: 'LCP', rating: 'good', value: 1200.1234, route: '/study', build: 'client-forged' }
@@ -60,7 +60,7 @@ describe('observability BFF', () => {
   })
 
   test('wrangler declares the official distributed limiter instead of local state', async () => {
-    const wrangler = JSON.parse(await readFile(new URL('../../../wrangler.jsonc', import.meta.url), 'utf8')) as { ratelimits?: unknown[] }
+    const wrangler = JSON.parse(await readFile(new URL('../../../../wrangler.jsonc', import.meta.url), 'utf8')) as { ratelimits?: unknown[] }
     expect(wrangler.ratelimits).toEqual([{ name: 'OBSERVABILITY_RATE_LIMITER', namespace_id: '10001', simple: { limit: 30, period: 60 } }])
   })
 })

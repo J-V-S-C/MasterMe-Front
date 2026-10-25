@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Icon, type IconName } from '../lib/icons'
 import { loginHrefFor, planLoginHref, type PlanId } from '../lib/auth-redirect'
 import type { Locale } from '../lib/i18n'
 import { ThemeToggle } from './theme-toggle'
+import { LandingTaskPreview, type LandingTaskPreviewCopy } from './landing-task-preview'
 import styles from './landing-page.module.css'
 
 type MarketingPlan = {
@@ -24,12 +25,13 @@ type MarketingPlan = {
 type MapNode = { kicker: string; title: string; state: string }
 type PathCard = { tag: string; icon: IconName; title: string; description: string; footer: string }
 type CycleStep = { tag: string; title: string; description: string }
-type TaskItem = { title: string; date: string; material: string; state: string; done?: boolean }
 
 type LandingCopy = {
   skipContent: string
   brandLabel: string
   navigationLabel: string
+  menuLabel: string
+  mobileNavigationLabel: string
   languageLabel: string
   lightTheme: string
   darkTheme: string
@@ -37,7 +39,6 @@ type LandingCopy = {
   startFree: string
   nav: { study: string; tasks: string; analyze: string; create: string; plans: string }
   hero: {
-    eyebrow: string
     titleLead: string
     titleEmphasis: string
     description: string
@@ -68,16 +69,7 @@ type LandingCopy = {
     diagnosisTail: string
     panelFooter: string
   }
-  tasks: {
-    kicker: string
-    title: string
-    description: string
-    points: readonly string[]
-    figureLabel: string
-    figureCaption: string
-    items: readonly TaskItem[]
-    calendar: { month: string; weekdays: readonly string[]; selectedDay: number; markedDays: readonly number[] }
-  }
+  tasks: { kicker: string; title: string; description: string; preview: LandingTaskPreviewCopy }
   paths: { kicker: string; title: string; description: string; cards: readonly PathCard[] }
   create: {
     kicker: string
@@ -110,14 +102,15 @@ const landingCopy = {
     skipContent: 'Pular para o conteúdo principal',
     brandLabel: 'MasterMe, página inicial',
     navigationLabel: 'Seções da página',
+    menuLabel: 'Menu',
+    mobileNavigationLabel: 'Menu de seções',
     languageLabel: 'Idioma',
     lightTheme: 'Usar tema claro',
     darkTheme: 'Usar tema escuro',
     signIn: 'Entrar',
-    startFree: 'Começar grátis',
+    startFree: 'Começar',
     nav: { study: 'Estudar', tasks: 'Tarefas', analyze: 'Analisar', create: 'Criar', plans: 'Planos' },
     hero: {
-      eyebrow: 'Ambiente pessoal de aprendizagem para autodidatas técnicos',
       titleLead: 'Organize o que estudar.',
       titleEmphasis: 'Descubra o que realmente aprendeu.',
       description: 'Reúna PDFs, artigos e anotações em uma biblioteca privada. Escolha um assunto, explique o que entendeu e veja o que precisa revisar. Depois, pratique com um pequeno projeto.',
@@ -171,21 +164,17 @@ const landingCopy = {
     },
     tasks: {
       kicker: 'PLANEJAMENTO',
-      title: 'Decida o que estudar agora e quando revisar.',
-      description: 'Transforme conceitos em tarefas com data, ligue cada uma a um material e mova o compromisso no calendário quando a semana mudar.',
-      points: [
-        'Data-alvo e material opcional em cada tarefa',
-        'Mude a data da tarefa pelo calendário',
-        'Sugestões opcionais a partir dos seus diagnósticos',
-      ],
-      figureLabel: 'Exemplo de tarefas e calendário',
-      figureCaption: 'Exemplo ilustrativo · suas tarefas e datas substituem estas.',
-      items: [
-        { title: 'Revisar índices compostos', date: '12 out', material: 'Banco de dados', state: 'Concluída', done: true },
-        { title: 'Explicar isolamento de transações', date: '22 out', material: 'Banco de dados', state: 'A fazer' },
-        { title: 'Praticar caching HTTP', date: 'sem data', material: 'sem material', state: 'A fazer' },
-      ],
-      calendar: { month: 'OUTUBRO', weekdays: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'], selectedDay: 22, markedDays: [12, 22] },
+      title: 'Dê um dia à tarefa. Depois, ajuste o resto.',
+      description: 'Experimente com uma tarefa de exemplo: escolha a data, ajuste o tempo e veja o cartão no quadro.',
+      preview: {
+        example: 'EXEMPLO INTERATIVO', title: 'Revisar índices compostos',
+        tabs: { date: 'Data', details: 'Tempo', board: 'Quadro' },
+        headings: { date: 'Escolha um dia', details: 'Defina o horário e a duração', board: 'Mova o cartão' },
+        month: 'OUTUBRO 2026', shortMonth: 'out', weekdays: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'],
+        dateLabel: 'Data', timeLabel: 'Horário', durationLabel: 'Duração', minutes: 'min', viewBoard: 'Ver no quadro', stageLabel: 'Etapa da tarefa',
+        stages: ['A fazer', 'Em andamento', 'Concluída'], otherCards: ['Explicar isolamento', 'Rever anotações'],
+        caption: 'Você está explorando um exemplo. Nada é salvo.',
+      },
     },
     paths: {
       kicker: 'QUATRO FORMAS DE ESTUDAR',
@@ -255,7 +244,7 @@ const landingCopy = {
     footer: {
       navigationLabel: 'Navegação do rodapé',
       description: 'Ambiente pessoal de aprendizagem para matérias técnicas.',
-      principles: 'Fonte preservada · Sem rastreamento de conteúdo',
+      principles: 'Materiais privados · Diagnósticos baseados na fonte',
       study: 'Estudar',
       tasks: 'Tarefas',
       analyze: 'Analisar',
@@ -268,14 +257,15 @@ const landingCopy = {
     skipContent: 'Skip to main content',
     brandLabel: 'MasterMe, home page',
     navigationLabel: 'Page sections',
+    menuLabel: 'Menu',
+    mobileNavigationLabel: 'Section menu',
     languageLabel: 'Language',
     lightTheme: 'Use light theme',
     darkTheme: 'Use dark theme',
     signIn: 'Sign in',
-    startFree: 'Start free',
+    startFree: 'Start',
     nav: { study: 'Study', tasks: 'Tasks', analyze: 'Analyze', create: 'Create', plans: 'Plans' },
     hero: {
-      eyebrow: 'A personal learning environment for self-taught engineers',
       titleLead: 'Organize what to study.',
       titleEmphasis: 'Discover what you really learned.',
       description: 'Bring PDFs, articles, and notes into a private library. Pick a topic, explain what you understood, and see what to review. Then practice with a small project.',
@@ -329,21 +319,17 @@ const landingCopy = {
     },
     tasks: {
       kicker: 'PLANNING',
-      title: 'Decide what to study now and when to review it.',
-      description: 'Turn concepts into dated tasks, attach each one to a material, and move the commitment on the calendar when the week changes.',
-      points: [
-        'A target date and an optional material on every task',
-        'Change a task date on the calendar',
-        'Optional suggestions drawn from your diagnostics',
-      ],
-      figureLabel: 'Tasks and calendar example',
-      figureCaption: 'Illustrative example · your tasks and dates replace these.',
-      items: [
-        { title: 'Review composite indexes', date: 'Oct 12', material: 'Databases', state: 'Done', done: true },
-        { title: 'Explain transaction isolation', date: 'Oct 22', material: 'Databases', state: 'To do' },
-        { title: 'Practice HTTP caching', date: 'no date', material: 'no material', state: 'To do' },
-      ],
-      calendar: { month: 'OCTOBER', weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], selectedDay: 22, markedDays: [12, 22] },
+      title: 'Give the task a date. Set the details after.',
+      description: 'Try one example task: choose its date, adjust the time, and see its card on the board.',
+      preview: {
+        example: 'INTERACTIVE EXAMPLE', title: 'Review composite indexes',
+        tabs: { date: 'Date', details: 'Time', board: 'Board' },
+        headings: { date: 'Choose a day', details: 'Set the time and duration', board: 'Move the card' },
+        month: 'OCTOBER 2026', shortMonth: 'Oct', weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+        dateLabel: 'Date', timeLabel: 'Time', durationLabel: 'Duration', minutes: 'min', viewBoard: 'See the board', stageLabel: 'Task stage',
+        stages: ['To do', 'Doing', 'Done'], otherCards: ['Explain isolation', 'Review notes'],
+        caption: 'This is an example. Nothing is saved.',
+      },
     },
     paths: {
       kicker: 'FOUR WAYS TO STUDY',
@@ -413,7 +399,7 @@ const landingCopy = {
     footer: {
       navigationLabel: 'Footer navigation',
       description: 'A personal learning environment for technical subjects.',
-      principles: 'Source preserved · No content tracking',
+      principles: 'Private materials · Source-grounded diagnostics',
       study: 'Study',
       tasks: 'Tasks',
       analyze: 'Analyze',
@@ -443,6 +429,7 @@ function LandingNavigation({ copy, label }: { copy: LandingCopy; label: string }
 
 export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true' }: { paymentsEnabled?: boolean } = {}) {
   const [locale, setLocaleState] = useState<Locale>('pt-BR')
+  const mobileMenuRef = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
     const stored = window.localStorage.getItem('masterme:locale')
@@ -470,20 +457,30 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </Link>
           <LandingNavigation copy={copy} label={copy.navigationLabel} />
           <div className={styles.headerActions}>
-            <a className={styles.plansLink} href="#plans">{copy.nav.plans}</a>
-            <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
-              <option value="pt-BR">PT</option><option value="en-US">EN</option>
-            </select>
-            <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
-            <Link className={styles.signIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
+            <Link className={styles.headerSignIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
             <Link className={`${styles.primaryAction} ${styles.headerAction}`} href={planLoginHref('FREE')} data-plan-id="FREE">{copy.startFree}</Link>
           </div>
+          <details className={styles.mobileMenu} ref={mobileMenuRef}>
+            <summary><svg className={styles.menuIcon} aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg>{copy.menuLabel}</summary>
+            <div className={styles.menuPanel}>
+              <nav className={styles.mobileNavigation} aria-label={copy.mobileNavigationLabel}>
+                {landingTabs.map((tab) => <a href={tab.href} key={tab.key} onClick={() => mobileMenuRef.current?.removeAttribute('open')}><Icon name={tab.icon} />{copy.nav[tab.key]}</a>)}
+              </nav>
+              <div className={styles.menuUtilities}>
+                <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
+                  <option value="pt-BR">PT</option><option value="en-US">EN</option>
+                </select>
+                <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
+              </div>
+              <Link className={styles.menuSignIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
+              <Link className={`${styles.primaryAction} ${styles.menuStart}`} href={planLoginHref('FREE')} data-plan-id="FREE">{copy.startFree}</Link>
+            </div>
+          </details>
         </div>
       </header>
 
       <main id="main-content" className={styles.main}>
         <section className={styles.hero} aria-labelledby="landing-title">
-          <p className={styles.eyebrow}>{copy.hero.eyebrow}</p>
           <h1 id="landing-title">{copy.hero.titleLead}<br /><em>{copy.hero.titleEmphasis}</em></h1>
           <p className={styles.heroDescription}>{copy.hero.description}</p>
           <div className={styles.heroActions}>
@@ -565,30 +562,8 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
               <h2 id="tasks-title">{copy.tasks.title}</h2>
               <p>{copy.tasks.description}</p>
             </header>
-            <ul className={styles.checkList}>{copy.tasks.points.map((point) => <li key={point}><Icon name="check" />{point}</li>)}</ul>
           </div>
-          <figure className={styles.tasksFigure} aria-label={copy.tasks.figureLabel}>
-            <div className={styles.tasksMock} aria-hidden="true">
-              <ul className={styles.taskList}>
-                {copy.tasks.items.map((task) => <li key={task.title} className={task.done ? styles.taskDone : ''}>
-                  <span className={styles.taskCheck}>{task.done ? '✓' : ''}</span>
-                  <div><strong>{task.title}</strong><small>{task.date} · {task.material}</small></div>
-                  <span className={styles.taskState}>{task.state}</span>
-                </li>)}
-              </ul>
-              <div className={styles.calendarMock}>
-                <div className={styles.calendarHeader}><span>{copy.tasks.calendar.month}</span><span className={styles.calendarNav}>‹ ›</span></div>
-                <div className={styles.calendarGrid}>
-                  {copy.tasks.calendar.weekdays.map((day, index) => <span className={styles.weekday} key={`${day}-${index}`}>{day}</span>)}
-                  {calendarCells(copy.tasks.calendar.selectedDay, copy.tasks.calendar.markedDays).map((cell) => <span
-                    key={cell.key}
-                    className={`${styles.day} ${cell.selected ? styles.selectedDay : ''} ${cell.marked ? styles.markedDay : ''}`}
-                  >{cell.day ?? ''}</span>)}
-                </div>
-              </div>
-            </div>
-            <figcaption>{copy.tasks.figureCaption}</figcaption>
-          </figure>
+          <LandingTaskPreview copy={copy.tasks.preview} locale={locale} />
         </section>
 
         <section className={styles.paths} id="study" aria-labelledby="paths-title">
@@ -694,6 +669,12 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
             </div>
           </div>
           <div className={styles.footerBottom}>
+            <div className={styles.footerPreferences}>
+              <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
+                <option value="pt-BR">PT</option><option value="en-US">EN</option>
+              </select>
+              <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
+            </div>
             <p>{copy.footer.description}</p>
             <span className={styles.footerMeta}>{copy.footer.principles}</span>
             <small className={styles.copyright}>© {new Date().getFullYear()} MasterMe</small>
@@ -704,12 +685,3 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
   )
 }
 
-// October 2026 starts on a Thursday; the mock stays static so the page renders
-// the same on the server and in every locale.
-function calendarCells(selectedDay: number, markedDays: readonly number[]) {
-  const cells: { key: string; day: number | null; selected: boolean; marked: boolean }[] = []
-  for (let index = 0; index < 4; index += 1) cells.push({ key: `blank-${index}`, day: null, selected: false, marked: false })
-  for (let day = 1; day <= 31; day += 1) cells.push({ key: `day-${day}`, day, selected: day === selectedDay, marked: markedDays.includes(day) })
-  while (cells.length % 7 !== 0) cells.push({ key: `tail-${cells.length}`, day: null, selected: false, marked: false })
-  return cells
-}

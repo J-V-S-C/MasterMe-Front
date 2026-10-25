@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { studyState } from './study-state';
+import { studyState } from '../../lib/study-state';
 
 describe('study state', () => {
   test('keeps sessions and drafts separate by concept', () => {

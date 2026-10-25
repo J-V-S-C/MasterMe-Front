@@ -1,19 +1,123 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { api, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask } from '../lib/api';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { api, type Concept, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useRealtimeRefresh } from './realtime-provider';
+import { StyledSelect } from './styled-select';
+import { ActionButton } from './action-button';
+import { Icon } from '../lib/icons';
+import { TaskBoard, boardStatuses, type BoardStatus } from './task-board';
+import { DayPicker, DurationChips, TimeSlider, dayKey, formatClock, formatDayShort, formatDuration } from './task-controls';
 import styles from './library-workspace.module.css';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
 import { WorkspaceHeading } from './workspace-heading';
 
 const copy = {
-  'pt-BR': { title: 'Suas tarefas de estudo', intro: 'Defina o que fazer e quando pretende concluir.', task: 'Tarefa', taskPlaceholder: 'Ex.: Revisar os exemplos do capítulo 3', target: 'Data para concluir', material: 'Material', optionalMaterial: 'Sem material específico', add: 'Adicionar tarefa', open: 'A fazer', done: 'Concluídas', unscheduled: 'Sem data', empty: 'Nenhuma tarefa em andamento. Adicione a próxima ação acima.', doneEmpty: 'Nenhuma tarefa concluída ainda.', complete: 'Concluir', reopen: 'Reabrir', remove: 'Remover', save: 'Salvar', edit: 'Editar', cancel: 'Cancelar', study: 'Estudar conceito', suggestions: 'Sugestões de estudo', suggestionHint: 'Ideias opcionais baseadas nas suas explicações.', calendar: 'Calendário', allTasks: 'Todas as tarefas', today: 'Hoje', previous: 'Anterior', next: 'Próximo', accept: 'Adicionar tarefa', ignore: 'Ignorar', failed: 'Não foi possível salvar. Tente novamente.' },
-  'en-US': { title: 'Your study tasks', intro: 'Decide what to do and when you aim to finish.', task: 'Task', taskPlaceholder: 'E.g. Review the examples in chapter 3', target: 'Target completion date', material: 'Material', optionalMaterial: 'No specific material', add: 'Add task', open: 'To do', done: 'Completed', unscheduled: 'No date', empty: 'No tasks in progress. Add your next action above.', doneEmpty: 'No completed tasks yet.', complete: 'Complete', reopen: 'Reopen', remove: 'Remove', save: 'Save', edit: 'Edit', cancel: 'Cancel', study: 'Study concept', suggestions: 'Study suggestions', suggestionHint: 'Optional ideas based on your explanations.', calendar: 'Calendar', allTasks: 'All tasks', today: 'Today', previous: 'Previous', next: 'Next', accept: 'Add task', ignore: 'Ignore', failed: 'Could not save. Try again.' },
+  'pt-BR': {
+    title: 'Suas tarefas de estudo',
+    intro: 'Escolha o dia, ajuste o ritmo e acompanhe o que já começou.',
+    composerKicker: 'NOVA TAREFA',
+    composerTitle: 'O que entra no seu dia?',
+    composerHint: 'Escreva só o essencial. Data, horário e duração ficam nos controles.',
+    task: 'Tarefa',
+    taskPlaceholder: 'Ex.: Revisar os exemplos do capítulo 3',
+    tabsLabel: 'Áreas da tarefa',
+    dateTab: 'Quando',
+    detailsTab: 'Detalhes',
+    resume: 'Resumo da tarefa',
+    previewLabel: 'Prévia do cartão',
+    previewTitle: 'Sua tarefa aparece assim',
+    previewHint: 'A prévia acompanha cada escolha. Nada é salvo até você adicionar.',
+    addHint: 'A tarefa entra como “A fazer”.',
+    today: 'Hoje',
+    tomorrow: 'Amanhã',
+    nextWeek: 'Em 7 dias',
+    noDate: 'Sem data',
+    dateLabel: 'Data',
+    previousMonth: 'Mês anterior',
+    nextMonth: 'Próximo mês',
+    time: 'Horário',
+    duration: 'Duração',
+    noEstimate: 'Sem estimativa',
+    periods: ['Manhã', 'Tarde', 'Noite'],
+    material: 'Material',
+    optionalMaterial: 'Sem material específico',
+    concept: 'Conceito',
+    optionalConcept: 'Nenhum conceito específico',
+    add: 'Adicionar tarefa',
+    pending: 'A fazer',
+    doing: 'Fazendo',
+    done: 'Concluído',
+    unscheduled: 'Sem horário',
+    remove: 'Remover',
+    save: 'Salvar',
+    edit: 'Editar',
+    cancel: 'Cancelar',
+    study: 'Estudar conceito',
+    suggestions: 'Sugestões de estudo',
+    suggestionHint: 'Ideias opcionais baseadas nas suas explicações.',
+    board: 'Quadro',
+    suggestionsTab: 'Sugestões',
+    boardHint: 'Arraste os cartões para mudar a etapa. Os três botões de cada cartão fazem o mesmo.',
+    accept: 'Adicionar tarefa',
+    ignore: 'Ignorar',
+    failed: 'Não foi possível salvar. Tente novamente.',
+    drag: 'Arrastar tarefa',
+    moveTo: 'Etapa',
+  },
+  'en-US': {
+    title: 'Your study tasks',
+    intro: 'Choose the day, set the pace, and see what is already moving.',
+    composerKicker: 'NEW TASK',
+    composerTitle: 'What goes into your day?',
+    composerHint: 'Write only the essentials. Date, time, and duration stay in the controls.',
+    task: 'Task',
+    taskPlaceholder: 'E.g. Review the examples in chapter 3',
+    tabsLabel: 'Task areas',
+    dateTab: 'When',
+    detailsTab: 'Details',
+    resume: 'Task summary',
+    previewLabel: 'Card preview',
+    previewTitle: 'Your task will look like this',
+    previewHint: 'The preview follows every choice. Nothing is saved until you add it.',
+    addHint: 'The task starts in “To do”.',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+    nextWeek: 'In 7 days',
+    noDate: 'No date',
+    dateLabel: 'Date',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    time: 'Time',
+    duration: 'Duration',
+    noEstimate: 'No estimate',
+    periods: ['Morning', 'Afternoon', 'Evening'],
+    material: 'Material',
+    optionalMaterial: 'No specific material',
+    concept: 'Concept',
+    optionalConcept: 'No specific concept',
+    add: 'Add task',
+    pending: 'To do',
+    doing: 'Doing',
+    done: 'Done',
+    unscheduled: 'No time set',
+    remove: 'Remove',
+    save: 'Save',
+    edit: 'Edit',
+    cancel: 'Cancel',
+    study: 'Study concept',
+    suggestions: 'Study suggestions',
+    suggestionHint: 'Optional ideas based on your explanations.',
+    board: 'Board',
+    suggestionsTab: 'Suggestions',
+    boardHint: 'Drag cards to change their stage. The three buttons on each card do the same.',
+    accept: 'Add task',
+    ignore: 'Ignore',
+    failed: 'Could not save. Try again.',
+    drag: 'Drag task',
+    moveTo: 'Stage',
+  },
 } as const;
 
 const suggestionCopy = {
@@ -21,11 +125,10 @@ const suggestionCopy = {
   'en-US': { diagnosis: 'Previous attempt', proposedTask: 'Edit the task before accepting', duration: 'Duration in minutes', schedule: 'When to study', plan: 'Plan', noPlan: 'No plan' },
 } as const;
 
-const localDate = (value: string) => {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
-const dateAtNoon = (value: string) => new Date(`${value}T12:00:00`).toISOString();
+type WorkspaceTab = 'date' | 'details' | 'board' | 'suggestions';
+
+const startIso = (value: string) => value ? new Date(value).toISOString() : null;
+const statusLabels = (locale: 'pt-BR' | 'en-US') => ({ PENDING: copy[locale].pending, IN_PROGRESS: copy[locale].doing, DONE: copy[locale].done });
 
 export function LibraryWorkspace() {
   const { locale } = useI18n();
@@ -34,12 +137,13 @@ export function LibraryWorkspace() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [suggestions, setSuggestions] = useState<StudySuggestion[]>([]);
   const [title, setTitle] = useState('');
-  const [targetDate, setTargetDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => dayKey(new Date()));
+  const [time, setTime] = useState('09:00');
+  const [duration, setDuration] = useState<number | null>(30);
   const [materialId, setMaterialId] = useState('');
-  const [selectedDate, setSelectedDate] = useState(() => localDate(new Date().toISOString()));
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [listView, setListView] = useState<'open' | 'done'>('open');
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const [conceptId, setConceptId] = useState('');
+  const [concepts, setConcepts] = useState<Concept[]>([]);
+  const [tab, setTab] = useState<WorkspaceTab>('date');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -49,68 +153,208 @@ export function LibraryWorkspace() {
   }, []);
   useEffect(() => { void refresh().catch(() => setError(t.failed)); }, [refresh, t.failed]);
   useRealtimeRefresh(() => { void refresh().catch(() => {}); });
+  useEffect(() => {
+    if (!materialId) { setConcepts([]); return; }
+    let active = true;
+    void api.concepts(materialId).then((rows) => { if (active) setConcepts(rows); }).catch(() => { if (active) setConcepts([]); });
+    return () => { active = false; };
+  }, [materialId]);
   const operate = async (action: () => Promise<unknown>) => {
     setBusy(true); setError('');
-    try { await action(); await refresh(); return true; } catch { setError(t.failed); return false; } finally { setBusy(false); }
+    try { await action(); await refresh(); return true; }
+    catch (cause) { setError(cause instanceof Error ? cause.message : t.failed); return false; }
+    finally { setBusy(false); }
   };
   const create = (event: FormEvent) => {
     event.preventDefault();
-    const nextTitle = title.trim();
-    if (!nextTitle) return;
+    if (!title.trim()) return;
     void operate(async () => {
-      await api.createTask({ title: nextTitle, activityType: 'READ', materialId: materialId || undefined, scheduledAt: targetDate ? dateAtNoon(targetDate) : undefined });
-      setTitle(''); setTargetDate(''); setMaterialId('');
+      await api.createTask({
+        title: title.trim(), activityType: 'READ',
+        materialId: materialId || undefined, conceptId: conceptId || undefined,
+        durationMinutes: duration ?? undefined,
+        scheduledAt: selectedDate ? startIso(`${selectedDate}T${time}`) ?? undefined : undefined,
+      });
+      setTitle('');
     });
   };
-  const openTasks = useMemo(() => tasks.filter((task) => task.status === 'PENDING').sort((a, b) =>
-    (a.scheduled_at ?? '9999').localeCompare(b.scheduled_at ?? '9999') || a.sort_order - b.sort_order), [tasks]);
-  const doneTasks = useMemo(() => tasks.filter((task) => task.status === 'DONE'), [tasks]);
+  const boardTasks = useMemo(() => tasks.filter((task) => task.status !== 'REMOVED').sort((a, b) => a.sort_order - b.sort_order || (a.scheduled_at ?? '9999').localeCompare(b.scheduled_at ?? '9999') || a.id.localeCompare(b.id)), [tasks]);
+  const taskCounts = useMemo(() => boardTasks.reduce((counts, task) => {
+    if (task.scheduled_at) {
+      const key = dayKey(task.scheduled_at);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }, {} as Record<string, number>), [boardTasks]);
+  const persistBoard = async (next: StudyTask[]) => {
+    if (busy) return;
+    const previous = tasks;
+    const ordered = next.map((task, index) => ({ ...task, sort_order: index }));
+    setTasks([...ordered, ...tasks.filter((task) => task.status === 'REMOVED')]);
+    setBusy(true); setError('');
+    try {
+      const statuses = Object.fromEntries(ordered.map((task) => [task.id, task.status])) as Record<string, BoardStatus>;
+      await api.reorderTasks(ordered.map((task) => task.id), statuses);
+      await refresh();
+    } catch (cause) {
+      setTasks(previous);
+      setError(cause instanceof Error ? cause.message : t.failed);
+    } finally { setBusy(false); }
+  };
+  const moveStatus = (task: StudyTask, status: BoardStatus) => {
+    if (task.status === status) return;
+    const remaining = boardTasks.filter((item) => item.id !== task.id);
+    void persistBoard([...remaining, { ...task, status }]);
+  };
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === 'PENDING');
+  const activeTab: WorkspaceTab = tab === 'suggestions' && pendingSuggestions.length === 0 ? 'board' : tab;
+  const tabs: Array<{ key: WorkspaceTab; label: string; detail: string; icon: 'calendar' | 'clock' | 'columns' | 'sparkles' }> = [
+    { key: 'date', label: t.dateTab, detail: selectedDate ? formatDayShort(selectedDate, locale) : t.noDate, icon: 'calendar' },
+    { key: 'details', label: t.detailsTab, detail: `${formatClock(time, locale)} · ${formatDuration(duration, locale)}`, icon: 'clock' },
+    { key: 'board', label: t.board, detail: `${boardTasks.length} ${locale === 'pt-BR' ? (boardTasks.length === 1 ? 'tarefa' : 'tarefas') : (boardTasks.length === 1 ? 'task' : 'tasks')}`, icon: 'columns' },
+    ...(pendingSuggestions.length > 0 ? [{ key: 'suggestions' as const, label: t.suggestionsTab, detail: String(pendingSuggestions.length), icon: 'sparkles' as const }] : []),
+  ];
+  const wide = activeTab === 'board' || activeTab === 'suggestions';
+  const openTab = (key: WorkspaceTab) => {
+    setTab(key);
+    requestAnimationFrame(() => document.getElementById(`workspace-tab-${key}`)?.focus());
+  };
+  const moveTab = (offset: number) => {
+    const index = tabs.findIndex((entry) => entry.key === activeTab);
+    const next = tabs[(index + offset + tabs.length) % tabs.length] ?? tabs[0];
+    if (next) openTab(next.key);
+  };
+  const selectedMaterial = materials.find((item) => item.id === materialId);
+  const selectedConcept = concepts.find((item) => item.id === conceptId);
 
   return <div className={styles.workspace}>
-    <WorkspaceHeading eyebrow={locale === 'pt-BR' ? 'PLANEJAMENTO' : 'PLANNING'} title={t.title} description={t.intro} aside={<div className={styles.heroMeta}><strong>{openTasks.length}</strong><span>{t.open}</span></div>} />
+    <WorkspaceHeading eyebrow={locale === 'pt-BR' ? 'PLANEJAMENTO' : 'PLANNING'} title={t.title} description={t.intro} />
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    <form className={styles.create} onSubmit={create}>
-      <label className={styles.titleField}>{t.task}<input ref={titleInputRef} required maxLength={160} value={title} placeholder={t.taskPlaceholder} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
-      <label>{t.target}<input type="date" value={targetDate} onInput={(event) => setTargetDate(event.currentTarget.value)} /></label>
-      <label>{t.material}<select value={materialId} onChange={(event) => setMaterialId(event.target.value)}><option value="">{t.optionalMaterial}</option>{materials.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-      <button disabled={busy}>{t.add}</button>
-    </form>
-    <div className={styles.layout}>
-      <section className={styles.list} aria-label={t.allTasks}><header><div><span className={styles.kicker}>{t.allTasks}</span><h2>{listView === 'open' ? t.open : t.done}</h2></div></header>
-        <div className={styles.listSwitch} aria-label={t.allTasks}><button type="button" aria-pressed={listView === 'open'} onClick={() => setListView('open')}>{t.open} <span>{openTasks.length}</span></button><button type="button" aria-pressed={listView === 'done'} onClick={() => setListView('done')}>{t.done} <span>{doneTasks.length}</span></button></div>
-        {listView === 'open' ? <>{!openTasks.length && <p className={styles.empty}>{t.empty}</p>}{openTasks.map((task) => <TaskItem key={task.id} task={task} materials={materials} locale={locale} busy={busy} operate={operate} labels={t} selected={selectedTaskId === task.id} />)}</> : <>{!doneTasks.length && <p className={styles.empty}>{t.doneEmpty}</p>}{doneTasks.map((task) => <TaskItem key={task.id} task={task} materials={materials} locale={locale} busy={busy} operate={operate} labels={t} selected={selectedTaskId === task.id} />)}</>}
-      </section>
-      <aside className={styles.calendarPanel} aria-label={t.calendar}>
-        <header><span className={styles.kicker}>{t.calendar}</span><h2>{t.target}</h2></header>
-        <div className={styles.calendar}><FullCalendar plugins={[dayGridPlugin, interactionPlugin]} initialView="dayGridMonth" locale={locale} height="auto" editable eventDurationEditable={false} buttonIcons={false} eventDrop={(info) => { if (!info.event.start) return; void operate(() => api.updateTask(info.event.id, { scheduledAt: dateAtNoon(localDate(info.event.start!.toISOString())) })).then((saved) => { if (!saved) info.revert(); }); }} headerToolbar={{ left: 'prev,next', center: 'title', right: 'today' }} buttonText={{ today: t.today, prev: t.previous, next: t.next }} dayCellClassNames={(arg) => localDate(arg.date.toISOString()) === selectedDate ? styles.selectedDay : ''} events={openTasks.filter((task) => task.scheduled_at).map((task) => ({ id: task.id, title: task.title, start: task.scheduled_at ? localDate(task.scheduled_at) : undefined, allDay: true }))} dateClick={(info) => { setSelectedDate(info.dateStr); setTargetDate(info.dateStr); titleInputRef.current?.focus(); }} eventClick={(info) => { setListView('open'); setSelectedTaskId(info.event.id); requestAnimationFrame(() => { const row = document.getElementById(`task-${info.event.id}`); row?.scrollIntoView({ block: 'center' }); row?.focus(); }); }} /></div>
-      </aside>
-    </div>
-    {pendingSuggestions.length > 0 && <details className={styles.archive}><summary>{t.suggestions} · {pendingSuggestions.length}</summary><p>{t.suggestionHint}</p>{pendingSuggestions.map((suggestion) => <SuggestionEditor key={suggestion.id} suggestion={suggestion} plans={[]} busy={busy} operate={async (action) => { await operate(action); }} locale={locale} labels={t} />)}</details>}
+
+    <section className={styles.composer} aria-labelledby="composer-title">
+      <header className={styles.composerHead}>
+        <div>
+          <span className={styles.kicker}>{t.composerKicker}</span>
+          <h2 id="composer-title">{t.composerTitle}</h2>
+          <p>{t.composerHint}</p>
+        </div>
+        <ol className={styles.summaryChips} aria-label={t.resume}>
+          <li><Icon name="calendar" />{selectedDate ? formatDayShort(selectedDate, locale) : t.noDate}</li>
+          {selectedDate && <li><Icon name="clock" />{formatClock(time, locale)}</li>}
+          <li><Icon name="bolt" />{formatDuration(duration, locale)}</li>
+        </ol>
+      </header>
+      <form className={`${styles.composerForm} ${wide ? styles.formWide : ''}`} onSubmit={create}>
+        <div className={styles.composerMain}>
+          <div className={styles.titleRow}>
+            <label className={styles.titleField}>{t.task}<input required maxLength={160} value={title} placeholder={t.taskPlaceholder} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+            {wide && <ActionButton variant="primary" type="submit" disabled={busy || !title.trim()}>{t.add}</ActionButton>}
+          </div>
+          <div className={styles.composerTabs} role="tablist" aria-label={t.tabsLabel} onKeyDown={(event) => {
+            if (event.key === 'ArrowRight') { event.preventDefault(); moveTab(1); }
+            if (event.key === 'ArrowLeft') { event.preventDefault(); moveTab(-1); }
+            if (event.key === 'Home') { event.preventDefault(); openTab('date'); }
+            if (event.key === 'End') { event.preventDefault(); openTab(tabs[tabs.length - 1]?.key ?? 'board'); }
+          }}>
+            {tabs.map((entry) => <button key={entry.key} id={`workspace-tab-${entry.key}`} type="button" role="tab" aria-selected={activeTab === entry.key} aria-controls={`workspace-panel-${entry.key}`} tabIndex={activeTab === entry.key ? 0 : -1} onClick={() => setTab(entry.key)}><Icon name={entry.icon} />{entry.label}<small>{entry.detail}</small></button>)}
+          </div>
+
+          {activeTab === 'date' && <div id="workspace-panel-date" role="tabpanel" aria-labelledby="workspace-tab-date" className={styles.composerPanel}>
+            <DayPicker value={selectedDate} onChange={setSelectedDate} locale={locale} counts={taskCounts} labels={{ previousMonth: t.previousMonth, nextMonth: t.nextMonth, today: t.today, tomorrow: t.tomorrow, nextWeek: t.nextWeek, noDate: t.noDate }} />
+          </div>}
+
+          {activeTab === 'details' && <div id="workspace-panel-details" role="tabpanel" aria-labelledby="workspace-tab-details" className={styles.composerPanel}>
+            <div className={styles.detailsGrid}>
+              <TimeSlider value={time} onChange={setTime} label={t.time} locale={locale} periods={t.periods} />
+              <DurationChips value={duration} onChange={setDuration} label={t.duration} locale={locale} noEstimate={t.noEstimate} />
+            </div>
+            <div className={styles.contextFields}>
+              <StyledSelect label={t.material} value={materialId} icon="document" options={[{ value: '', label: t.optionalMaterial }, ...materials.map((item) => ({ value: item.id, label: item.title }))]} onValueChange={(id) => { setMaterialId(id); setConceptId(''); setConcepts([]); }} />
+              <StyledSelect label={t.concept} value={conceptId} icon="idea" disabled={!materialId || !concepts.length} options={[{ value: '', label: t.optionalConcept }, ...concepts.map((item) => ({ value: item.id, label: item.name }))]} onValueChange={setConceptId} />
+            </div>
+          </div>}
+
+          {activeTab === 'board' && <div id="workspace-panel-board" role="tabpanel" aria-labelledby="workspace-tab-board" className={styles.composerPanel}>
+            <p className={styles.boardHint}>{t.boardHint}</p>
+            <TaskBoard tasks={boardTasks} labels={statusLabels(locale)} onMove={(next) => void persistBoard(next)} renderCard={(task) => <TaskCard task={task} materials={materials} locale={locale} busy={busy} onStatusChange={(status) => moveStatus(task, status)} operate={operate} />} />
+          </div>}
+
+          {activeTab === 'suggestions' && <div id="workspace-panel-suggestions" role="tabpanel" aria-labelledby="workspace-tab-suggestions" className={styles.composerPanel}>
+            <div className={styles.suggestionsPanel}>
+              <p>{t.suggestionHint}</p>
+              {pendingSuggestions.map((suggestion) => <SuggestionEditor key={suggestion.id} suggestion={suggestion} plans={[]} busy={busy} operate={async (action) => { await operate(action); }} locale={locale} labels={t} />)}
+            </div>
+          </div>}
+        </div>
+        {(activeTab === 'date' || activeTab === 'details') && <aside className={styles.preview} aria-label={t.previewLabel}>
+          <span className={styles.previewLabel}>{t.previewLabel}</span>
+          <article className={styles.previewCard}>
+            <div className={styles.previewTop}>
+              <span>{selectedDate ? formatDayShort(selectedDate, locale) : t.noDate}</span>
+              {selectedDate && <span>{formatClock(time, locale)}</span>}
+            </div>
+            <strong>{title.trim() || t.previewTitle}</strong>
+            <div className={styles.cardMeta}>
+              <span>{formatDuration(duration, locale)}</span>
+              {selectedMaterial && <span>{selectedMaterial.title}</span>}
+              {selectedConcept && <span>{selectedConcept.name}</span>}
+            </div>
+            <span className={styles.previewStage}><Icon name="columns" />{t.pending}</span>
+          </article>
+          <p>{t.previewHint}</p>
+          <ActionButton variant="primary" type="submit" disabled={busy || !title.trim()}>{t.add}</ActionButton>
+          <small>{t.addHint}</small>
+        </aside>}
+      </form>
+    </section>
   </div>;
 }
 
-function TaskItem({ task, materials, locale, busy, operate, labels, selected }: { task: StudyTask; materials: MaterialSummary[]; locale: 'pt-BR' | 'en-US'; busy: boolean; operate: (action: () => Promise<unknown>) => Promise<boolean>; labels: typeof copy['pt-BR'] | typeof copy['en-US']; selected: boolean }) {
+function TaskCard({ task, materials, locale, busy, operate, onStatusChange }: { task: StudyTask; materials: MaterialSummary[]; locale: 'pt-BR' | 'en-US'; busy: boolean; operate: (action: () => Promise<unknown>) => Promise<boolean>; onStatusChange: (status: BoardStatus) => void }) {
+  const t = copy[locale];
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
-  const [targetDate, setTargetDate] = useState(task.scheduled_at ? localDate(task.scheduled_at) : '');
+  const [scheduledAt, setScheduledAt] = useState(task.scheduled_at ? `${dayKey(task.scheduled_at)}T${String(new Date(task.scheduled_at).getHours()).padStart(2, '0')}:${String(new Date(task.scheduled_at).getMinutes()).padStart(2, '0')}` : '');
+  const [duration, setDuration] = useState<number | null>(task.duration_minutes);
+  const [materialId, setMaterialId] = useState(task.material_id ?? '');
+  const [conceptId, setConceptId] = useState(task.concept_id ?? '');
+  const [concepts, setConcepts] = useState<Concept[]>([]);
   useEffect(() => {
-    if (!editing) { setTitle(task.title); setTargetDate(task.scheduled_at ? localDate(task.scheduled_at) : ''); }
-  }, [editing, task.title, task.scheduled_at]);
+    if (!editing || !materialId) { setConcepts([]); return; }
+    let active = true;
+    void api.concepts(materialId).then((rows) => { if (active) setConcepts(rows); }).catch(() => { if (active) setConcepts([]); });
+    return () => { active = false; };
+  }, [editing, materialId]);
+  const reset = () => {
+    setTitle(task.title);
+    setScheduledAt(task.scheduled_at ? `${dayKey(task.scheduled_at)}T${String(new Date(task.scheduled_at).getHours()).padStart(2, '0')}:${String(new Date(task.scheduled_at).getMinutes()).padStart(2, '0')}` : '');
+    setDuration(task.duration_minutes);
+    setMaterialId(task.material_id ?? '');
+    setConceptId(task.concept_id ?? '');
+  };
   const material = materials.find((item) => item.id === task.material_id);
-  const dateLabel = task.scheduled_at ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(task.scheduled_at)) : labels.unscheduled;
-  return <article id={`task-${task.id}`} tabIndex={-1} className={`${styles.task} ${selected ? styles.selectedTask : ''}`}>
-    {editing ? <form className={styles.editForm} onSubmit={(event) => { event.preventDefault(); void operate(() => api.updateTask(task.id, { title: title.trim(), scheduledAt: targetDate ? dateAtNoon(targetDate) : null })).then((saved) => { if (saved) setEditing(false); }); }}>
-      <label>{labels.task}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
-      <label>{labels.target}<input type="date" value={targetDate} onInput={(event) => setTargetDate(event.currentTarget.value)} /></label>
-      <div className={styles.actions}><button disabled={busy}>{labels.save}</button><button type="button" onClick={() => { setEditing(false); setTitle(task.title); setTargetDate(task.scheduled_at ? localDate(task.scheduled_at) : ''); }}>{labels.cancel}</button></div>
-    </form> : <><div className={styles.taskCopy}><strong>{task.title}</strong><div className={styles.meta}><time dateTime={task.scheduled_at ?? undefined}>{dateLabel}</time>{material && <span>{material.title}</span>}</div></div><div className={styles.actions}>
-      {task.concept_id && task.material_id && <Link href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{labels.study}</Link>}
-      <button type="button" onClick={() => setEditing(true)}>{labels.edit}</button>
-      <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: task.status === 'DONE' ? 'PENDING' : 'DONE' }))}>{task.status === 'DONE' ? labels.reopen : labels.complete}</button>
-      <button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{labels.remove}</button>
-    </div></>}
-  </article>;
+  const datePart = scheduledAt.slice(0, 10);
+  const timePart = scheduledAt.slice(11, 16) || '09:00';
+  return editing ? <form className={styles.cardEdit} onSubmit={(event) => { event.preventDefault(); void operate(() => api.updateTask(task.id, { title: title.trim(), materialId: materialId || null, conceptId: conceptId || null, durationMinutes: duration, scheduledAt: startIso(scheduledAt) })).then((saved) => { if (saved) setEditing(false); }); }}>
+    <label>{t.task}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+    <label>{t.dateLabel}<input type="date" value={datePart} onInput={(event) => setScheduledAt(`${event.currentTarget.value}T${timePart}`)} /></label>
+    <TimeSlider value={timePart} onChange={(next) => setScheduledAt(`${datePart || dayKey(new Date())}T${next}`)} label={t.time} locale={locale} periods={t.periods} compact />
+    <DurationChips value={duration} onChange={setDuration} label={t.duration} locale={locale} noEstimate={t.noEstimate} />
+    <StyledSelect label={t.material} value={materialId} options={[{ value: '', label: t.optionalMaterial }, ...materials.map((item) => ({ value: item.id, label: item.title }))]} onValueChange={(id) => { setMaterialId(id); setConceptId(''); }} />
+    <StyledSelect label={t.concept} value={conceptId} disabled={!materialId || !concepts.length} options={[{ value: '', label: t.optionalConcept }, ...concepts.map((item) => ({ value: item.id, label: item.name }))]} onValueChange={setConceptId} />
+    <div className={styles.cardActions}><ActionButton variant="primary" type="submit" disabled={busy}>{t.save}</ActionButton><ActionButton variant="ghost" onClick={() => { reset(); setEditing(false); }}>{t.cancel}</ActionButton></div>
+  </form> : <div className={styles.cardBody}>
+    <div className={styles.cardTop}>
+      <span className={styles.cardWhen}><Icon name="clock" />{task.scheduled_at ? new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(task.scheduled_at)) : t.unscheduled}</span>
+      <span>{formatDuration(task.duration_minutes, locale)}</span>
+    </div>
+    <strong>{task.title}</strong>
+    <div className={styles.cardMeta}>{material && <span>{material.title}</span>}{task.concepts && <span>{task.concepts.name}</span>}</div>
+    <div className={styles.stagePicker} role="group" aria-label={t.moveTo}>
+      {boardStatuses.map((status) => <button key={status} type="button" aria-pressed={task.status === status} disabled={busy || task.status === status} onClick={() => onStatusChange(status)}>{statusLabels(locale)[status]}</button>)}
+    </div>
+    <div className={styles.cardActions}>{task.concept_id && task.material_id && <Link className="app-button secondary small" href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{t.study}</Link>}<ActionButton size="small" onClick={() => setEditing(true)}>{t.edit}</ActionButton><ActionButton variant="ghost" size="small" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{t.remove}</ActionButton></div>
+  </div>;
 }
 
 export function SuggestionEditor({ suggestion, plans, busy, operate, locale, labels }: {
