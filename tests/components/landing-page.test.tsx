@@ -6,6 +6,12 @@ import { LandingPage } from '../../components/landing-page'
 const originalFetch = globalThis.fetch
 const originalEventSource = globalThis.EventSource
 
+const chooseLanguage = (root: Element, label: string, option: string, hidden = false) => {
+  const controls = within(root as HTMLElement)
+  fireEvent.click(controls.getByRole('combobox', { name: label, hidden }))
+  fireEvent.click(controls.getByRole('option', { name: option, hidden }))
+}
+
 beforeEach(() => {
   const window = new Window({ url: 'https://masterme.test/' })
   Object.assign(globalThis, {
@@ -51,18 +57,18 @@ describe('public landing page', () => {
     const footer = () => within(view.container.querySelector('footer')!)
     const menu = () => within(view.container.querySelector('header details')!)
 
-    fireEvent.change(footer().getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
-    expect(menu().getByRole('combobox', { name: 'Language', hidden: true })).toHaveProperty('value', 'en-US')
+    chooseLanguage(view.container.querySelector('footer')!, 'Idioma', 'EN')
+    expect(menu().getByRole('combobox', { name: 'Language', hidden: true }).textContent).toContain('EN')
     expect(document.documentElement.lang).toBe('en-US')
     expect(window.localStorage.getItem('masterme:locale')).toBe('en-US')
 
     cleanup()
     const restored = render(<LandingPage />)
-    await waitFor(() => expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Language' })).toHaveProperty('value', 'en-US'))
+    await waitFor(() => expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Language' }).textContent).toContain('EN'))
     expect(document.documentElement.lang).toBe('en-US')
 
-    fireEvent.change(within(restored.container.querySelector('header details')!).getByRole('combobox', { name: 'Language', hidden: true }), { target: { value: 'pt-BR' } })
-    expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' })).toHaveProperty('value', 'pt-BR')
+    chooseLanguage(restored.container.querySelector('header details')!, 'Language', 'PT', true)
+    expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' }).textContent).toContain('PT')
     expect(window.localStorage.getItem('masterme:locale')).toBe('pt-BR')
     expect(document.documentElement.lang).toBe('pt-BR')
   })
@@ -106,7 +112,7 @@ describe('public landing page', () => {
     globalThis.fetch = fetch as unknown as typeof globalThis.fetch
     globalThis.EventSource = eventSource as unknown as typeof EventSource
     const view = render(<LandingPage />)
-    fireEvent.change(within(view.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' }), { target: { value: 'en-US' } })
+    chooseLanguage(view.container.querySelector('footer')!, 'Idioma', 'EN')
     fireEvent.click(within(view.container.querySelector('footer')!).getByRole('button', { name: 'Use light theme' }))
     const preview = within(view.getByRole('figure', { name: 'INTERACTIVE EXAMPLE' }))
     fireEvent.click(preview.getByRole('tab', { name: 'Time' }))

@@ -1,10 +1,11 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { ActionButton } from '../../components/action-button'
 import { Icon, type IconName } from '../../lib/icons'
 import { ThemeToggle } from '../../components/theme-toggle'
+import { StyledSelect } from '../../components/styled-select'
+import { BrandLink } from '../../components/brand-link'
 import { I18nProvider, useI18n } from '../../lib/i18n'
 import { safeInternalDestination } from '../../lib/auth-redirect'
 
@@ -90,7 +91,7 @@ function LoginContent() {
   return <main className="auth-page">
     <section className="auth-shell">
       <aside className="auth-intro">
-        <Link className="auth-identity" href="/" aria-label="MasterMe"><span className="brand-mark"><i>M</i></span><strong>MasterMe</strong></Link>
+        <BrandLink href="/" label="MasterMe" className="auth-identity" />
         <div className="auth-intro-copy"><span className="eyebrow">{t('authEyebrow')}</span><h1>{t('authTitle')}</h1><p>{t('authAccessDescription')}</p></div>
         <section className="auth-workspace-preview" aria-label={t('authExploreAreas')}>
           <h2>{t('authExploreAreas')}</h2>
@@ -102,10 +103,7 @@ function LoginContent() {
           </div>
         </section>
         <div className="auth-preferences">
-          <label htmlFor="auth-language">{t('language')}</label>
-          <select id="auth-language" value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
-            <option value="pt-BR">Português</option><option value="en-US">English</option>
-          </select>
+          <StyledSelect dropUp icon={null} label={t('language')} value={locale} options={[{ value: 'pt-BR', label: 'Português' }, { value: 'en-US', label: 'English' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
           <ThemeToggle lightLabel={t('lightTheme')} darkLabel={t('darkTheme')} />
         </div>
       </aside>

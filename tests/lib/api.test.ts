@@ -90,9 +90,9 @@ describe('frontend HTTP contract', () => {
     expect(path).toBe('/api/materials/upload'); expect(capture.sent?.get('title')).toBe('Título'); expect(capture.sent?.get('locale')).toBe('pt-BR'); expect(progress).toEqual([50]); expect(result.id).toBe('material-a');
   });
 
-  test('rejects files above the 8 MiB API limit on the client', async () => {
-    expect(MAX_UPLOAD_BYTES).toBe(8 * 1024 * 1024);
+  test('rejects files above the 16 MiB API limit on the client', async () => {
+    expect(MAX_UPLOAD_BYTES).toBe(16 * 1024 * 1024);
     const file = new File([new Uint8Array(MAX_UPLOAD_BYTES + 1)], 'grande.pdf', { type: 'application/pdf' });
-    await expect(uploadMaterial(file, '', 'pt-BR', () => undefined)).rejects.toThrow('O arquivo deve ter no máximo 8 MiB.');
+    await expect(uploadMaterial(file, '', 'pt-BR', () => undefined)).rejects.toThrow('O arquivo deve ter no máximo 16 MiB.');
   });
 });

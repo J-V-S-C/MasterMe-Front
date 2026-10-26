@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from 'next/link';
 import { ApiError, api, uploadMaterial, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
-import { stageCopy, type ExtractionProgress } from "../lib/extraction-progress";
+import { type ExtractionProgress } from "../lib/extraction-progress";
 import { useMaterialExtraction } from "../lib/use-material-extraction";
 import { Icon } from "../lib/icons";
 import { LoadingSkeleton } from "./loading-skeleton";
@@ -19,9 +19,19 @@ import { knowledgeStatusKey } from "../lib/knowledge-status";
 import { WorkspaceHeading } from "./workspace-heading";
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
+const extractionStageKeys = {
+  QUEUED: ['extractionQueuedTitle', 'extractionQueuedDescription'],
+  RETRYING: ['extractionRetryingTitle', 'extractionRetryingDescription'],
+  PREPARING: ['extractionPreparingTitle', 'extractionPreparingDescription'],
+  EXTRACTING: ['extractionExtractingTitle', 'extractionExtractingDescription'],
+  REDUCING: ['extractionReducingTitle', 'extractionReducingDescription'],
+  READY: ['extractionReadyTitle', 'extractionReadyDescription'],
+} as const;
 
 export function LiveStudy() {
   const { locale, t } = useI18n();
+  const translateRef = useRef(t);
+  translateRef.current = t;
   const { balance, loading: balanceLoading, unavailable: balanceUnavailable, refresh: refreshBilling } = useBilling();
   const searchParams = useSearchParams();
   const requestedMaterialId = searchParams.get("material");
@@ -68,7 +78,7 @@ export function LiveStudy() {
       if (requestId !== nodeLoadRequest.current || id !== currentMaterial.current) return;
       setNodes([]);
       setConceptId("");
-      setError(message(cause, "Não foi possível carregar os conceitos."));
+      setError(message(cause, translateRef.current('studyConceptsLoadError')));
     } finally { if (requestId === nodeLoadRequest.current) setLoadingNodes(false); }
   }, [requestedConceptId]);
 
@@ -81,7 +91,7 @@ export function LiveStudy() {
           : getActiveMaterialId(data.map((item) => item.id)) || data[0]?.id || "",
       );
     })
-      .catch((cause: unknown) => setError(message(cause, "Não foi possível carregar os materiais.")))
+      .catch((cause: unknown) => setError(message(cause, translateRef.current('studyMaterialsLoadError'))))
       .finally(() => setLoading(false));
   }, [requestedMaterialId]);
 
@@ -98,7 +108,7 @@ export function LiveStudy() {
     void api.material(materialId).then((detail) => { if (active) setMaterial(detail); }).catch((cause: unknown) => {
       if (!active) return;
       if (cause instanceof ApiError && cause.status === 404) setMaterialUnavailable(true);
-      else setError(message(cause, "Não foi possível carregar o material."));
+      else setError(message(cause, translateRef.current('studyMaterialLoadError')));
     });
     void loadNodes(materialId);
     return () => { active = false; };
@@ -115,7 +125,7 @@ export function LiveStudy() {
     if (!materialId || extraction.enqueueing) return;
     setError("");
     try { await extraction.startExtraction(); void refreshBilling(); }
-    catch (cause: unknown) { setError(message(cause, "Não foi possível extrair o contexto.")); }
+    catch (cause: unknown) { setError(message(cause, t('studyExtractError'))); }
   };
   const createMaterial = async () => {
     if (!title.trim() || !content.trim()) return;
@@ -127,7 +137,7 @@ export function LiveStudy() {
       setMaterialId(material.id); setTitle(""); setContent("");
       await api.extractConcepts(material.id);
       void refreshBilling();
-    } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o material.")); }
+    } catch (cause: unknown) { setError(message(cause, t('studyCreateError'))); }
     finally { setCreating(false); }
   };
 
@@ -140,7 +150,7 @@ export function LiveStudy() {
       saveActiveMaterialId(uploaded.id);
       setMaterialId(uploaded.id);
       setTitle(""); setContent("");
-    } catch (cause: unknown) { setError(message(cause, "Não foi possível importar o material.")); }
+    } catch (cause: unknown) { setError(message(cause, t('studyUploadError'))); }
     finally { setCreating(false); setUploadProgress(null); }
   };
 
@@ -155,7 +165,7 @@ export function LiveStudy() {
         setSession(s);
         setAnswer("");
       }
-    } catch (cause: unknown) { setError(message(cause, "Não foi possível iniciar a sessão.")); }
+    } catch (cause: unknown) { setError(message(cause, t('studyBeginError'))); }
   };
 
   useEffect(() => {
@@ -175,7 +185,7 @@ export function LiveStudy() {
         }
       }).catch(() => {
         studyState.forgetSession(materialId, conceptId);
-        if (activeSelection.current === key) setError('Não foi possível retomar a sessão. Inicie uma nova.');
+        if (activeSelection.current === key) setError(translateRef.current('studyResumeError'));
       });
     } else if (requestedMaterialId === materialId && requestedConceptId === conceptId) {
       void begin();
@@ -199,7 +209,7 @@ export function LiveStudy() {
         studyState.clearDraft(updated.id);
       }
     } catch (cause: unknown) {
-      setError(message(cause, "Não foi possível avaliar a resposta."));
+      setError(message(cause, t('studyEvaluateError')));
     } finally { setSubmitting(false); }
   };
 
@@ -224,7 +234,7 @@ export function LiveStudy() {
       await loadNodes(materialId);
       void refreshBilling();
     } catch (cause: unknown) {
-      setError(message(cause, "Não foi possível localizar o conteúdo gerado."));
+      setError(message(cause, t('studyLocalizeError')));
     } finally { setLocalizing(false); }
   };
 
@@ -238,9 +248,9 @@ export function LiveStudy() {
   });
 
   if (loading) return <LoadingSkeleton />;
-  if (error && !materials.length) return <section className="empty-state"><h1>Backend indisponível</h1><p>{error}</p></section>;
+  if (error && !materials.length) return <section className="empty-state"><h1>{t('studyBackendUnavailable')}</h1><p>{error}</p></section>;
   if (materialUnavailable || (requestedMaterialId && !materials.some(({ id }) => id === requestedMaterialId))) return <section className="empty-state" role="alert"><h1>{locale === 'pt-BR' ? 'Referência indisponível' : 'Reference unavailable'}</h1><p>{locale === 'pt-BR' ? 'O material desta tarefa não está mais disponível. Escolha outra fonte na biblioteca.' : 'The material for this task is no longer available. Choose another source in the library.'}</p><Link href="/library">{locale === 'pt-BR' ? 'Abrir biblioteca' : 'Open library'}</Link></section>;
-  if (!materials.length) return <section className="onboarding"><div className="onboarding-shell"><header className="onboarding-intro"><div className="onboarding-symbol"><Icon name="book" /></div><span className="eyebrow">{t('workspaceReady')}</span><h1>{t('addFirstMaterial')}</h1><p>{t('onboardingDescription')}</p><ol><li><strong>1</strong><span><b>{t('addStep')}</b><small>{t('addStepDescription')}</small></span></li><li><strong>2</strong><span><b>{t('extractStep')}</b><small>{t('extractStepDescription')}</small></span></li><li><strong>3</strong><span><b>{t('explainStep')}</b><small>{t('explainStepDescription')}</small></span></li></ol></header><MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error={error} /></div></section>;
+  if (!materials.length) return <section className="onboarding"><div className="onboarding-shell"><header className="onboarding-intro"><span className="eyebrow">{t('workspaceReady')}</span><h1>{t('addFirstMaterial')}</h1><p>{t('onboardingDescription')}</p><div className="onboarding-outcome"><span className="onboarding-outcome-rule" aria-hidden="true" /><span>{t('extractStepDescription')} {t('explainStepDescription')}</span></div></header><MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error={error} /></div></section>;
 
   const remainingCredits = balance ? balance.planId === 'FREE' ? balance.dailyRemaining : Math.min(balance.dailyRemaining, balance.periodRemaining) : null;
 
@@ -249,7 +259,7 @@ export function LiveStudy() {
     <section className="live-toolbar">
       <div className="study-controls">
         <StyledSelect label={t('material')} icon="document" value={materialId} disabled={creating} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { setError(""); saveActiveMaterialId(id); setMaterialId(id); }} />
-        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: `${node.concept.name} — ${t(knowledgeStatusKey(node.status))}` }))} onValueChange={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton>}</> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">Acompanhe a extração abaixo.</p> : <div className="extract-callout"><div><strong>Extraia o contexto deste material</strong><span>Depois, você poderá escolher um conceito para estudar.</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
+        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: `${node.concept.name} — ${t(knowledgeStatusKey(node.status))}` }))} onValueChange={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton>}</> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">{t('extractionFollow')}</p> : <div className="extract-callout"><div><strong>{t('extractionCalloutTitle')}</strong><span>{t('extractionCalloutDescription')}</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
       </div>
       <p className="study-credit-count" role="status" title={balanceUnavailable ? t('creditUnavailable') : undefined}>{remainingCredits !== null ? `${new Intl.NumberFormat(locale).format(remainingCredits)} ${t('credits')} ${t('creditRemaining')}` : balanceLoading ? `${t('creditBalance')}: …` : t('creditUnavailable')}</p>
     </section>
@@ -260,7 +270,7 @@ export function LiveStudy() {
       <MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error="" compact />
     </details>
     <div className="study-work-layout">
-      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, "Não foi possível criar o caso-limite.")); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <section className="study-start"><span className="study-start-kicker">{t('studyNextStep')}</span><h2>{t('studyStartTitle')}: {selected.concept.name}</h2><p>{t('studyStartDescription')}</p><div className="study-start-action"><ActionButton variant="primary" onClick={begin}>{t('studyStartAction')}</ActionButton><small>{t('studyStartHint')}</small></div></section> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
+      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <section className="study-start"><span className="study-start-kicker">{t('studyNextStep')}</span><h2>{t('studyStartTitle')}: {selected.concept.name}</h2><p>{t('studyStartDescription')}</p><div className="study-start-action"><ActionButton variant="primary" onClick={begin}>{t('studyStartAction')}</ActionButton><small>{t('studyStartHint')}</small></div></section> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
     </div>
   </>;
 }
@@ -286,14 +296,16 @@ export function SessionView({ session, answer, words, onAnswerChange, onSubmit, 
 }
 
 function ExtractionProgressCard({ progress, connectionLost, retrying, cancelling, onRetry, onCancel }: { progress: ExtractionProgress; connectionLost: boolean; retrying: boolean; cancelling: boolean; onRetry: () => Promise<void>; onCancel: () => Promise<void> }) {
+  const { t } = useI18n();
   const failed = progress.status === "FAILED";
-  const copy = stageCopy[progress.stage];
-  const failureMessage = progress.error?.trim() || "Não foi possível extrair os conceitos deste material.";
+  const [titleKey, descriptionKey] = extractionStageKeys[progress.stage];
+  const title = t(titleKey);
+  const failureMessage = progress.error?.trim() || t('extractionFailedDescription');
   const stages = [
-    { key: 'PREPARING', label: 'Preparação' }, { key: 'EXTRACTING', label: 'Análise com IA' }, { key: 'REDUCING', label: 'Organização' },
+    { key: 'PREPARING', label: t('extractionPreparingStage') }, { key: 'EXTRACTING', label: t('extractionExtractingStage') }, { key: 'REDUCING', label: t('extractionReducingStage') },
   ] as const;
   const currentStage = Math.max(0, stages.findIndex(({ key }) => key === progress.stage));
-  return <section className={`extraction-progress ${failed ? "failed" : "active"}`} aria-live="polite"><div className="processing-symbol"><Icon name={failed ? "warning" : "brain"} /><i /></div><div className="progress-copy"><span className="eyebrow">Construção do mapa de conhecimento</span><h2>{failed ? "A extração não foi concluída" : copy.title}</h2><p>{failed ? failureMessage : copy.description}</p></div>{!failed && <><ol className="extraction-stages" aria-label="Etapas da extração">{stages.map((stage, index) => <li key={stage.key} className={index < currentStage ? 'done' : index === currentStage ? 'current' : ''}><i aria-hidden="true" /><span>{stage.label}</span></li>)}</ol><div className="progress-track indeterminate" role="progressbar" aria-label={`${copy.title}. Processamento em andamento`}><i /></div><p className="progress-note">Você pode continuar usando outras áreas enquanto processamos o material.</p>{connectionLost && <p className="connection-note">Conexão em tempo real instável. Continuamos consultando o progresso.</p>}<ActionButton variant="secondary" onClick={() => void onCancel()} disabled={cancelling}>{cancelling ? "Cancelando…" : "Cancelar processamento"}</ActionButton></>}{failed && <ActionButton variant="primary" onClick={() => void onRetry()} disabled={retrying}>{retrying ? "Colocando na fila…" : "Tentar extrair novamente"}</ActionButton>}</section>;
+  return <section className={`extraction-progress ${failed ? "failed" : "active"}`} aria-live="polite"><div className="processing-symbol"><Icon name={failed ? "warning" : "brain"} /><i /></div><div className="progress-copy"><span className="eyebrow">{t('extractionHeading')}</span><h2>{failed ? t('extractionFailed') : title}</h2><p>{failed ? failureMessage : t(descriptionKey)}</p></div>{!failed && <><ol className="extraction-stages" aria-label={t('extractionStages')}>{stages.map((stage, index) => <li key={stage.key} className={index < currentStage ? 'done' : index === currentStage ? 'current' : ''}><i aria-hidden="true" /><span>{stage.label}</span></li>)}</ol><div className="progress-track indeterminate" role="progressbar" aria-label={`${title}. ${t('extractionInProgress')}`}><i /></div><p className="progress-note">{t('extractionWhileWaiting')}</p>{connectionLost && <p className="connection-note">{t('extractionConnectionLost')}</p>}<ActionButton variant="secondary" onClick={() => void onCancel()} disabled={cancelling}>{cancelling ? t('extractionCancelling') : t('extractionCancel')}</ActionButton></>}{failed && <ActionButton variant="primary" onClick={() => void onRetry()} disabled={retrying}>{retrying ? t('extractionRetryingAction') : t('extractionRetry')}</ActionButton>}</section>;
 }
 
 export function MaterialForm({ title, content, creating, uploadProgress, onTitleChange, onContentChange, onSubmit, onUpload, error, compact = false }: { title: string; content: string; creating: boolean; uploadProgress: number | null; error: string; compact?: boolean; onTitleChange: (value: string) => void; onContentChange: (value: string) => void; onSubmit: () => void; onUpload: (file: File, title: string) => Promise<void> }) {
@@ -305,7 +317,7 @@ export function MaterialForm({ title, content, creating, uploadProgress, onTitle
     <div className="material-mode" role="group" aria-label={t('addMaterial')}><button type="button" className={mode === 'text' ? 'selected' : ''} onClick={() => setMode('text')}>{t('pasteText')}</button><button type="button" className={mode === 'file' ? 'selected' : ''} onClick={() => setMode('file')}>{t('uploadFile')}</button></div>
     <label className="title-field">{t('title')}{mode === 'file' && <small>{t('optionalFilename')}</small>}<input value={title} maxLength={160} onChange={(event) => onTitleChange(event.target.value)} placeholder={t('titlePlaceholder')} /></label>
     {mode === 'text' ? <label>{t('content')}<textarea value={content} onChange={(event) => onContentChange(event.target.value)} placeholder={t('contentPlaceholder')} rows={8} /></label> : <label>{t('file')}<input type="file" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><small>{t('fileHelp')}</small></label>}
-    {uploadProgress !== null && <div className="upload-progress" role="status">{uploadProgress < 100 ? `Enviando arquivo: ${uploadProgress}%` : 'Arquivo enviado. Preparando processamento…'}<progress value={uploadProgress} max={100} /></div>}
+    {uploadProgress !== null && <div className="upload-progress" role="status">{uploadProgress < 100 ? `${t('uploadSending')}: ${uploadProgress}%` : t('uploadReceived')}<progress value={uploadProgress} max={100} /></div>}
     {error && <p className="form-error" role="alert">{error}</p>}
     <ActionButton variant="primary" onClick={() => mode === 'file' ? file && void onUpload(file, title) : onSubmit()} disabled={creating || (mode === 'text' ? !title.trim() || !content.trim() : !file)}>{creating ? t('savingQueue') : mode === 'file' ? t('uploadExtract') : t('createExtract')}</ActionButton>
   </section>;

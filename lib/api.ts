@@ -310,7 +310,7 @@ const uploadTypes: Record<string, string> = {
   markdown: 'text/markdown',
   txt: 'text/plain',
 };
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 16 * 1024 * 1024;
 export function uploadMaterial(
   file: File,
   title: string,
@@ -324,7 +324,7 @@ export function uploadMaterial(
       new Error('Selecione um arquivo PDF, Markdown ou TXT.'),
     );
   if (file.size > MAX_UPLOAD_BYTES)
-    return Promise.reject(new Error('O arquivo deve ter no máximo 8 MiB.'));
+    return Promise.reject(new Error('O arquivo deve ter no máximo 16 MiB.'));
   const data = new FormData();
   data.append('file', new File([file], file.name, { type: mime }));
   if (title.trim()) data.append('title', title.trim());

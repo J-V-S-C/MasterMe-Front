@@ -10,8 +10,10 @@ type StyledSelectProps = {
   value: string;
   options: StyledSelectOption[];
   onValueChange: (value: string) => void;
-  icon?: IconName;
+  icon?: IconName | null;
   disabled?: boolean;
+  compact?: boolean;
+  dropUp?: boolean;
 };
 
 export function StyledSelect({
@@ -21,6 +23,8 @@ export function StyledSelect({
   onValueChange,
   icon = "document",
   disabled = false,
+  compact = false,
+  dropUp = false,
 }: StyledSelectProps) {
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -83,18 +87,18 @@ export function StyledSelect({
   };
 
   return (
-    <div className="select-field" ref={rootRef}>
-      <span className="select-label" id={`${id}-label`}>
+    <div className={`select-field${compact ? " compact" : ""}${dropUp ? " drop-up" : ""}`} ref={rootRef}>
+      <span className={`select-label${compact ? " sr-only" : ""}`} id={`${id}-label`}>
         {label}
       </span>
       <div className={`select-control ${open ? "open" : ""}`}>
         <button
           type="button"
-          className="select-trigger"
+          className={`select-trigger${icon ? "" : " without-icon"}`}
           disabled={disabled || options.length === 0}
           role="combobox"
           aria-autocomplete="none"
-          aria-labelledby={id + "-label " + id + "-value"}
+          aria-labelledby={`${id}-label`}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={`${id}-listbox`}
@@ -104,11 +108,9 @@ export function StyledSelect({
           onClick={() => (open ? setOpen(false) : openMenu())}
           onKeyDown={onKeyDown}
         >
-          <span className="select-leading" aria-hidden="true">
-            <Icon name={icon} />
-          </span>
+          {icon && <span className="select-leading" aria-hidden="true"><Icon name={icon} /></span>}
           <span className="select-value" id={`${id}-value`}>
-            {selected?.label ?? "Nenhuma opção disponível"}
+            {selected?.label ?? label}
           </span>
           <span className="select-chevron" aria-hidden="true">
             <Icon name="chevron" />
