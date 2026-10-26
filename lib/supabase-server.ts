@@ -25,9 +25,10 @@ export async function createSupabaseServerClient() {
 export async function authenticatedSession() {
   const supabase = await createSupabaseServerClient()
   const { data: userData, error } = await supabase.auth.getUser()
+  if (error && error.name !== 'AuthSessionMissingError' && error.status !== 400 && error.status !== 401) throw error
   if (error || !userData.user) return null
   const { data } = await supabase.auth.getSession()
-  if (!data.session?.access_token) return null
+  if (!data.session?.access_token) throw new Error('Authenticated user has no access token.')
   return { user: userData.user, accessToken: data.session.access_token }
 }
 

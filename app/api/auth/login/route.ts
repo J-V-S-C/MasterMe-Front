@@ -8,7 +8,11 @@ export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseServerClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email: body.email.trim(), password: body.password })
-    if (error || !data.user) return NextResponse.json({ code: 'AUTH_INVALID_CREDENTIALS' }, { status: 401 })
+    if (error) {
+      const unavailable = error.status === 429 || (error.status ?? 0) >= 500
+      return NextResponse.json({ code: unavailable ? 'AUTH_UNAVAILABLE' : 'AUTH_INVALID_CREDENTIALS' }, { status: unavailable ? 503 : 401 })
+    }
+    if (!data.user) return NextResponse.json({ code: 'AUTH_UNAVAILABLE' }, { status: 503 })
     return NextResponse.json({ data: { id: data.user.id, email: data.user.email } })
   } catch {
     return NextResponse.json({ code: 'AUTH_UNAVAILABLE' }, { status: 503 })

@@ -18,7 +18,7 @@ bun install
 bun run dev
 ```
 
-Full validation:
+Full validation for the owner or commit automation (the coding agent does not run it unless explicitly asked):
 
 ```bash
 bun run typecheck
@@ -40,7 +40,7 @@ codex mcp add playwright -- npx "@playwright/mcp@latest"
 codex mcp list
 ```
 
-With `bun run dev` running, validate the changed route at widths of 390 px, 768 px and 1440 px. In each viewport, check horizontal overflow, alignment, spacing, typography, focus and relevant states; test the controls and review console errors and failed requests. Repeat this inspection after correcting any findings.
+When the owner requests browser validation, use `bun run dev` and inspect the changed route at widths of 390 px, 768 px and 1440 px. In each viewport, check horizontal overflow, alignment, spacing, typography, focus and relevant states; test the controls and review console errors and failed requests.
 
 For regressions that need to be run in CI, prefer a versioned Playwright Test suite instead of depending on MCP. MCP serves for exploration and diagnosis during development; the E2E tests document and protect critical flows in a repeatable manner.
 
@@ -61,7 +61,7 @@ The workflow only ends successfully after Cloudflare accepts and activates the n
 
 `production` environment also requires `PUBLIC_APP_URL`: frontend canonical HTTPS origin without a path or trailing slash. `APP_BUILD_ID` is filled by workflow with the published SHA; do not configure manually. `BACKEND_URL` should point to the public API before deploy. Manual execution of the workflow outside `main` is refused. After the first deploy, associate the desired domain with the Worker. Rollback is reverting or republishing the last green SHA.
 
-CI installs with `bun install --frozen-lockfile`, executes `bun run validate`, production dependencies audit, Next/Vinext builds, and landing/login HTTP smoke with CSP and `nosniff`. Deploy repeats the gate before publishing. In an independent clone, code, tests, and workflows define behavior; this README describes operations. In the main workspace, `agents.md` contains the conventions. Code changes need an objective, acceptance criteria, tests, and independent review before completion.
+CI installs with `bun install --frozen-lockfile`, executes `bun run validate`, production dependencies audit, Next/Vinext builds, and landing/login HTTP smoke with CSP and `nosniff`. Deploy repeats the gate before publishing. In an independent clone, code, tests, and workflows define behavior; this README describes operations. In the main workspace, `agents.md` contains the coding agent's workflow. The agent edits code without running checks or committing; later automation provides validation evidence.
 
 ## Security and billing
 

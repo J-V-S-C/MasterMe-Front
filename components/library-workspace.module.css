@@ -1,22 +1,20 @@
-.workspace { display: grid; gap: 22px; padding-bottom: 64px; color: var(--text); }
+.workspace { display: grid; gap: 16px; padding-bottom: 64px; color: var(--text); }
 .workspace input:not([type="range"]) { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-soft); border-radius: 7px; background: var(--deep); color: var(--text); font: 400 var(--font-control) var(--font-ui); }
+.workspace textarea { width: 100%; min-width: 0; min-height: 96px; padding: 10px 11px; border: 1px solid var(--line-soft); border-radius: 7px; background: var(--deep); color: var(--text); font: 400 var(--font-control)/1.45 var(--font-ui); resize: vertical; }
 .workspace input[type="range"] { width: 100%; margin: 0; accent-color: var(--blue); cursor: pointer; }
-.workspace input:focus-visible, .workspace button:focus-visible, .workspace a:focus-visible, .workspace summary:focus-visible, .boardCard:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.workspace input:focus-visible, .workspace textarea:focus-visible, .workspace button:focus-visible, .workspace a:focus-visible, .workspace summary:focus-visible, .boardCard:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .workspace label { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--dim); font-size: var(--font-label); font-weight: 700; }
 .workspace label small { color: var(--muted); font-weight: 400; }
 
 /* Composer */
-.composer { min-width: 0; padding: 22px; border: 1px solid var(--line-faint); border-top: 3px solid var(--blue); border-radius: 11px; background: var(--low); box-shadow: 0 3px 14px var(--shadow); }
-.composerHead { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding-bottom: 16px; }
-.composerHead > div { min-width: 0; }
-.kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--amber); font: 700 var(--font-label)/1.3 var(--font-ui); letter-spacing: .11em; text-transform: uppercase; }
-.composerHead h2 { margin: 3px 0 2px; color: var(--blue-text); font: 600 clamp(25px, 3vw, 32px)/1.15 var(--font-editorial); }
-.composerHead p { max-width: 560px; margin: 0; color: var(--muted); }
+.composer { min-width: 0; padding: 18px 22px 22px; border: 1px solid var(--line-faint); border-top: 3px solid var(--blue); border-radius: 11px; background: var(--low); box-shadow: 0 3px 14px var(--shadow); }
+.composerHead { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-bottom: 12px; }
+.composerHead h1 { margin: 0; color: var(--blue-text); font: 600 clamp(20px, 2vw, 24px)/1.2 var(--font-editorial); }
 .summaryChips { display: flex; flex-wrap: wrap; justify-content: end; gap: 7px; margin: 0; padding: 0; list-style: none; }
 .summaryChips li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--muted); font: 700 var(--font-meta)/1.2 var(--font-ui); white-space: nowrap; }
 .summaryChips li:first-child { border-color: var(--blue); background: var(--accent-soft); color: var(--blue-text); }
 .summaryChips svg { width: 15px; height: 15px; }
-.composerForm { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .75fr); align-items: start; gap: 22px; padding-top: 18px; border-top: 1px solid var(--line-faint); }
+.composerForm { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .75fr); align-items: start; gap: 22px; padding-top: 12px; border-top: 1px solid var(--line-faint); }
 .formWide { grid-template-columns: minmax(0, 1fr); }
 .composerMain { display: grid; gap: 14px; min-width: 0; }
 .titleRow { display: flex; align-items: end; gap: 12px; }
@@ -32,6 +30,7 @@
 .composerTabs small { overflow: hidden; color: var(--muted); font: 400 var(--font-meta)/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
 .composerPanel { min-width: 0; min-height: 250px; }
 .detailsGrid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 18px; }
+.descriptionField { margin-bottom: 16px; }
 .contextFields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line-soft); }
 .contextFields :global(.select-field) { min-width: 0; width: 100%; }
 
@@ -43,7 +42,7 @@
 :global([data-theme="dark"]) .chip[aria-pressed="true"] { background: var(--accent-medium); color: var(--blue-ink); }
 
 /* Day picker */
-.dayPicker { display: grid; gap: 8px; max-width: 520px; }
+.dayPicker { display: grid; gap: 8px; width: 100%; }
 .dayHead { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
 .dayHead strong { color: var(--text); text-align: center; font: 600 var(--font-body)/1.3 var(--font-editorial); }
 .dayHead strong::first-letter { text-transform: uppercase; }
@@ -53,9 +52,9 @@
 .dayNext svg { transform: none; }
 .weekRow, .dayGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .weekRow span { padding: 2px 0; color: var(--muted); text-align: center; font: 700 var(--font-meta)/1.2 var(--font-ui); }
-.dayCell { position: relative; display: grid; place-items: center; min-height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: 600 var(--font-control)/1 var(--font-ui); cursor: pointer; }
+.dayCell { position: relative; display: grid; place-items: center; min-height: clamp(44px, 5vw, 76px); padding: 0; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: 600 var(--font-control)/1 var(--font-ui); cursor: pointer; }
 .dayCell:hover { border-color: var(--dim); background: var(--high); }
-.dayCell small { position: absolute; right: 3px; bottom: 2px; min-width: 14px; padding: 0 3px; border-radius: 8px; background: var(--amber); color: var(--low); font: 800 10px/1.4 var(--font-ui); text-align: center; }
+.dayCell small { position: absolute; right: 4px; bottom: 4px; min-width: 21px; min-height: 18px; padding: 1px 4px; border-radius: 9px; background: var(--amber); color: var(--low); font: 800 12px/1.25 var(--font-ui); text-align: center; }
 .dayToday { box-shadow: inset 0 0 0 1px var(--amber); }
 .daySelected, .daySelected:hover { border-color: var(--blue); background: var(--blue); color: var(--blue-ink); box-shadow: 0 3px 9px var(--shadow); }
 .daySelected small { background: var(--blue-ink); color: var(--blue); }
@@ -63,15 +62,18 @@
 
 /* Time and duration controls */
 .timeControl, .chipFieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.controlHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.controlHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 10px; }
 .controlHead > span { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font: 700 var(--font-label)/1.2 var(--font-ui); }
 .controlHead svg { width: 16px; height: 16px; }
 .controlHead output { min-width: 74px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--blue-text); text-align: center; font: 800 var(--font-body)/1.3 var(--font-ui); font-variant-numeric: tabular-nums; }
+.workspace .timeControl input[type="time"] { width: min(100%, 240px); min-width: 210px; min-height: 44px; color: var(--blue-text); font-variant-numeric: tabular-nums; }
 .timeControl input[type="range"] { height: 30px; }
 .timeTicks { display: flex; justify-content: space-between; margin-top: -3px; color: var(--muted); font: var(--font-meta)/1.2 var(--font-ui); font-variant-numeric: tabular-nums; }
 .timeShortcuts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .chipFieldset > legend { margin-bottom: 10px; color: var(--dim); font-size: var(--font-label); font-weight: 700; }
 .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.customDuration { width: min(100%, 280px); margin-top: 18px; }
+.customDuration input { font-variant-numeric: tabular-nums; }
 .timeControl.compact .timeTicks { display: none; }
 
 /* Live preview */
@@ -81,6 +83,7 @@
 .previewTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font: 700 var(--font-meta)/1.2 var(--font-ui); }
 .previewTop span:last-child { color: var(--amber); font-variant-numeric: tabular-nums; }
 .previewCard > strong { overflow-wrap: anywhere; font-size: var(--font-body); line-height: 1.35; }
+.cardDescription { margin: 0; overflow-wrap: anywhere; color: var(--muted); font: 400 var(--font-support)/1.45 var(--font-ui); white-space: pre-wrap; }
 .previewStage { display: inline-flex; align-items: center; gap: 5px; width: max-content; padding: 3px 8px; border-radius: 20px; background: var(--warning-soft); color: var(--amber); font: 700 var(--font-meta)/1.3 var(--font-ui); }
 .previewStage svg { width: 14px; height: 14px; }
 .preview > p, .preview > small { margin: 0; color: var(--muted); font-size: var(--font-support); line-height: 1.5; }
@@ -90,7 +93,9 @@
 /* Board */
 .boardHint { margin: 0 0 12px; color: var(--muted); }
 .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 15px; }
+.boardPanel .board { min-height: min(360px, 38dvh); align-items: stretch; }
 .boardColumn { min-width: 0; min-height: 240px; padding: 15px; border: 1px solid var(--line-faint); border-radius: 11px; background: var(--card); }
+.boardPanel .boardColumn { display: flex; flex-direction: column; }
 .boardColumn:nth-child(1) { border-top: 3px solid var(--amber); }
 .boardColumn:nth-child(2) { border-top: 3px solid var(--blue); }
 .boardColumn:nth-child(3) { border-top: 3px solid var(--green); }
@@ -98,31 +103,53 @@
 .boardColumn h2 { margin: 0; font: 600 24px/1.2 var(--font-editorial); }
 .boardColumn header span { min-width: 27px; padding: 2px 7px; border-radius: 20px; background: var(--deep); color: var(--muted); text-align: center; font-weight: 700; }
 .boardColumnBody { display: grid; align-content: start; gap: 10px; min-height: 170px; }
+.boardPanel .boardColumnBody { flex: 1; }
 .boardDropTarget { background: var(--accent-soft); border-color: var(--blue); }
-.boardCard { position: relative; min-width: 0; padding: 14px; background: var(--low); border: 1px solid var(--line-soft); border-radius: 9px; box-shadow: 0 2px 8px var(--shadow); }
-.boardDragging { opacity: .55; box-shadow: 0 10px 24px var(--shadow); }
-.dragHandle { position: absolute; top: 10px; right: 10px; min-width: 36px; min-height: 36px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--muted); font-size: 22px; cursor: grab; touch-action: none; }
-.dragHandle:active { cursor: grabbing; }
-.cardBody { display: grid; gap: 10px; }
-.cardBody > strong { padding-right: 40px; overflow-wrap: anywhere; font-size: var(--font-body); line-height: 1.35; }
-.cardTop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-right: 40px; color: var(--muted); font: 600 var(--font-meta)/1.3 var(--font-ui); }
-.cardTop > * { padding: 3px 7px; border-radius: 5px; background: var(--deep); }
+.boardCard { position: relative; min-width: 0; padding: 16px 16px 12px; background: var(--low); border: 1px solid var(--line-soft); border-left: 3px solid var(--blue); border-radius: 8px; box-shadow: 0 2px 8px var(--shadow); cursor: grab; touch-action: none; }
+.boardCard:active { cursor: grabbing; }
+.boardCard :is(button, a, input, select, textarea) { cursor: auto; touch-action: auto; }
+.boardDragging { opacity: .3; }
+.boardOverlay { box-shadow: 0 16px 36px var(--shadow); cursor: grabbing; pointer-events: none; }
+.dragCue { position: absolute; top: 10px; right: 13px; color: var(--muted); font-size: 22px; line-height: 1; pointer-events: none; }
+.cardBody { display: grid; gap: 12px; }
+.cardBody > strong { padding-right: 30px; overflow-wrap: anywhere; color: var(--text); font: 600 clamp(18px, 1.65vw, 22px)/1.25 var(--font-editorial); }
+.cardTop { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding-right: 30px; color: var(--muted); font: 600 var(--font-meta)/1.3 var(--font-ui); }
+.cardTop > span + span { padding-left: 8px; border-left: 1px solid var(--line); }
 .cardTop .cardWhen { display: inline-flex; align-items: center; gap: 5px; color: var(--amber); font-variant-numeric: tabular-nums; }
 .cardWhen svg { width: 14px; height: 14px; }
-.cardMeta { display: flex; flex-wrap: wrap; gap: 6px; color: var(--muted); font-size: var(--font-support); }
-.cardMeta > * { padding: 3px 7px; border-radius: 5px; background: var(--deep); }
+.cardMeta { display: flex; flex-wrap: wrap; gap: 6px 10px; color: var(--muted); font-size: var(--font-support); }
+.cardMeta > * + * { padding-left: 10px; border-left: 1px solid var(--line); }
 .cardMeta:empty { display: none; }
-.stagePicker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--card); }
-.stagePicker button { min-width: 0; min-height: 44px; padding: 4px 3px; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--muted); font: 700 var(--font-control)/1.2 var(--font-ui); cursor: pointer; }
-.stagePicker button:first-child { border-left: 0; }
-.stagePicker button:hover:not(:disabled) { background: var(--high); color: var(--text); }
-.stagePicker button[aria-pressed="true"] { background: var(--accent-soft); color: var(--blue-text); }
-.stagePicker button[aria-pressed="true"]:disabled { opacity: 1; }
-:global([data-theme="dark"]) .stagePicker button[aria-pressed="true"] { background: var(--accent-medium); color: var(--blue-ink); }
-.cardActions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
-.cardEdit { display: grid; gap: 11px; padding-top: 36px; }
+.cardActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-faint); }
+.cardAction { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--blue-text); font: 600 var(--font-support)/1.2 var(--font-ui); text-decoration: none; cursor: pointer; }
+.cardAction:hover { border-color: var(--blue); background: var(--accent-soft); }
+.cardAction:disabled { color: var(--muted); cursor: default; }
+.cardActions > .cardAction:last-child { color: var(--muted); }
+.cardActions > .cardAction:last-child:hover { border-color: var(--amber); color: var(--amber); background: var(--warning-soft); }
+.cardEdit { display: grid; gap: 11px; padding-top: 0; cursor: default; }
+.editHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editHeader h2 { margin: 0; color: var(--blue-text); font: 600 21px/1.2 var(--font-editorial); }
+.editClose { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); font: 400 26px/1 var(--font-ui); cursor: pointer; }
+.editClose:hover { border-color: var(--blue); background: var(--high); }
+.cardEditFields { display: grid; gap: 11px; min-width: 0; }
+.cardEdit .controlHead { display: grid; grid-template-columns: minmax(0, 1fr); }
+.workspace .cardEdit .timeControl input[type="time"] { width: 100%; max-width: none; min-width: 0; font-size: 16px; }
 .cardEdit :global(.select-field) { min-width: 0; }
 .cardEdit :global(.app-button) { flex: 1 1 auto; }
+.editDialog { width: min(860px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: 11px; background: var(--low); color: var(--text); box-shadow: 0 22px 60px var(--shadow); overflow: hidden; }
+.editDialog::backdrop { background: var(--modal-backdrop); }
+.editDialog .cardEdit { grid-template-rows: auto minmax(0, 1fr) auto; gap: 0; max-height: calc(100dvh - 34px); }
+.editDialog .editHeader { padding: 14px 20px; border-bottom: 1px solid var(--line-faint); }
+.editDialog .cardEditFields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; padding: 18px 20px; overflow-y: auto; }
+.editDialog .editFull { grid-column: 1 / -1; }
+.editDialog .cardActions { justify-content: end; padding: 12px 20px; background: var(--low); }
+.editDialog label { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--dim); font-size: var(--font-label); font-weight: 700; }
+.editDialog input:not([type="range"]), .editDialog textarea { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-soft); border-radius: 7px; background: var(--deep); color: var(--text); font: 400 var(--font-control)/1.4 var(--font-ui); }
+.editDialog textarea { min-height: 86px; resize: vertical; }
+.editDialog input[type="range"] { width: 100%; accent-color: var(--blue); }
+.editDialog .cardEdit .controlHead { display: grid; grid-template-columns: minmax(0, 1fr); }
+.editDialog .timeControl input[type="time"] { width: 100%; min-width: 0; }
+.editDialog :is(input, textarea, button, summary):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* Suggestions and feedback */
 .suggestionsPanel { display: grid; gap: 4px; }
@@ -162,4 +189,5 @@
   .boardColumn { min-height: 0; }
   .boardColumnBody { min-height: 70px; }
 }
+@media (max-width: 767px) { .cardEditFields { grid-template-columns: minmax(0, 1fr); } .boardCard .cardEdit .editHeader { position: sticky; z-index: 2; top: 0; padding: 8px 0; background: var(--low); } }
 @media (prefers-reduced-motion: reduce) { .workspace * { scroll-behavior: auto !important; transition: none !important; } }
