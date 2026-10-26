@@ -6,6 +6,8 @@ import { Icon, type IconName } from '../lib/icons'
 import { loginHrefFor, planLoginHref, type PlanId } from '../lib/auth-redirect'
 import type { Locale } from '../lib/i18n'
 import { ThemeToggle } from './theme-toggle'
+import { StyledSelect } from './styled-select'
+import { BrandLink } from './brand-link'
 import { LandingTaskPreview, type LandingTaskPreviewCopy } from './landing-task-preview'
 import styles from './landing-page.module.css'
 
@@ -451,10 +453,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
 
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link className={styles.brand} href="/" aria-label={copy.brandLabel}>
-            <span className={styles.brandMark} aria-hidden="true">M</span>
-            <span className={styles.brandName}>MasterMe</span>
-          </Link>
+          <BrandLink href="/" label={copy.brandLabel} className={styles.brand} />
           <LandingNavigation copy={copy} label={copy.navigationLabel} />
           <div className={styles.headerActions}>
             <Link className={styles.headerSignIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
@@ -467,9 +466,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
                 {landingTabs.map((tab) => <a href={tab.href} key={tab.key} onClick={() => mobileMenuRef.current?.removeAttribute('open')}><Icon name={tab.icon} />{copy.nav[tab.key]}</a>)}
               </nav>
               <div className={styles.menuUtilities}>
-                <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
-                  <option value="pt-BR">PT</option><option value="en-US">EN</option>
-                </select>
+                <StyledSelect compact icon={null} label={copy.languageLabel} value={locale} options={[{ value: 'pt-BR', label: 'PT' }, { value: 'en-US', label: 'EN' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
                 <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
               </div>
               <Link className={styles.menuSignIn} href={loginHrefFor('/study')}>{copy.signIn}</Link>
@@ -661,7 +658,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
-            <Link className={styles.brand} href="/"><span className={styles.brandMark} aria-hidden="true">M</span><span className={styles.brandName}>MasterMe</span></Link>
+            <BrandLink href="/" label={copy.brandLabel} className={styles.brand} />
             <LandingNavigation copy={copy} label={copy.footer.navigationLabel} />
             <div className={styles.footerActions}>
               <a href="#plans">{copy.nav.plans}</a>
@@ -670,9 +667,7 @@ export function LandingPage({ paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS
           </div>
           <div className={styles.footerBottom}>
             <div className={styles.footerPreferences}>
-              <select className={styles.localeSelect} aria-label={copy.languageLabel} value={locale} onChange={(event) => setLocale(event.target.value === 'en-US' ? 'en-US' : 'pt-BR')}>
-                <option value="pt-BR">PT</option><option value="en-US">EN</option>
-              </select>
+              <StyledSelect compact dropUp icon={null} label={copy.languageLabel} value={locale} options={[{ value: 'pt-BR', label: 'PT' }, { value: 'en-US', label: 'EN' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
               <ThemeToggle lightLabel={copy.lightTheme} darkLabel={copy.darkTheme} />
             </div>
             <p>{copy.footer.description}</p>

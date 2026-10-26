@@ -55,11 +55,13 @@ describe('Knowledge map', () => {
     expect(new Set([...layout.points.values()].map(({ x, y }) => `${x}:${y}`)).size).toBe(20);
   });
 
-  test('selects a node and updates its diagnosis without navigation', async () => {
+  test('selects a concept and updates its diagnosis without navigation', async () => {
     const nodes = [node('a', 'Raiz', [], ['b']), node('b', 'Filho', ['a'])];
     globalThis.fetch = (async (url: string) => new Response(JSON.stringify({ data: url.endsWith('/materials') ? [{ id: 'material-a', title: 'Material', content: 'Texto', locale: 'pt-BR', createdAt: '2026-01-01T00:00:00.000Z' }] : url.endsWith('/relations') || url.endsWith('/evidence') ? [] : nodes }), { status: 200 })) as typeof fetch;
     const view = render(<I18nProvider><KnowledgeMap /></I18nProvider>);
-    const child = await view.findByLabelText('Selecionar conceito Filho');
+    const concepts = await view.findByText('Conceitos (2)');
+    concepts.closest('details')?.setAttribute('open', '');
+    const child = view.getByRole('button', { name: 'Filho' });
     const locationBeforeSelection = window.location.href;
     fireEvent.click(child);
     await waitFor(() => expect(view.getByRole('heading', { name: 'Filho', level: 2 })).toBeTruthy());

@@ -12,7 +12,8 @@ describe('StyledSelect', () => {
   test('exposes a label and state and allows choosing an option', () => {
     const onValueChange = mock(() => {})
     const view = render(<StyledSelect label="Conceito" value="a" options={options} onValueChange={onValueChange} />)
-    const trigger = view.getByRole('combobox', { name: /conceito arquitetura/i })
+    const trigger = view.getByRole('combobox', { name: 'Conceito' })
+    expect(trigger.textContent).toContain('Arquitetura')
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(trigger)
     expect(view.getByRole('listbox', { name: 'Conceito' })).toBeTruthy()

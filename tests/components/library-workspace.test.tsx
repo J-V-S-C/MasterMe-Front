@@ -77,7 +77,7 @@ test('keeps a selected material and concept after adding a task', async () => {
   fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review indexes' } });
   fireEvent.click(view.getByRole('button', { name: 'Adicionar tarefa' }));
   await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ materialId: 'material', conceptId: 'concept' })));
-  expect(view.getByRole('combobox', { name: /Conceito Indexes/i })).toBeTruthy();
+  expect(view.getByRole('combobox', { name: 'Conceito' }).textContent).toContain('Indexes');
   materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); concepts.mockRestore(); create.mockRestore();
 });
 
@@ -100,7 +100,7 @@ test('edits a task in its own form without submitting a new task', async () => {
   fireEvent.click(await view.findByRole('tab', { name: /Quadro/ }));
   const card = view.container.querySelector('#task-1') as HTMLElement;
   fireEvent.click(within(card).getByRole('button', { name: 'Editar' }));
-  const editForm = within(card).getByRole('button', { name: 'Salvar' }).closest('form');
+  const editForm = (await view.findByRole('button', { name: 'Salvar' })).closest('form');
   expect(editForm).toBeTruthy();
   expect(editForm?.parentElement?.closest('form')).toBeNull();
   fireEvent.input(within(editForm!).getByLabelText('Tarefa'), { target: { value: 'Renamed' } });
