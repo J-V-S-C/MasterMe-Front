@@ -133,7 +133,7 @@ export function TimeSlider({ value, onChange, label, locale, periods, compact = 
   return <div className={`${styles.timeControl} ${compact ? styles.compact : ''}`}>
     <div className={styles.controlHead}>
       <span><Icon name="clock" />{label}</span>
-      <output htmlFor={id}>{formatClock(value, locale)}</output>
+      <input type="time" value={value} aria-label={label} onInput={(event) => onChange(event.currentTarget.value)} />
     </div>
     <input
       id={id}
@@ -142,7 +142,7 @@ export function TimeSlider({ value, onChange, label, locale, periods, compact = 
       max="1380"
       step="15"
       value={minutes}
-      aria-label={label}
+      aria-label={`${label} ${locale === 'pt-BR' ? 'controle deslizante' : 'slider'}`}
       onInput={(event) => onChange(clockValue(Number(event.currentTarget.value)))}
     />
     <div className={styles.timeTicks} aria-hidden="true"><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
@@ -164,5 +164,13 @@ export function DurationChips({ value, onChange, label, locale, noEstimate }: {
     <div className={styles.chipRow}>
       {[15, 30, 45, 60, 90, null].map((minutes) => <Chip key={minutes ?? 'none'} pressed={value === minutes} onClick={() => onChange(minutes)}>{minutes === null ? noEstimate : formatDuration(minutes, locale)}</Chip>)}
     </div>
+    <label className={styles.customDuration}>{locale === 'pt-BR' ? 'Outro tempo (minutos)' : 'Custom duration (minutes)'}
+      <input type="number" min="1" max="480" step="1" value={value ?? ''} placeholder={locale === 'pt-BR' ? '1 a 480' : '1 to 480'} onInput={(event) => {
+        const raw = event.currentTarget.value;
+        if (!raw) { onChange(null); return; }
+        const minutes = Number(raw);
+        if (Number.isFinite(minutes)) onChange(Math.min(480, Math.max(1, Math.trunc(minutes))));
+      }} />
+    </label>
   </fieldset>;
 }

@@ -1,26 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { api, type Concept, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useRealtimeRefresh } from './realtime-provider';
 import { StyledSelect } from './styled-select';
 import { ActionButton } from './action-button';
 import { Icon } from '../lib/icons';
-import { TaskBoard, boardStatuses, type BoardStatus } from './task-board';
+import { TaskBoard, type BoardStatus } from './task-board';
 import { DayPicker, DurationChips, TimeSlider, dayKey, formatClock, formatDayShort, formatDuration } from './task-controls';
 import styles from './library-workspace.module.css';
-import { WorkspaceHeading } from './workspace-heading';
 
 const copy = {
   'pt-BR': {
-    title: 'Suas tarefas de estudo',
-    intro: 'Escolha o dia, ajuste o ritmo e acompanhe o que já começou.',
-    composerKicker: 'NOVA TAREFA',
-    composerTitle: 'O que entra no seu dia?',
-    composerHint: 'Escreva só o essencial. Data, horário e duração ficam nos controles.',
+    title: 'Tarefas',
     task: 'Tarefa',
+    description: 'Descrição',
+    descriptionPlaceholder: 'O que você pretende fazer nesta tarefa?',
     taskPlaceholder: 'Ex.: Revisar os exemplos do capítulo 3',
     tabsLabel: 'Áreas da tarefa',
     dateTab: 'Quando',
@@ -53,26 +50,25 @@ const copy = {
     remove: 'Remover',
     save: 'Salvar',
     edit: 'Editar',
+    editTitle: 'Editar tarefa',
+    closeEdit: 'Fechar edição',
     cancel: 'Cancelar',
     study: 'Estudar conceito',
     suggestions: 'Sugestões de estudo',
     suggestionHint: 'Ideias opcionais baseadas nas suas explicações.',
     board: 'Quadro',
     suggestionsTab: 'Sugestões',
-    boardHint: 'Arraste os cartões para mudar a etapa. Os três botões de cada cartão fazem o mesmo.',
+    boardHint: 'Arraste cartões entre colunas. Pelo teclado, foque um cartão, pressione Espaço, use W/S ou ↑/↓ para mudar a prioridade e A/D ou ←/→ para mudar de coluna; pressione Espaço para soltar.',
     accept: 'Adicionar tarefa',
     ignore: 'Ignorar',
     failed: 'Não foi possível salvar. Tente novamente.',
     drag: 'Arrastar tarefa',
-    moveTo: 'Etapa',
   },
   'en-US': {
-    title: 'Your study tasks',
-    intro: 'Choose the day, set the pace, and see what is already moving.',
-    composerKicker: 'NEW TASK',
-    composerTitle: 'What goes into your day?',
-    composerHint: 'Write only the essentials. Date, time, and duration stay in the controls.',
+    title: 'Tasks',
     task: 'Task',
+    description: 'Description',
+    descriptionPlaceholder: 'What do you plan to do in this task?',
     taskPlaceholder: 'E.g. Review the examples in chapter 3',
     tabsLabel: 'Task areas',
     dateTab: 'When',
@@ -105,18 +101,19 @@ const copy = {
     remove: 'Remove',
     save: 'Save',
     edit: 'Edit',
+    editTitle: 'Edit task',
+    closeEdit: 'Close editor',
     cancel: 'Cancel',
     study: 'Study concept',
     suggestions: 'Study suggestions',
     suggestionHint: 'Optional ideas based on your explanations.',
     board: 'Board',
     suggestionsTab: 'Suggestions',
-    boardHint: 'Drag cards to change their stage. The three buttons on each card do the same.',
+    boardHint: 'Drag cards between columns. With a keyboard, focus a card, press Space, use W/S or ↑/↓ to change priority and A/D or ←/→ to change columns, then press Space to drop.',
     accept: 'Add task',
     ignore: 'Ignore',
     failed: 'Could not save. Try again.',
     drag: 'Drag task',
-    moveTo: 'Stage',
   },
 } as const;
 
@@ -137,6 +134,7 @@ export function LibraryWorkspace() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [suggestions, setSuggestions] = useState<StudySuggestion[]>([]);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => dayKey(new Date()));
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState<number | null>(30);
@@ -171,11 +169,13 @@ export function LibraryWorkspace() {
     void operate(async () => {
       await api.createTask({
         title: title.trim(), activityType: 'READ',
+        description: description.trim() || undefined,
         materialId: materialId || undefined, conceptId: conceptId || undefined,
         durationMinutes: duration ?? undefined,
         scheduledAt: selectedDate ? startIso(`${selectedDate}T${time}`) ?? undefined : undefined,
       });
       setTitle('');
+      setDescription('');
     });
   };
   const boardTasks = useMemo(() => tasks.filter((task) => task.status !== 'REMOVED').sort((a, b) => a.sort_order - b.sort_order || (a.scheduled_at ?? '9999').localeCompare(b.scheduled_at ?? '9999') || a.id.localeCompare(b.id)), [tasks]);
@@ -201,11 +201,6 @@ export function LibraryWorkspace() {
       setError(cause instanceof Error ? cause.message : t.failed);
     } finally { setBusy(false); }
   };
-  const moveStatus = (task: StudyTask, status: BoardStatus) => {
-    if (task.status === status) return;
-    const remaining = boardTasks.filter((item) => item.id !== task.id);
-    void persistBoard([...remaining, { ...task, status }]);
-  };
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === 'PENDING');
   const activeTab: WorkspaceTab = tab === 'suggestions' && pendingSuggestions.length === 0 ? 'board' : tab;
   const tabs: Array<{ key: WorkspaceTab; label: string; detail: string; icon: 'calendar' | 'clock' | 'columns' | 'sparkles' }> = [
@@ -228,28 +223,23 @@ export function LibraryWorkspace() {
   const selectedConcept = concepts.find((item) => item.id === conceptId);
 
   return <div className={styles.workspace}>
-    <WorkspaceHeading eyebrow={locale === 'pt-BR' ? 'PLANEJAMENTO' : 'PLANNING'} title={t.title} description={t.intro} />
     {error && <p role="alert" className={styles.error}>{error}</p>}
 
     <section className={styles.composer} aria-labelledby="composer-title">
       <header className={styles.composerHead}>
-        <div>
-          <span className={styles.kicker}>{t.composerKicker}</span>
-          <h2 id="composer-title">{t.composerTitle}</h2>
-          <p>{t.composerHint}</p>
-        </div>
+        <h1 id="composer-title">{t.title}</h1>
         <ol className={styles.summaryChips} aria-label={t.resume}>
           <li><Icon name="calendar" />{selectedDate ? formatDayShort(selectedDate, locale) : t.noDate}</li>
           {selectedDate && <li><Icon name="clock" />{formatClock(time, locale)}</li>}
           <li><Icon name="bolt" />{formatDuration(duration, locale)}</li>
         </ol>
       </header>
-      <form className={`${styles.composerForm} ${wide ? styles.formWide : ''}`} onSubmit={create}>
+      <div className={`${styles.composerForm} ${wide ? styles.formWide : ''}`}>
         <div className={styles.composerMain}>
-          <div className={styles.titleRow}>
+          <form id="task-create-form" className={styles.titleRow} onSubmit={create}>
             <label className={styles.titleField}>{t.task}<input required maxLength={160} value={title} placeholder={t.taskPlaceholder} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
             {wide && <ActionButton variant="primary" type="submit" disabled={busy || !title.trim()}>{t.add}</ActionButton>}
-          </div>
+          </form>
           <div className={styles.composerTabs} role="tablist" aria-label={t.tabsLabel} onKeyDown={(event) => {
             if (event.key === 'ArrowRight') { event.preventDefault(); moveTab(1); }
             if (event.key === 'ArrowLeft') { event.preventDefault(); moveTab(-1); }
@@ -264,6 +254,7 @@ export function LibraryWorkspace() {
           </div>}
 
           {activeTab === 'details' && <div id="workspace-panel-details" role="tabpanel" aria-labelledby="workspace-tab-details" className={styles.composerPanel}>
+            <label className={styles.descriptionField}>{t.description}<textarea maxLength={500} value={description} placeholder={t.descriptionPlaceholder} onInput={(event) => setDescription(event.currentTarget.value)} /></label>
             <div className={styles.detailsGrid}>
               <TimeSlider value={time} onChange={setTime} label={t.time} locale={locale} periods={t.periods} />
               <DurationChips value={duration} onChange={setDuration} label={t.duration} locale={locale} noEstimate={t.noEstimate} />
@@ -274,9 +265,9 @@ export function LibraryWorkspace() {
             </div>
           </div>}
 
-          {activeTab === 'board' && <div id="workspace-panel-board" role="tabpanel" aria-labelledby="workspace-tab-board" className={styles.composerPanel}>
+          {activeTab === 'board' && <div id="workspace-panel-board" role="tabpanel" aria-labelledby="workspace-tab-board" className={`${styles.composerPanel} ${styles.boardPanel}`}>
             <p className={styles.boardHint}>{t.boardHint}</p>
-            <TaskBoard tasks={boardTasks} labels={statusLabels(locale)} onMove={(next) => void persistBoard(next)} renderCard={(task) => <TaskCard task={task} materials={materials} locale={locale} busy={busy} onStatusChange={(status) => moveStatus(task, status)} operate={operate} />} />
+            <TaskBoard tasks={boardTasks} labels={statusLabels(locale)} onMove={(next) => void persistBoard(next)} renderCard={(task) => <TaskCard task={task} materials={materials} locale={locale} busy={busy} operate={operate} />} />
           </div>}
 
           {activeTab === 'suggestions' && <div id="workspace-panel-suggestions" role="tabpanel" aria-labelledby="workspace-tab-suggestions" className={styles.composerPanel}>
@@ -294,6 +285,7 @@ export function LibraryWorkspace() {
               {selectedDate && <span>{formatClock(time, locale)}</span>}
             </div>
             <strong>{title.trim() || t.previewTitle}</strong>
+            {description.trim() && <p className={styles.cardDescription}>{description.trim()}</p>}
             <div className={styles.cardMeta}>
               <span>{formatDuration(duration, locale)}</span>
               {selectedMaterial && <span>{selectedMaterial.title}</span>}
@@ -302,18 +294,23 @@ export function LibraryWorkspace() {
             <span className={styles.previewStage}><Icon name="columns" />{t.pending}</span>
           </article>
           <p>{t.previewHint}</p>
-          <ActionButton variant="primary" type="submit" disabled={busy || !title.trim()}>{t.add}</ActionButton>
+          <ActionButton variant="primary" type="submit" form="task-create-form" disabled={busy || !title.trim()}>{t.add}</ActionButton>
           <small>{t.addHint}</small>
         </aside>}
-      </form>
+      </div>
     </section>
   </div>;
 }
 
-function TaskCard({ task, materials, locale, busy, operate, onStatusChange }: { task: StudyTask; materials: MaterialSummary[]; locale: 'pt-BR' | 'en-US'; busy: boolean; operate: (action: () => Promise<unknown>) => Promise<boolean>; onStatusChange: (status: BoardStatus) => void }) {
+function TaskCard({ task, materials, locale, busy, operate }: { task: StudyTask; materials: MaterialSummary[]; locale: 'pt-BR' | 'en-US'; busy: boolean; operate: (action: () => Promise<unknown>) => Promise<boolean> }) {
   const t = copy[locale];
   const [editing, setEditing] = useState(false);
+  const [dialogMode, setDialogMode] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? '');
   const [scheduledAt, setScheduledAt] = useState(task.scheduled_at ? `${dayKey(task.scheduled_at)}T${String(new Date(task.scheduled_at).getHours()).padStart(2, '0')}:${String(new Date(task.scheduled_at).getMinutes()).padStart(2, '0')}` : '');
   const [duration, setDuration] = useState<number | null>(task.duration_minutes);
   const [materialId, setMaterialId] = useState(task.material_id ?? '');
@@ -325,8 +322,20 @@ function TaskCard({ task, materials, locale, busy, operate, onStatusChange }: { 
     void api.concepts(materialId).then((rows) => { if (active) setConcepts(rows); }).catch(() => { if (active) setConcepts([]); });
     return () => { active = false; };
   }, [editing, materialId]);
+  useEffect(() => {
+    if (!editing || !dialogMode) return;
+    const dialog = dialogRef.current;
+    if (!dialog || typeof dialog.showModal !== 'function') { setDialogMode(false); return; }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    closeButtonRef.current?.focus();
+    return () => { document.body.style.overflow = previousOverflow; if (dialog.open) dialog.close(); };
+  }, [editing, dialogMode]);
+  useEffect(() => { if (editing && !dialogMode) closeButtonRef.current?.focus(); }, [editing, dialogMode]);
   const reset = () => {
     setTitle(task.title);
+    setDescription(task.description ?? '');
     setScheduledAt(task.scheduled_at ? `${dayKey(task.scheduled_at)}T${String(new Date(task.scheduled_at).getHours()).padStart(2, '0')}:${String(new Date(task.scheduled_at).getMinutes()).padStart(2, '0')}` : '');
     setDuration(task.duration_minutes);
     setMaterialId(task.material_id ?? '');
@@ -335,26 +344,42 @@ function TaskCard({ task, materials, locale, busy, operate, onStatusChange }: { 
   const material = materials.find((item) => item.id === task.material_id);
   const datePart = scheduledAt.slice(0, 10);
   const timePart = scheduledAt.slice(11, 16) || '09:00';
-  return editing ? <form className={styles.cardEdit} onSubmit={(event) => { event.preventDefault(); void operate(() => api.updateTask(task.id, { title: title.trim(), materialId: materialId || null, conceptId: conceptId || null, durationMinutes: duration, scheduledAt: startIso(scheduledAt) })).then((saved) => { if (saved) setEditing(false); }); }}>
-    <label>{t.task}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
-    <label>{t.dateLabel}<input type="date" value={datePart} onInput={(event) => setScheduledAt(`${event.currentTarget.value}T${timePart}`)} /></label>
-    <TimeSlider value={timePart} onChange={(next) => setScheduledAt(`${datePart || dayKey(new Date())}T${next}`)} label={t.time} locale={locale} periods={t.periods} compact />
-    <DurationChips value={duration} onChange={setDuration} label={t.duration} locale={locale} noEstimate={t.noEstimate} />
-    <StyledSelect label={t.material} value={materialId} options={[{ value: '', label: t.optionalMaterial }, ...materials.map((item) => ({ value: item.id, label: item.title }))]} onValueChange={(id) => { setMaterialId(id); setConceptId(''); }} />
-    <StyledSelect label={t.concept} value={conceptId} disabled={!materialId || !concepts.length} options={[{ value: '', label: t.optionalConcept }, ...concepts.map((item) => ({ value: item.id, label: item.name }))]} onValueChange={setConceptId} />
-    <div className={styles.cardActions}><ActionButton variant="primary" type="submit" disabled={busy}>{t.save}</ActionButton><ActionButton variant="ghost" onClick={() => { reset(); setEditing(false); }}>{t.cancel}</ActionButton></div>
-  </form> : <div className={styles.cardBody}>
+  const closeEditor = () => {
+    reset();
+    setEditing(false);
+    requestAnimationFrame(() => editButtonRef.current?.focus());
+  };
+  const editor = <form className={styles.cardEdit} onSubmit={(event) => { event.preventDefault(); void operate(() => api.updateTask(task.id, { title: title.trim(), description: description.trim(), materialId: materialId || null, conceptId: conceptId || null, durationMinutes: duration, scheduledAt: startIso(scheduledAt) })).then((saved) => { if (saved) { setEditing(false); requestAnimationFrame(() => editButtonRef.current?.focus()); } }); }}>
+    <header className={styles.editHeader}><h2>{t.editTitle}</h2><button ref={closeButtonRef} type="button" className={styles.editClose} aria-label={t.closeEdit} onClick={closeEditor}>×</button></header>
+    <div className={styles.cardEditFields}>
+      <label className={styles.editFull}>{t.task}<input required maxLength={160} value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
+      <label className={styles.editFull}>{t.description}<textarea maxLength={500} value={description} placeholder={t.descriptionPlaceholder} onInput={(event) => setDescription(event.currentTarget.value)} /></label>
+      <label>{t.dateLabel}<input type="date" value={datePart} onInput={(event) => setScheduledAt(`${event.currentTarget.value}T${timePart}`)} /></label>
+      <TimeSlider value={timePart} onChange={(next) => setScheduledAt(`${datePart || dayKey(new Date())}T${next}`)} label={t.time} locale={locale} periods={t.periods} compact />
+      <div className={styles.editFull}><DurationChips value={duration} onChange={setDuration} label={t.duration} locale={locale} noEstimate={t.noEstimate} /></div>
+      <StyledSelect label={t.material} value={materialId} options={[{ value: '', label: t.optionalMaterial }, ...materials.map((item) => ({ value: item.id, label: item.title }))]} onValueChange={(id) => { setMaterialId(id); setConceptId(''); }} />
+      <StyledSelect label={t.concept} value={conceptId} disabled={!materialId || !concepts.length} options={[{ value: '', label: t.optionalConcept }, ...concepts.map((item) => ({ value: item.id, label: item.name }))]} onValueChange={setConceptId} />
+    </div>
+    <div className={styles.cardActions}><ActionButton variant="primary" type="submit" disabled={busy}>{t.save}</ActionButton><ActionButton variant="ghost" onClick={closeEditor}>{t.cancel}</ActionButton></div>
+  </form>;
+  const card = <div className={styles.cardBody}>
     <div className={styles.cardTop}>
       <span className={styles.cardWhen}><Icon name="clock" />{task.scheduled_at ? new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(task.scheduled_at)) : t.unscheduled}</span>
       <span>{formatDuration(task.duration_minutes, locale)}</span>
     </div>
     <strong>{task.title}</strong>
+    {task.description && <p className={styles.cardDescription}>{task.description}</p>}
     <div className={styles.cardMeta}>{material && <span>{material.title}</span>}{task.concepts && <span>{task.concepts.name}</span>}</div>
-    <div className={styles.stagePicker} role="group" aria-label={t.moveTo}>
-      {boardStatuses.map((status) => <button key={status} type="button" aria-pressed={task.status === status} disabled={busy || task.status === status} onClick={() => onStatusChange(status)}>{statusLabels(locale)[status]}</button>)}
+    <div className={styles.cardActions}>
+      {task.concept_id && task.material_id && <Link className={styles.cardAction} href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{t.study}</Link>}
+      <button ref={editButtonRef} className={styles.cardAction} type="button" onClick={() => { reset(); setDialogMode(window.matchMedia?.('(min-width: 768px)').matches ?? false); setEditing(true); }}>{t.edit}</button>
+      <button className={styles.cardAction} type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{t.remove}</button>
     </div>
-    <div className={styles.cardActions}>{task.concept_id && task.material_id && <Link className="app-button secondary small" href={`/study?material=${task.material_id}&concept=${task.concept_id}`}>{t.study}</Link>}<ActionButton size="small" onClick={() => setEditing(true)}>{t.edit}</ActionButton><ActionButton variant="ghost" size="small" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{t.remove}</ActionButton></div>
   </div>;
+  return <>
+    {editing && dialogMode && <dialog ref={dialogRef} className={styles.editDialog} aria-label={t.editTitle} onCancel={(event) => { event.preventDefault(); closeEditor(); }}>{editor}</dialog>}
+    {editing && !dialogMode ? editor : card}
+  </>;
 }
 
 export function SuggestionEditor({ suggestion, plans, busy, operate, locale, labels }: {

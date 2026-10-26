@@ -46,14 +46,15 @@ test('creates a task from the visual date and detail controls', async () => {
   const restore = mockWorkspace();
   const create = spyOn(api, 'createTask').mockResolvedValue(task('1', 'Review chapter'));
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  await view.findByRole('heading', { name: 'Suas tarefas de estudo' });
+  await view.findByRole('heading', { name: 'Tarefas' });
   fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review chapter' } });
   fireEvent.click(view.getByRole('button', { name: 'Amanhã' }));
   fireEvent.click(view.getByRole('tab', { name: /Detalhes/ }));
-  fireEvent.input(view.getByLabelText('Horário'), { target: { value: '870' } });
+  fireEvent.input(view.getByLabelText('Horário'), { target: { value: '14:30' } });
+  fireEvent.input(view.getByLabelText('Descrição'), { target: { value: 'Compare the two examples.' } });
   fireEvent.click(view.getByRole('button', { name: '45min' }));
-  fireEvent.submit(view.getByRole('button', { name: 'Adicionar tarefa' }).closest('form')!);
-  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Review chapter', durationMinutes: 45, scheduledAt: expect.any(String) })));
+  fireEvent.click(view.getByRole('button', { name: 'Adicionar tarefa' }));
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Review chapter', description: 'Compare the two examples.', durationMinutes: 45, scheduledAt: expect.any(String) })));
   expect(new Date(create.mock.calls[0]![0].scheduledAt!).getHours()).toBe(14);
   expect(new Date(create.mock.calls[0]![0].scheduledAt!).getMinutes()).toBe(30);
   restore(); create.mockRestore();
@@ -66,7 +67,7 @@ test('keeps a selected material and concept after adding a task', async () => {
   const concepts = spyOn(api, 'concepts').mockResolvedValue([{ id: 'concept', materialId: 'material', name: 'Indexes', description: '', kind: 'NODE', sourceExcerpt: '', fundamentalPremises: [], edgeCases: [], prerequisiteIds: [], nextIds: [], generatedLocale: 'en-US' }]);
   const create = spyOn(api, 'createTask').mockResolvedValue(task('1', 'Review indexes'));
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  await view.findByRole('heading', { name: 'Suas tarefas de estudo' });
+  await view.findByRole('heading', { name: 'Tarefas' });
   fireEvent.click(view.getByRole('tab', { name: /Detalhes/ }));
   fireEvent.click(view.getByRole('combobox', { name: /Material/i }));
   fireEvent.click(view.getByRole('option', { name: 'Databases' }));
@@ -74,21 +75,39 @@ test('keeps a selected material and concept after adding a task', async () => {
   fireEvent.click(view.getByRole('combobox', { name: /Conceito/i }));
   fireEvent.click(view.getByRole('option', { name: 'Indexes' }));
   fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review indexes' } });
-  fireEvent.submit(view.getByRole('button', { name: 'Adicionar tarefa' }).closest('form')!);
+  fireEvent.click(view.getByRole('button', { name: 'Adicionar tarefa' }));
   await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ materialId: 'material', conceptId: 'concept' })));
   expect(view.getByRole('combobox', { name: /Conceito Indexes/i })).toBeTruthy();
   materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); concepts.mockRestore(); create.mockRestore();
 });
 
-test('moves a card to Doing and persists status and order together', async () => {
+test('keeps the card draggable without a separate move control', async () => {
   const restore = mockWorkspace([task('1', 'First'), task('2', 'Second')]);
-  const reorder = spyOn(api, 'reorderTasks').mockResolvedValue([]);
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
   fireEvent.click(await view.findByRole('tab', { name: /Quadro/ }));
   await view.findByText('First');
-  const card = view.container.querySelector('#task-1')!;
-  fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Fazendo' }));
-  await waitFor(() => expect(reorder).toHaveBeenCalledWith(expect.arrayContaining(['1', '2']), expect.objectContaining({ '1': 'IN_PROGRESS' })));
-  restore(); reorder.mockRestore();
+  const card = view.container.querySelector('#task-1') as HTMLElement;
+  expect(card.getAttribute('tabindex')).toBe('0');
+  expect(within(card).queryByText('Mover')).toBeNull();
+  restore();
+});
+
+test('edits a task in its own form without submitting a new task', async () => {
+  const restore = mockWorkspace([task('1', 'First', 'PENDING', '2026-10-25T12:00:00Z')]);
+  const update = spyOn(api, 'updateTask').mockResolvedValue(task('1', 'Renamed'));
+  const create = spyOn(api, 'createTask').mockResolvedValue(task('2', 'Unwanted'));
+  const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
+  fireEvent.click(await view.findByRole('tab', { name: /Quadro/ }));
+  const card = view.container.querySelector('#task-1') as HTMLElement;
+  fireEvent.click(within(card).getByRole('button', { name: 'Editar' }));
+  const editForm = within(card).getByRole('button', { name: 'Salvar' }).closest('form');
+  expect(editForm).toBeTruthy();
+  expect(editForm?.parentElement?.closest('form')).toBeNull();
+  fireEvent.input(within(editForm!).getByLabelText('Tarefa'), { target: { value: 'Renamed' } });
+  fireEvent.input(within(editForm!).getByLabelText('Descrição'), { target: { value: 'Read both sections.' } });
+  fireEvent.submit(editForm!);
+  await waitFor(() => expect(update).toHaveBeenCalledWith('1', expect.objectContaining({ title: 'Renamed', description: 'Read both sections.' })));
+  expect(create).not.toHaveBeenCalled();
+  restore(); update.mockRestore(); create.mockRestore();
 });
 

@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ActionButton } from '../../components/action-button'
 import { Icon, type IconName } from '../../lib/icons'
 import { ThemeToggle } from '../../components/theme-toggle'
@@ -37,7 +36,6 @@ export default function LoginPage() {
 
 function LoginContent() {
   const { t, locale, setLocale } = useI18n()
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -83,7 +81,7 @@ function LoginContent() {
         setCreating(false); setPassword(''); setConfirmation('')
         return
       }
-      router.replace(destination); router.refresh()
+      window.location.assign(destination)
     } catch (cause) { setError(cause instanceof Error ? cause.message : t('authLoginFailed')) }
     finally { setLoading(false) }
   }
