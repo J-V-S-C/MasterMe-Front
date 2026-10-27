@@ -59,6 +59,11 @@ The four destinations belong to the same environment, but each has a different i
 
 The center of Study is the student's source, a question, their explanation, and a grounded response. It should feel focused and private enough for an imperfect first attempt. The answer area deserves space and calm. The diagnosis should separate what the student established from what remains uncertain. A recommendation should name the concept and explain why it follows.
 
+Keep the question readable on its own. Offer a short, source-grounded concept explanation behind an explicit control beside the question, with a separate control for reading the original source. Open a new question with the explanation closed so the student chooses when to use help.
+For uploaded PDFs, show the original pages in a book reader that uses the available Study width, with little space around the page and clear page controls. Clicking the left or right edge of a page turns it; the labeled controls and arrow keys remain available. Mark the studied passage only when it can be matched to text on a page; otherwise say that its location is uncertain and let the student browse. Do not repeat the selected PDF passage as raw text below the page. Source disclosure, page navigation, and other secondary actions need a visible control surface, readable label, and clear focus state; they should never resemble unstyled text. For text and Markdown, keep readable prose with its editorial section and page when known, and mark the selected passage within that prose instead of duplicating it above. Selecting a concept opens its question directly. Keep saved explanations accessible and make a new attempt after approval an explicit confirmed choice that preserves the original result.
+
+Put the material and concept controls before the question without repeating the selected material in a large page banner. After an answer is evaluated, bring the diagnosis into view and move keyboard focus to it so the student can read the result without searching below the answer.
+
 When there is no material, the act of adding one is the main event. A concise introduction can orient the student, but it should not compete with the form or repeat its instructions.
 
 ### Tasks: make an intention concrete

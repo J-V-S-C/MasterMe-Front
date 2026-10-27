@@ -6,6 +6,7 @@ export type MaterialSummary = {
   title: string;
   locale: SupportedLocale;
   createdAt: string;
+  sourceType?: 'TEXT' | 'PDF' | 'MARKDOWN' | 'TXT';
 };
 export type Material = MaterialSummary & { content: string };
 export type EvaluationStatus = 'PASSED' | 'LOGICAL_BREAK' | 'INCOMPLETE';
@@ -417,6 +418,8 @@ export const api = {
     call<Concept[]>(`/materials/${id}/localize`, 'POST', { locale }),
   startSession: (conceptId: string) =>
     call<StudySession>(`/concepts/${conceptId}/sessions`, 'POST'),
+  conceptSessions: (conceptId: string) =>
+    call<StudySession[]>(`/concepts/${conceptId}/sessions`),
   getSession: (sessionId: string) =>
     call<StudySession>(`/sessions/${sessionId}`),
   answer: (sessionId: string, answer: string) =>
