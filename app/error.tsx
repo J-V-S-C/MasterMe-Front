@@ -7,7 +7,9 @@ import { reportClientError } from '../lib/client-observability'
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error('Page render failed', { name: error.name, digest: error.digest })
+    console.error('Page render failed', process.env.NODE_ENV === 'development'
+      ? { name: error.name, message: error.message, stack: error.stack, digest: error.digest }
+      : { name: error.name, digest: error.digest })
     reportClientError('render')
   }, [error])
 

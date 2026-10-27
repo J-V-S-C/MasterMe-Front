@@ -1,22 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from 'next/link';
-import { ApiError, api, uploadMaterial, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
+import { ApiError, api, uploadMaterial, type EditorialUnit, type KnowledgeNode, type Material, type MaterialSummary, type StudySession } from "../lib/api";
 import { type ExtractionProgress } from "../lib/extraction-progress";
 import { useMaterialExtraction } from "../lib/use-material-extraction";
 import { Icon } from "../lib/icons";
 import { LoadingSkeleton } from "./loading-skeleton";
 import { StyledSelect } from "./styled-select";
 import { ActionButton } from "./action-button";
+import { PdfBookViewer } from "./pdf-book-viewer";
 import { getActiveMaterialId, saveActiveMaterialId } from "../lib/active-material";
 import { studyState } from "../lib/study-state";
 import { useI18n } from "../lib/i18n";
 import { useRealtimeRefresh } from "./realtime-provider";
 import { useBilling } from "./billing-provider";
 import { knowledgeStatusKey } from "../lib/knowledge-status";
-import { WorkspaceHeading } from "./workspace-heading";
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 const extractionStageKeys = {
@@ -28,6 +28,15 @@ const extractionStageKeys = {
   READY: ['extractionReadyTitle', 'extractionReadyDescription'],
 } as const;
 
+class SourceViewerBoundary extends Component<{ children: ReactNode; fallback: string }, { failed: boolean; message: string }> {
+  state = { failed: false, message: '' };
+  static getDerivedStateFromError(error: Error) { return { failed: true, message: error.message }; }
+  componentDidCatch(error: Error) {
+    if (process.env.NODE_ENV === 'development') console.error('Source viewer failed', { name: error.name, message: error.message, stack: error.stack });
+  }
+  render() { return this.state.failed ? <p className="form-error" role="alert">{this.props.fallback}{process.env.NODE_ENV === 'development' && this.state.message && <small> {this.state.message}</small>}</p> : this.props.children; }
+}
+
 export function LiveStudy() {
   const { locale, t } = useI18n();
   const translateRef = useRef(t);
@@ -37,12 +46,15 @@ export function LiveStudy() {
   const requestedMaterialId = searchParams.get("material");
   const requestedConceptId = searchParams.get("concept");
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
-  const [material, setMaterial] = useState<Material | null>(null);
   const [materialId, setMaterialId] = useState("");
+  const [material, setMaterial] = useState<Material | null>(null);
+  const [outline, setOutline] = useState<EditorialUnit[]>([]);
   const [materialUnavailable, setMaterialUnavailable] = useState(false);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [conceptId, setConceptId] = useState("");
   const [session, setSession] = useState<StudySession | null>(null);
+  const [history, setHistory] = useState<StudySession[]>([]);
+  const [loadingSession, setLoadingSession] = useState(false);
   const [answer, setAnswer] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -57,6 +69,7 @@ export function LiveStudy() {
   const activeSelection = useRef("");
   const nodeLoadRequest = useRef(0);
   const currentMaterial = useRef(materialId);
+  const pendingFeedback = useRef<string | null>(null);
   activeSelection.current = `${materialId}:${conceptId}`;
   currentMaterial.current = materialId;
 
@@ -98,18 +111,22 @@ export function LiveStudy() {
   useEffect(() => {
     if (!materialId) return;
     let active = true;
+    pendingFeedback.current = null;
     restoredSelection.current = null;
     setSession(null);
+    setHistory([]);
+    setMaterial(null);
+    setOutline([]);
     setAnswer("");
     setNodes([]);
     setConceptId("");
-    setMaterial(null);
     setMaterialUnavailable(false);
     void api.material(materialId).then((detail) => { if (active) setMaterial(detail); }).catch((cause: unknown) => {
       if (!active) return;
       if (cause instanceof ApiError && cause.status === 404) setMaterialUnavailable(true);
       else setError(message(cause, translateRef.current('studyMaterialLoadError')));
     });
+    void api.outline(materialId).then((units) => { if (active) setOutline(units); }).catch(() => {});
     void loadNodes(materialId);
     return () => { active = false; };
   }, [materialId, loadNodes]);
@@ -156,6 +173,8 @@ export function LiveStudy() {
 
   const begin = async () => {
     if (!conceptId) return;
+    pendingFeedback.current = null;
+    setLoadingSession(true);
     setError("");
     try {
       const s = await api.startSession(conceptId);
@@ -163,9 +182,17 @@ export function LiveStudy() {
       studyState.saveSession(materialId, conceptId, s.id);
       if (activeSelection.current === `${materialId}:${conceptId}`) {
         setSession(s);
+        setHistory((current) => [s, ...current]);
         setAnswer("");
       }
     } catch (cause: unknown) { setError(message(cause, t('studyBeginError'))); }
+    finally { setLoadingSession(false); }
+  };
+
+  const repeat = () => {
+    const approved = history.some((item) => item.state === 'EXPLANATION_PASSED');
+    if (approved && !window.confirm(t('repeatConfirm'))) return;
+    void begin();
   };
 
   useEffect(() => {
@@ -174,22 +201,25 @@ export function LiveStudy() {
     if (restoredSelection.current === key) return;
     restoredSelection.current = key;
     setSession(null);
+    setHistory([]);
     setAnswer("");
-    const saved = studyState.sessionId(materialId, conceptId);
-    if (saved) {
-      void api.getSession(saved).then((restored) => {
-        if (restored.conceptId !== conceptId) throw new Error('Sessão pertence a outro conceito.');
-        if (activeSelection.current === key) {
-          setSession(restored);
-          setAnswer(studyState.draft(restored.id));
+    setLoadingSession(true);
+    void api.conceptSessions(conceptId).then(async (savedSessions) => {
+      if (activeSelection.current !== key) return;
+      setHistory(savedSessions);
+      const restored = savedSessions[0];
+      if (restored) {
+        if (!restored.attempts.length && selected.question.text !== restored.question.text) {
+          await begin();
+          return;
         }
-      }).catch(() => {
-        studyState.forgetSession(materialId, conceptId);
-        if (activeSelection.current === key) setError(translateRef.current('studyResumeError'));
-      });
-    } else if (requestedMaterialId === materialId && requestedConceptId === conceptId) {
-      void begin();
-    }
+        studyState.saveSession(materialId, conceptId, restored.id);
+        setSession(restored);
+        setAnswer(studyState.draft(restored.id));
+      } else await begin();
+    }).catch((cause: unknown) => {
+      if (activeSelection.current === key) setError(message(cause, translateRef.current('studyResumeError')));
+    }).finally(() => { if (activeSelection.current === key) setLoadingSession(false); });
   }, [materialId, conceptId, selected, loadingNodes, requestedMaterialId, requestedConceptId]);
 
   const submit = async () => {
@@ -201,7 +231,9 @@ export function LiveStudy() {
       const edgeCaseAnswer = session.state === "EXPLANATION_PASSED" && (session.edgeCaseStatus === "READY" || session.edgeCaseStatus === "REVIEW");
       const updated = edgeCaseAnswer ? await api.answerEdgeCase(session.id, answer) : await api.answer(session.id, answer);
       if (activeSelection.current !== `${materialId}:${session.conceptId}`) return;
+      if (updated.attempts.length > session.attempts.length) pendingFeedback.current = updated.id;
       setSession(updated);
+      setHistory((current) => current.map((item) => item.id === updated.id ? updated : item));
       void refreshBilling();
       if (updated.state === 'EXPLANATION_PASSED') {
         setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, status: 'EXPLAINED', edgeCaseStatus: updated.edgeCaseStatus } : node));
@@ -213,10 +245,21 @@ export function LiveStudy() {
     } finally { setSubmitting(false); }
   };
 
+  useEffect(() => {
+    if (!session || pendingFeedback.current !== session.id) return;
+    const feedback = document.getElementById('study-diagnostic');
+    if (!feedback) return;
+    pendingFeedback.current = null;
+    feedback.focus({ preventScroll: true });
+    feedback.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }, [session]);
+
   const changeConcept = (id: string) => {
+    pendingFeedback.current = null;
     restoredSelection.current = null;
     setConceptId(id);
     setSession(null);
+    setHistory([]);
     setAnswer("");
     setError("");
   };
@@ -255,11 +298,11 @@ export function LiveStudy() {
   const remainingCredits = balance ? balance.planId === 'FREE' ? balance.dailyRemaining : Math.min(balance.dailyRemaining, balance.periodRemaining) : null;
 
   return <>
-    <WorkspaceHeading className="study-context" eyebrow={t('studyActive')} title={material?.title ?? 'MasterMe'} description={t('studyDescription')} aside={selected && <div className="context-node"><Icon name="idea" /><span>{t('currentNode')}: <b>{selected.concept.name}</b></span></div>} />
+    <h1 className="sr-only">{t('navStudy')}</h1>
     <section className="live-toolbar">
       <div className="study-controls">
         <StyledSelect label={t('material')} icon="document" value={materialId} disabled={creating} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { setError(""); saveActiveMaterialId(id); setMaterialId(id); }} />
-        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: `${node.concept.name} — ${t(knowledgeStatusKey(node.status))}` }))} onValueChange={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={begin} disabled={!selected}>{t('newSession')}</ActionButton>}</> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">{t('extractionFollow')}</p> : <div className="extract-callout"><div><strong>{t('extractionCalloutTitle')}</strong><span>{t('extractionCalloutDescription')}</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
+        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <><StyledSelect label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: `${node.concept.name} — ${t(knowledgeStatusKey(node.status))}` }))} onValueChange={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={repeat} disabled={!selected || loadingSession}>{t('repeatConcept')}</ActionButton>}</> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">{t('extractionFollow')}</p> : <div className="extract-callout"><div><strong>{t('extractionCalloutTitle')}</strong><span>{t('extractionCalloutDescription')}</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
       </div>
       <p className="study-credit-count" role="status" title={balanceUnavailable ? t('creditUnavailable') : undefined}>{remainingCredits !== null ? `${new Intl.NumberFormat(locale).format(remainingCredits)} ${t('credits')} ${t('creditRemaining')}` : balanceLoading ? `${t('creditBalance')}: …` : t('creditUnavailable')}</p>
     </section>
@@ -270,29 +313,74 @@ export function LiveStudy() {
       <MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error="" compact />
     </details>
     <div className="study-work-layout">
-      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <section className="study-start"><span className="study-start-kicker">{t('studyNextStep')}</span><h2>{t('studyStartTitle')}: {selected.concept.name}</h2><p>{t('studyStartDescription')}</p><div className="study-start-action"><ActionButton variant="primary" onClick={begin}>{t('studyStartAction')}</ActionButton><small>{t('studyStartHint')}</small></div></section> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
+      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} history={history} material={material} outline={outline} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={() => void submit()} error={error} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <p className="study-loading" role="status">{loadingSession ? t('loadingQuestion') : error || t('studyBeginError')}</p> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
     </div>
   </>;
 }
 
-export function SessionView({ session, answer, words, onAnswerChange, onSubmit, selectedNode, submitting, onRetry, error, onRequestEdgeCase }: { session: StudySession; answer: string; words: number; onAnswerChange: (value: string) => void; onSubmit: () => void; selectedNode: KnowledgeNode | undefined; submitting: boolean; onRetry: () => void; error: string; onRequestEdgeCase: () => Promise<void> }) {
-  const { t } = useI18n();
+export function SessionView({ session, history = [], material, outline = [], answer, words, onAnswerChange, onSubmit, selectedNode, submitting, onRetry, error, onRequestEdgeCase }: { session: StudySession; history?: StudySession[]; material?: Material | null; outline?: EditorialUnit[]; answer: string; words: number; onAnswerChange: (value: string) => void; onSubmit: () => void; selectedNode: KnowledgeNode | undefined; submitting: boolean; onRetry: () => void; error: string; onRequestEdgeCase: () => Promise<void> }) {
+  const { locale, t } = useI18n();
+  const [helpOpen, setHelpOpen] = useState(false);
+  useEffect(() => setHelpOpen(false), [session.id]);
   const edgeActive = session.state === "EXPLANATION_PASSED" && (session.edgeCaseStatus === "READY" || session.edgeCaseStatus === "REVIEW");
   const latest = session.attempts.at(-1);
-  const kind = selectedNode?.concept.kind ?? "N/A";
   const completed = session.state === "EXPLANATION_PASSED";
   const statusLabel = latest?.evaluation.status === 'PASSED' ? t('statusPassed') : latest?.evaluation.status === 'INCOMPLETE' ? t('statusIncomplete') : t('statusLogicalBreak');
   return <>
     <section className="prompt-card">
-      <div className="eyebrow"><span className="challenge">{edgeActive ? t('edgeChallenge') : t('nodeChallenge')}</span><small className="kind">{kind}</small></div>
+      <div className="eyebrow"><span className="challenge">{edgeActive ? t('edgeChallenge') : t('nodeChallenge')}</span></div>
       <h2>{edgeActive ? session.edgeCaseChallenge?.question : session.question.text}</h2>
-      {selectedNode && <section className="concept-summary"><header><span><Icon name="idea" />{t('conceptContext')}</span><small>{selectedNode.concept.kind}</small></header><h3>{selectedNode.concept.name}</h3><p>{selectedNode.concept.description}</p><footer>{t('prerequisites')}: {selectedNode.concept.prerequisiteIds.length}</footer></section>}
+      {selectedNode && <>
+        <ActionButton variant="primary" className="concept-help-toggle" aria-expanded={helpOpen} aria-controls={`concept-help-${session.id}`} onClick={() => setHelpOpen((open) => !open)}><Icon name="idea" />{helpOpen ? t('hideConceptHelp') : t('showConceptHelp')}</ActionButton>
+        <section className="concept-summary" id={`concept-help-${session.id}`} hidden={!helpOpen}><header><span><Icon name="idea" />{t('conceptContext')}</span></header><h3>{selectedNode.concept.name}</h3><p>{selectedNode.concept.description}</p>{selectedNode.concept.fundamentalPremises.length > 0 && <ul>{selectedNode.concept.fundamentalPremises.map((premise, index) => <li key={`${index}-${premise}`}>{premise}</li>)}</ul>}</section>
+        <SourceViewerBoundary key={`${selectedNode.concept.id}:${material?.id ?? ''}`} fallback={t(material?.sourceType === 'PDF' ? 'pdfUnavailable' : 'studyMaterialLoadError')}><SourceDisclosure material={material} outline={outline} node={selectedNode} /></SourceViewerBoundary>
+      </>}
       {edgeActive && session.edgeCaseChallenge && <p className="edge-scenario">{session.edgeCaseChallenge.scenario}</p>}
       <p className="tip"><Icon name="idea" /><span>{edgeActive ? t('testLimits') : t('explainMechanism')} {t('minimumAnswer')}</span></p>
     </section>
     {!completed || edgeActive ? <section className="answer-card"><header><h2>{edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')}</h2><p>{words} {t('words')}</p></header><textarea aria-label={edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')} value={answer} onChange={(event) => onAnswerChange(event.target.value)} rows={8} placeholder={t('answerPlaceholder')} /><footer><span>{t('groundedDiagnostic')}</span><div className="answer-actions"><ActionButton variant="primary" disabled={answer.trim().length < 20 || submitting} onClick={onSubmit}><Icon name="sparkles" />{submitting ? t('evaluating') : t('validateAnswer')}</ActionButton>{error && <ActionButton variant="secondary" onClick={onRetry}>{t('retry')}</ActionButton>}</div></footer></section> : <section className="completion-card"><Icon name="sparkles" /><div><span>{t('explanationComplete')}</span><h2>{t('explanationPassed')}</h2><p>{t('edgeOptional')}</p></div>{session.edgeCaseStatus === "NOT_REQUESTED" && <ActionButton variant="secondary" disabled={submitting} onClick={() => void onRequestEdgeCase()}>{submitting ? t('preparing') : t('prepareEdge')}</ActionButton>}{session.edgeCaseStatus === "PASSED" && <strong>{t('edgePassed')}</strong>}</section>}
-    {latest && <section className="diagnostic-card concise"><header><h2>{t('diagnostic')}</h2><small className={latest.evaluation.status.toLowerCase()}>{statusLabel}</small></header><div className="diagnostic-points"><article><strong>{t('correctPoint')}</strong><p>{latest.evaluation.strength ?? latest.evaluation.feedback}</p></article>{latest.evaluation.status !== 'PASSED' && <article><strong>{t('missingPoint')}</strong><p>{latest.evaluation.gap ?? latest.evaluation.logicalBreak ?? latest.evaluation.missingPremises[0] ?? latest.evaluation.feedback}</p></article>}<article><strong>{t('nextStep')}</strong>{selectedNode && <span className="next-step-concept">{t('concept')}: {selectedNode.concept.name}</span>}<p>{latest.evaluation.nextAction ?? latest.evaluation.feedback}</p></article></div>{session.edgeCaseStatus !== "NOT_REQUESTED" && <div className="edge-case-status"><Icon name="warning" /><div><span>{t('edgeChallenge')}</span><p>{session.edgeCaseChallenge?.question}</p></div></div>}</section>}
+    {latest && <section id="study-diagnostic" className="diagnostic-card concise" tabIndex={-1}><header><h2>{t('diagnostic')}</h2><small className={latest.evaluation.status.toLowerCase()}>{statusLabel}</small></header><div className="diagnostic-points"><article><strong>{t('correctPoint')}</strong><p>{latest.evaluation.strength ?? latest.evaluation.feedback}</p></article>{latest.evaluation.status !== 'PASSED' && <article><strong>{t('missingPoint')}</strong><p>{latest.evaluation.gap ?? latest.evaluation.logicalBreak ?? latest.evaluation.missingPremises[0] ?? latest.evaluation.feedback}</p></article>}<article><strong>{t('nextStep')}</strong>{selectedNode && <span className="next-step-concept">{t('concept')}: {selectedNode.concept.name}</span>}<p>{latest.evaluation.nextAction ?? latest.evaluation.feedback}</p></article></div>{session.edgeCaseStatus !== "NOT_REQUESTED" && <div className="edge-case-status"><Icon name="warning" /><div><span>{t('edgeChallenge')}</span><p>{session.edgeCaseChallenge?.question}</p></div></div>}</section>}
+    {history.some((item) => item.attempts.length > 0) && <details className="study-history"><summary>{t('savedExplanations')} ({history.filter((item) => item.attempts.length > 0).length})</summary><div>{history.filter((item) => item.attempts.length > 0).map((item) => <article key={item.id}><h3>{new Date(item.createdAt).toLocaleDateString(locale)} · {item.state === 'EXPLANATION_PASSED' ? t('statusPassed') : t('statusIncomplete')}</h3><p>{item.question.text}</p>{item.attempts.map((attempt, index) => <div key={`${item.id}-${index}`}><strong>{attempt.stage === 'INITIAL' ? t('yourExplanation') : t('yourEdgeAnswer')}</strong><p>{attempt.answer}</p><strong>{t('diagnostic')}</strong><p>{attempt.evaluation.feedback}</p></div>)}</article>)}</div></details>}
   </>;
+}
+
+function SourceDisclosure({ material, outline, node }: { material?: Material | null; outline: EditorialUnit[]; node: KnowledgeNode }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const offset = node.concept.sourceOffset ?? material?.content.indexOf(node.concept.sourceExcerpt) ?? 0;
+  const unit = outline.find((item) => item.startOffset <= offset && offset < item.endOffset);
+  return <details className="source-disclosure" onToggle={(event) => setOpen(event.currentTarget.open)}><summary><Icon name="book" /><span>{t('readSource')}</span><Icon name="chevron" /></summary>{open && (material?.sourceType === 'PDF' ? <PdfBookViewer materialId={material.id} title={material.title} excerpt={node.concept.sourceExcerpt} sourceOffset={offset} contentLength={material.content.length} outlinePage={unit?.pageNumber ?? undefined} /> : <SourceReader material={material} outline={outline} node={node} />)}</details>;
+}
+
+function SourceReader({ material, outline, node }: { material?: Material | null; outline: EditorialUnit[]; node: KnowledgeNode }) {
+  const { t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const excerpt = node.concept.sourceExcerpt;
+  if (!material) return <p className="study-loading" role="status">{t('checkingMaterial')}</p>;
+  const content = material.content;
+  const offset = node.concept.sourceOffset ?? content.indexOf(excerpt);
+  const position = Math.max(0, offset);
+  const unit = outline.find((item) => item.startOffset <= position && position < item.endOffset);
+  const unitStart = unit?.startOffset ?? 0;
+  const unitEnd = unit?.endOffset ?? content.length;
+  const windowStart = Math.max(unitStart, position - 4000);
+  const windowEnd = Math.min(unitEnd, position + Math.max(4000, excerpt.length));
+  const expandedStart = unitEnd - unitStart <= 24000 ? unitStart : Math.max(unitStart, position - 12000);
+  const expandedEnd = Math.min(unitEnd, expandedStart + 24000);
+  const start = expanded ? expandedStart : windowStart;
+  const end = expanded ? expandedEnd : windowEnd;
+  const passage = content.slice(start, end);
+  const selectedStart = passage.indexOf(excerpt);
+  const selectedEnd = selectedStart + excerpt.length;
+  let cursor = 0;
+  const readable = (value: string) => value.replace(/([^\n])\n([^\n])/g, '$1 $2');
+  return <article className="source-reader"><header><span>{t('sourceFromMaterial')}</span><h4>{unit?.title ?? material.title}</h4>{unit?.pageNumber && <small>{t('sourcePage')} {unit.pageNumber}</small>}</header>{start > unitStart && <span className="source-reader-ellipsis" aria-hidden="true">…</span>}<div className="source-reader-text">{passage.split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => {
+    const paragraphStart = passage.indexOf(paragraph, cursor);
+    cursor = paragraphStart + paragraph.length;
+    const markStart = Math.max(0, selectedStart - paragraphStart);
+    const markEnd = Math.min(paragraph.length, selectedEnd - paragraphStart);
+    return <p key={index}>{selectedStart >= 0 && markEnd > markStart ? <>{readable(paragraph.slice(0, markStart))}<mark>{readable(paragraph.slice(markStart, markEnd))}</mark>{readable(paragraph.slice(markEnd))}</> : readable(paragraph)}</p>;
+  })}</div>{end < unitEnd && <span className="source-reader-ellipsis" aria-hidden="true">…</span>}{(windowStart > unitStart || windowEnd < unitEnd) && <ActionButton variant="secondary" onClick={() => setExpanded((value) => !value)}>{expanded ? t('showLessSource') : t('showFullSection')}</ActionButton>}</article>;
 }
 
 function ExtractionProgressCard({ progress, connectionLost, retrying, cancelling, onRetry, onCancel }: { progress: ExtractionProgress; connectionLost: boolean; retrying: boolean; cancelling: boolean; onRetry: () => Promise<void>; onCancel: () => Promise<void> }) {
