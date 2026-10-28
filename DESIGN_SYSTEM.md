@@ -53,7 +53,7 @@ A screen may be sparse when there is little to show, but it should never feel un
 
 ## One product, distinct work
 
-The four destinations belong to the same environment, but each has a different intellectual job. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination.
+The three primary destinations are Study, Tasks, and Practice. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination. Saved assessments, recurring gaps, and the optional concept map are available within Study; old Analyze links lead there.
 
 ### Study: examine an idea
 
@@ -72,17 +72,19 @@ Tasks turns attention into a plan. Dates, times, durations, priorities, and stat
 
 The task itself should carry the student's words and timing. Avoid repeating status in every card when its location already says it. Avoid expanding controls so far that the plan disappears below the fold.
 
-### Analyze: reveal structure
+### Learning record within Study: reveal structure
 
 Analyze makes concepts, relationships, evidence, and gaps visible. Its visual language can be richer because a map can carry real information. Connections should explain how ideas relate, not simply make the page appear sophisticated. The student must be able to inspect a connection and understand its basis. The map should be navigable, with a readable alternative when it becomes dense.
 
+Lead Analyze with the student's saved questions, answers, feedback, and source passages in the material's editorial order. Group repeated gaps as tentative difficulties and keep the supporting attempts visible. A review action creates a task only when the student chooses it. The concept map remains a secondary view for inspecting relationships.
+
 An empty Analyze screen can preview the *kind* of structure that will appear: source material yielding concepts, relationships, and diagnosis. That preview must be labeled as an explanation of the process, never mistaken for the student's actual map. Meaningful connections matter more than a decorative row of shapes.
 
-### Create: apply understanding
+### Practice: apply understanding
 
-Create turns a chosen difficulty into a small, actionable project. Its central decision is focus: what concept is worth applying now, and why? The student should understand the proposed focus before asking for a generated result. The result should read like a usable brief, with a goal, deliverables, constraints, and a first step.
+Practice turns a chosen difficulty into a short exercise with a criterion, an attempt, and feedback. An optional project can combine concepts. The student should understand the proposed focus before starting either activity; a project result should read like a usable brief, with a goal, deliverables, constraints, and a first step.
 
-An empty Create screen can show the structure of that brief. It should look and read differently from Analyze's relationship map. The preview explains what a project will contain, without pretending that a project has already been generated.
+An empty Practice screen can show the structure of a project brief. The preview explains what a project will contain, without pretending that a project has already been generated.
 
 ## States are part of the work
 
@@ -110,6 +112,8 @@ Meaning must survive changes in device, theme, language, and input method. A sel
 Responsive design should preserve the relationship between work surfaces. On a wide screen, related tools can sit together; on a narrow screen, stack them in the order a student needs them. Do not preserve an impressive composition by making the actual work cramped or forcing unnecessary scrolling.
 
 The visual system should remain readable for long sessions. Contrast, type size, line length, and spacing serve comprehension before style. The current implementation expresses these choices through code; this document defines why they matter.
+
+Product text must never render below 14px, including metadata, status labels, and controls on small screens. Every button and button-like disclosure needs an intentional visible surface, a readable label, and a clear focus state. Shared button styles are the starting point for actions; a custom control must meet the same standard.
 
 ## Using this document
 

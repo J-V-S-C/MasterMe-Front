@@ -111,7 +111,7 @@ const landingCopy = {
     darkTheme: 'Usar tema escuro',
     signIn: 'Entrar',
     startFree: 'Começar',
-    nav: { study: 'Estudar', tasks: 'Tarefas', analyze: 'Analisar', create: 'Criar', plans: 'Planos' },
+    nav: { study: 'Estudar', tasks: 'Tarefas', analyze: 'Histórico', create: 'Praticar', plans: 'Planos' },
     hero: {
       titleLead: 'Organize o que estudar.',
       titleEmphasis: 'Descubra o que realmente aprendeu.',
@@ -128,13 +128,12 @@ const landingCopy = {
     },
     cycle: {
       kicker: 'COMO FUNCIONA',
-      title: 'Quatro áreas. O mesmo material.',
-      description: 'Estudar, Tarefas, Analisar e Criar compartilham a mesma biblioteca privada. O que você organiza em uma área vira contexto nas outras.',
+      title: 'Três áreas. O mesmo material.',
+      description: 'Estudar, Tarefas e Praticar compartilham a mesma biblioteca privada. Seu histórico e suas lacunas ficam disponíveis em Estudar.',
       steps: [
         { tag: 'ESTUDAR', title: 'Reúna e explique', description: 'Envie PDF, Markdown ou TXT, ou cole um texto. Escolha um conceito e responda com suas palavras.' },
         { tag: 'TAREFAS', title: 'Planeje quando voltar', description: 'Crie tarefas com data, ligue-as a um material e ajuste o calendário quando a semana mudar.' },
-        { tag: 'ANALISAR', title: 'Veja o que você entendeu', description: 'O mapa liga os assuntos do material. Depois da sua resposta, você vê o que explicou bem e o que precisa revisar.' },
-        { tag: 'CRIAR', title: 'Crie um projeto para praticar', description: 'Crie um projeto curto para praticar os assuntos que você ainda não domina. Faça o projeto no seu editor.' },
+        { tag: 'PRATICAR', title: 'Trabalhe uma lacuna', description: 'Faça um exercício focado com feedback ou crie um projeto opcional para aplicar o que estudou.' },
       ],
     },
     map: {
@@ -241,7 +240,7 @@ const landingCopy = {
       kicker: 'SEU PRÓXIMO MATERIAL PODE VIRAR PRÁTICA',
       title: 'Pronto para estudar com rigor?',
       description: 'Sem métricas de vaidade. Apenas compreensão testada contra fatos.',
-      action: 'Criar meu primeiro mapa',
+      action: 'Começar a estudar',
     },
     footer: {
       navigationLabel: 'Navegação do rodapé',
@@ -266,7 +265,7 @@ const landingCopy = {
     darkTheme: 'Use dark theme',
     signIn: 'Sign in',
     startFree: 'Start',
-    nav: { study: 'Study', tasks: 'Tasks', analyze: 'Analyze', create: 'Create', plans: 'Plans' },
+    nav: { study: 'Study', tasks: 'Tasks', analyze: 'History', create: 'Practice', plans: 'Plans' },
     hero: {
       titleLead: 'Organize what to study.',
       titleEmphasis: 'Discover what you really learned.',
@@ -283,13 +282,12 @@ const landingCopy = {
     },
     cycle: {
       kicker: 'HOW IT WORKS',
-      title: 'Four areas. The same material.',
-      description: 'Study, Tasks, Analyze, and Create share the same private library. What you organize in one area becomes context in the others.',
+      title: 'Three areas. The same material.',
+      description: 'Study, Tasks, and Practice share the same private library. Your history and gaps remain available in Study.',
       steps: [
         { tag: 'STUDY', title: 'Bring it in and explain', description: 'Upload a PDF, Markdown, or TXT file, or paste text. Pick a concept and answer in your own words.' },
         { tag: 'TASKS', title: 'Plan when to come back', description: 'Create tasks with a target date, attach a material, and move the date when the week changes.' },
-        { tag: 'ANALYZE', title: 'See what you understood', description: 'The map links topics in the material. After you answer, you see what you explained well and what needs review.' },
-        { tag: 'CREATE', title: 'Create a project for practice', description: 'Create a small project to practice topics you still need to learn. Build it in your own editor.' },
+        { tag: 'PRACTICE', title: 'Work on a gap', description: 'Try a focused exercise with feedback or create an optional project to apply what you studied.' },
       ],
     },
     map: {
@@ -396,7 +394,7 @@ const landingCopy = {
       kicker: 'YOUR NEXT MATERIAL CAN BECOME PRACTICE',
       title: 'Ready to study with rigor?',
       description: 'No vanity metrics. Just understanding tested against facts.',
-      action: 'Create my first map',
+      action: 'Start studying',
     },
     footer: {
       navigationLabel: 'Footer navigation',
@@ -419,7 +417,6 @@ export const marketingPlans: readonly MarketingPlan[] = landingCopy['pt-BR'].pla
 const landingTabs = [
   { key: 'study', href: '#study', icon: 'book' },
   { key: 'tasks', href: '#tasks', icon: 'library' },
-  { key: 'analyze', href: '#analyze', icon: 'brain' },
   { key: 'create', href: '#create', icon: 'sparkles' },
 ] as const
 

@@ -17,7 +17,7 @@ for (const viewport of viewports) {
       if (path === '/api/learning/materials/material-a/outline') return route.fulfill({ json: { data: [{ id: 'chapter-a', order: 0, title: 'Chapter one', level: 1, startOffset: 0, endOffset: 100, provenance: 'HEADING', pageNumber: 1 }] } });
       if (path === '/api/materials/material-a/knowledge-map') return route.fulfill({ json: { data: [] } });
       if (path === '/api/learning/materials/material-a/relations') return route.fulfill({ json: { data: [] } });
-      if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/tasks' || path === '/api/learning/suggestions' || path === '/api/learning/availability') return route.fulfill({ json: { data: [] } });
+      if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/tasks' || path === '/api/learning/suggestions' || path === '/api/learning/reviews/due' || path === '/api/learning/availability') return route.fulfill({ json: { data: [] } });
       if (path === '/api/billing/me') return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
       if (path === '/api/observability') return route.fulfill({ status: 204 });
       return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });

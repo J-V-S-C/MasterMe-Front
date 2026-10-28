@@ -22,7 +22,6 @@ type PasswordFieldProps = {
 const authAreas = [
   { label: 'navStudy', description: 'authAreaStudy', icon: 'book' },
   { label: 'navLibrary', description: 'authAreaTasks', icon: 'library' },
-  { label: 'navMap', description: 'authAreaAnalyze', icon: 'brain' },
   { label: 'navPractice', description: 'authAreaCreate', icon: 'sparkles' },
 ] as const satisfies readonly { label: string; description: string; icon: IconName }[]
 

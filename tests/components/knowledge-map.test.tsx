@@ -74,7 +74,7 @@ describe('Knowledge map', () => {
       paths.push(`${init?.method ?? 'GET'} ${new URL(url, 'http://localhost').pathname}`);
       return new Response(JSON.stringify({ data: { id: 'suggestion-a', status: 'PENDING' } }), { status: 200 });
     }) as typeof fetch;
-    const view = render(<ul><EvidenceRow event={{ id: 'event-a', material_id: 'material-a', concept_id: 'concept-a', relation_id: null, previous_evidence_id: null, activity_type: 'RETENTION', status: 'PASSED', prompt: 'Explique', prompt_version: 'activity-v1', criteria: ['Causa'], hints_used: [], answer: 'Resposta', assisted: false, diagnosis: 'Correto', source_excerpt: 'Texto', created_at: '2026-01-01T00:00:00.000Z' }} locale="pt-BR" onContested={() => {}} /></ul>);
+    const view = render(<ul><EvidenceRow event={{ id: 'event-a', material_id: 'material-a', concept_id: 'concept-a', relation_id: null, previous_evidence_id: null, activity_type: 'RETENTION', status: 'PASSED', prompt: 'Explique', prompt_version: 'activity-v1', criteria: ['Causa'], hints_used: [], answer: 'Resposta', assisted: false, assistance_level: 0, solution_revealed: false, diagnosis: 'Correto', source_excerpt: 'Texto', created_at: '2026-01-01T00:00:00.000Z' }} locale="pt-BR" onContested={() => {}} /></ul>);
     const request = view.getByRole('button', { name: 'Solicitar retomada' });
     fireEvent.click(request);
     await waitFor(() => expect(paths).toContain('POST /api/learning/evidence/event-a/revisit'));

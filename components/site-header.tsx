@@ -12,7 +12,6 @@ import { BrandLink } from './brand-link'
 const links = [
   { label: 'navStudy', accessibleLabel: 'navStudyLabel', href: '/study', id: 'study', icon: 'book' },
   { label: 'navLibrary', accessibleLabel: 'navLibraryLabel', href: '/library', id: 'library', icon: 'library' },
-  { label: 'navMap', accessibleLabel: 'navMapLabel', href: '/knowledge-map', id: 'map', icon: 'brain' },
   { label: 'navPractice', accessibleLabel: 'navPracticeLabel', href: '/practice', id: 'practice', icon: 'sparkles' },
 ] as const
 

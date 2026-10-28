@@ -56,11 +56,12 @@ function parseDay(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function DayPicker({ value, onChange, locale, counts, labels }: {
+export function DayPicker({ value, onChange, locale, counts, minDay, labels }: {
   value: string;
   onChange: (day: string) => void;
   locale: 'pt-BR' | 'en-US';
   counts: Record<string, number>;
+  minDay?: string;
   labels: DayPickerLabels;
 }) {
   const selected = parseDay(value) ?? new Date();
@@ -87,7 +88,7 @@ export function DayPicker({ value, onChange, locale, counts, labels }: {
 
   return <div className={styles.dayPicker}>
     <header className={styles.dayHead}>
-      <button type="button" className={styles.dayNav} aria-label={labels.previousMonth} onClick={() => setCursor(new Date(year, month - 1, 1))}><Icon name="chevron" /></button>
+      <button type="button" className={styles.dayNav} aria-label={labels.previousMonth} disabled={Boolean(minDay && dayKey(new Date(year, month, 0)) < minDay)} onClick={() => setCursor(new Date(year, month - 1, 1))}><Icon name="chevron" /></button>
       <strong>{monthTitle}</strong>
       <button type="button" className={`${styles.dayNav} ${styles.dayNext}`} aria-label={labels.nextMonth} onClick={() => setCursor(new Date(year, month + 1, 1))}><Icon name="chevron" /></button>
     </header>
@@ -104,6 +105,7 @@ export function DayPicker({ value, onChange, locale, counts, labels }: {
           className={`${styles.dayCell} ${value === key ? styles.daySelected : ''} ${today === key ? styles.dayToday : ''}`}
           aria-label={label}
           aria-pressed={value === key}
+          disabled={Boolean(minDay && key < minDay)}
           onClick={() => onChange(key)}
         >
           <span>{day}</span>
@@ -120,34 +122,36 @@ export function DayPicker({ value, onChange, locale, counts, labels }: {
   </div>;
 }
 
-export function TimeSlider({ value, onChange, label, locale, periods, compact = false }: {
+export function TimeSlider({ value, onChange, label, locale, periods, compact = false, minTime }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
   locale: 'pt-BR' | 'en-US';
   periods: readonly [string, string, string];
   compact?: boolean;
+  minTime?: string;
 }) {
   const id = useId();
   const minutes = clockMinutes(value);
+  const firstAllowedMinute = minTime ? clockMinutes(minTime) : 0;
   return <div className={`${styles.timeControl} ${compact ? styles.compact : ''}`}>
     <div className={styles.controlHead}>
       <span><Icon name="clock" />{label}</span>
-      <input type="time" value={value} aria-label={label} onInput={(event) => onChange(event.currentTarget.value)} />
+      <input type="time" value={value} min={minTime} aria-label={label} onInput={(event) => { const next = event.currentTarget.value; onChange(minTime && next < minTime ? minTime : next); }} />
     </div>
     <input
       id={id}
       type="range"
-      min="360"
-      max="1380"
-      step="15"
+      min={firstAllowedMinute}
+      max="1439"
+      step="1"
       value={minutes}
       aria-label={`${label} ${locale === 'pt-BR' ? 'controle deslizante' : 'slider'}`}
       onInput={(event) => onChange(clockValue(Number(event.currentTarget.value)))}
     />
-    <div className={styles.timeTicks} aria-hidden="true"><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
+    <div className={styles.timeTicks} aria-hidden="true"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:59</span></div>
     <div className={styles.timeShortcuts}>
-      {[480, 840, 1140].map((period, index) => <Chip key={period} pressed={minutes === period} onClick={() => onChange(clockValue(period))}>{periods[index]}</Chip>)}
+      {[480, 840, 1140].map((period, index) => <Chip key={period} pressed={minutes === period} disabled={period < firstAllowedMinute} onClick={() => onChange(clockValue(period))}>{periods[index]}</Chip>)}
     </div>
   </div>;
 }

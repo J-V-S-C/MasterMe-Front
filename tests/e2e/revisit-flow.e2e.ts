@@ -19,7 +19,7 @@ test('revisit acceptance survives a network failure and a stale second tab', asy
     if (path === '/api/events' || path === '/api/observability') return route.fulfill({ status: 204 });
     if (path === '/api/materials') return route.fulfill({ json: { data: [{ id: 'material-a', title: 'Mechanisms', locale: 'en-US', createdAt: '2026-10-18T09:00:00Z' }] } });
     if (path === '/api/learning/materials/material-a/outline' || path === '/api/materials/material-a/knowledge-map' || path === '/api/learning/materials/material-a/relations') return route.fulfill({ json: { data: [] } });
-    if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/availability') return route.fulfill({ json: { data: [] } });
+    if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/availability' || path === '/api/learning/reviews/due') return route.fulfill({ json: { data: [] } });
     if (path === '/api/learning/tasks') return route.fulfill({ json: { data: status === 'ACCEPTED' ? [task] : [] } });
     if (path === '/api/learning/suggestions') return route.fulfill({ json: { data: [{
       id: 'suggestion-one', title: 'Revisit the cause', reason: 'The explanation was incomplete.', status,
