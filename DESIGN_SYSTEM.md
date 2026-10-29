@@ -53,11 +53,15 @@ A screen may be sparse when there is little to show, but it should never feel un
 
 ## One product, distinct work
 
-The three primary destinations are Study, Tasks, and Practice. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination. Saved assessments, recurring gaps, and the optional concept map are available within Study; old Analyze links lead there.
+Shared controls should give the three destinations a familiar feel. The select field uses the browser's native selection behavior with the product's label, spacing, and focus treatment. Reuse the shared button and loading state components so controls stay consistent across routes.
+
+The three primary destinations are Study, Tasks, and Practice. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination. Saved assessments and recurring gaps are available within Study; old Analyze links lead there.
 
 ### Study: examine an idea
 
 The center of Study is the student's source, a question, their explanation, and a grounded response. It should feel focused and private enough for an imperfect first attempt. The answer area deserves space and calm. The diagnosis should separate what the student established from what remains uncertain. A recommendation should name the concept and explain why it follows.
+
+Questions and the saved history with gaps are two visible choices at the top of Study. Keep both choices available in the same position so students can find their earlier answers and return to the current question without searching for a secondary action.
 
 Keep the question readable on its own. Offer a short, source-grounded concept explanation behind an explicit control beside the question, with a separate control for reading the original source. Open a new question with the explanation closed so the student chooses when to use help.
 For uploaded PDFs, show the original pages in a book reader that uses the available Study width, with little space around the page and clear page controls. Clicking the left or right edge of a page turns it; the labeled controls and arrow keys remain available. Mark the studied passage only when it can be matched to text on a page; otherwise say that its location is uncertain and let the student browse. Do not repeat the selected PDF passage as raw text below the page. Source disclosure, page navigation, and other secondary actions need a visible control surface, readable label, and clear focus state; they should never resemble unstyled text. For text and Markdown, keep readable prose with its editorial section and page when known, and mark the selected passage within that prose instead of duplicating it above. Selecting a concept opens its question directly. Keep saved explanations accessible and make a new attempt after approval an explicit confirmed choice that preserves the original result.
@@ -74,11 +78,11 @@ The task itself should carry the student's words and timing. Avoid repeating sta
 
 ### Learning record within Study: reveal structure
 
-Analyze makes concepts, relationships, evidence, and gaps visible. Its visual language can be richer because a map can carry real information. Connections should explain how ideas relate, not simply make the page appear sophisticated. The student must be able to inspect a connection and understand its basis. The map should be navigable, with a readable alternative when it becomes dense.
+The learning record makes attempts, feedback, and remaining gaps visible in the order of the source. Use color to distinguish outcomes and concise previews to support scanning; keep full answers and source evidence available on request.
 
-Lead Analyze with the student's saved questions, answers, feedback, and source passages in the material's editorial order. Group repeated gaps as tentative difficulties and keep the supporting attempts visible. A review action creates a task only when the student chooses it. The concept map remains a secondary view for inspecting relationships.
+Lead with the student's saved questions, answers, feedback, and source passages in the material's editorial order. Group repeated gaps as tentative difficulties and keep the supporting attempts visible. A review action creates a task only when the student chooses it.
 
-An empty Analyze screen can preview the *kind* of structure that will appear: source material yielding concepts, relationships, and diagnosis. That preview must be labeled as an explanation of the process, never mistaken for the student's actual map. Meaningful connections matter more than a decorative row of shapes.
+An empty learning record should point back to the first question without suggesting that evidence or a diagnosis already exists.
 
 ### Practice: apply understanding
 

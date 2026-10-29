@@ -1,5 +1,5 @@
-import { accessTokenForProxy } from '../../../lib/supabase-server'
-import { buildBackendHeaders, InvalidProxyHeaderError } from '../../../lib/bff-headers'
+import { accessTokenForProxy } from '../../../lib/auth/supabase-server'
+import { buildBackendHeaders, InvalidProxyHeaderError } from '../../../lib/server/bff-headers'
 
 export const dynamic = 'force-dynamic'
 

@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { LiveStudy } from '../../../components/live-study'
-import { PageShell } from '../../../components/page-shell'
-import { CheckoutQueryExperience } from '../../../components/checkout-experience'
+import { LiveStudy } from '../../../components/study/live-study'
+import { PageShell } from '../../../components/shell/page-shell'
+import { CheckoutQueryExperience } from '../../../components/billing/checkout-experience'
 
 export const metadata: Metadata = { title: 'Estudar' }
 

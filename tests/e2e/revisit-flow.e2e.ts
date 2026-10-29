@@ -40,19 +40,19 @@ test('revisit acceptance survives a network failure and a stale second tab', asy
   const second = await context.newPage();
   await Promise.all([first.goto('/library'), second.goto('/library')]);
   await Promise.all([
-    first.getByRole('button', { name: 'Mesa do Dia' }).click(),
-    second.getByRole('button', { name: 'Mesa do Dia' }).click(),
+    first.getByRole('tab', { name: /Sugestões/ }).click(),
+    second.getByRole('tab', { name: /Sugestões/ }).click(),
   ]);
   await expect(first.getByText('The explanation was incomplete.')).toBeVisible();
   await expect(second.getByText('The explanation was incomplete.')).toBeVisible();
-  await first.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(first.getByText('Não foi possível concluir. Tente novamente.')).toBeVisible();
-  await first.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(first.getByText('Nenhuma sugestão pendente.')).toBeVisible();
-  await second.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(second.getByText('Nenhuma sugestão pendente.')).toBeVisible();
+  await first.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(first.getByText('Temporary outage')).toBeVisible();
+  await first.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(first.getByRole('tab', { name: /Sugestões/ })).toHaveCount(0);
+  await second.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(second.getByRole('tab', { name: /Sugestões/ })).toHaveCount(0);
   expect(createdTasks).toBe(1);
-  await first.getByRole('button', { name: 'Calendário' }).click();
+  await first.getByRole('tab', { name: /Quadro/ }).click();
   await expect(first.getByText('Revisit the cause').first()).toBeVisible();
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { canonicalAppOrigin } from '../../lib/canonical-origin'
+import { canonicalAppOrigin } from '../../lib/server/canonical-origin'
 
 describe('canonical origin', () => {
   test('ignores request Host and origin when configuration exists', () => {

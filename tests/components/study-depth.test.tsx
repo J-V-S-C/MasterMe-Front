@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { StudyDepth } from '../../components/study-depth';
-import { BillingProvider } from '../../components/billing-provider';
+import { StudyDepth } from '../../components/study/study-depth';
+import { BillingProvider } from '../../components/providers/billing-provider';
 import { api, type KnowledgeNode, type LearningEvidence } from '../../lib/api';
-import { I18nProvider } from '../../lib/i18n';
+import { I18nProvider } from '../../lib/localization/i18n';
 
 beforeEach(() => {
   const window = new Window();
@@ -37,19 +37,17 @@ const evidence: LearningEvidence = {
   created_at: '2026-10-19T00:00:00.000Z',
 };
 
-test('records the hint ladder and review id without marking a revealed answer independent', async () => {
+test('records opened explanation and source as assisted during a review', async () => {
   const prompts = spyOn(api, 'activityPrompts').mockResolvedValue({ reasoning: 'Raciocine.', application: 'Aplique.', retention: 'Explique o índice.' });
   const evaluate = spyOn(api, 'evaluateActivity').mockResolvedValue({ event: evidence, suggestion: null });
   const billing = spyOn(api, 'billingMe').mockResolvedValue({} as never);
-  const view = render(<I18nProvider><BillingProvider><StudyDepth node={node} activity="RETENTION" reviewId="review-a" /></BillingProvider></I18nProvider>);
+  const view = render(<I18nProvider><BillingProvider><StudyDepth node={node} activity="RETENTION" reviewId="review-a" conceptHelpOpened sourceOpened /></BillingProvider></I18nProvider>);
   await waitFor(() => expect(view.getByText('Explique o índice.')).toBeTruthy());
-  fireEvent.click(view.getByRole('button', { name: 'Pista' }));
-  fireEvent.click(view.getByRole('button', { name: 'Fonte' }));
-  fireEvent.input(view.getByLabelText('Sua resposta'), { target: { value: 'O índice ordena chaves e reduz a busca no disco.' } });
+  fireEvent.input(view.getByRole('textbox', { name: 'Sua resposta' }), { target: { value: 'O índice ordena chaves e reduz a busca no disco.' } });
   await waitFor(() => expect((view.getByRole('button', { name: 'Avaliar resposta' }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(view.getByRole('button', { name: 'Avaliar resposta' }));
   await waitFor(() => expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({
-    reviewId: 'review-a', assisted: true, assistanceLevel: 2, hintsUsed: ['cue', 'source'], solutionRevealed: false,
+    reviewId: 'review-a', assisted: true, assistanceLevel: 3, hintsUsed: ['concept-summary', 'source-excerpt'], solutionRevealed: false,
   })));
   prompts.mockRestore(); evaluate.mockRestore(); billing.mockRestore();
 });
@@ -60,7 +58,7 @@ test('a retry requests a different server prompt and keeps the previous attempt 
   const billing = spyOn(api, 'billingMe').mockResolvedValue({} as never);
   const view = render(<I18nProvider><BillingProvider><StudyDepth node={node} activity="APPLICATION" /></BillingProvider></I18nProvider>);
   await waitFor(() => expect(view.getByText('Aplique.')).toBeTruthy());
-  fireEvent.input(view.getByLabelText('Sua resposta'), { target: { value: 'O índice permite localizar uma linha pelo valor da chave.' } });
+  fireEvent.input(view.getByRole('textbox', { name: 'Sua resposta' }), { target: { value: 'O índice permite localizar uma linha pelo valor da chave.' } });
   fireEvent.click(view.getByRole('button', { name: 'Avaliar resposta' }));
   await waitFor(() => expect(view.getByRole('button', { name: 'Tentar outra resposta' })).toBeTruthy());
   fireEvent.click(view.getByRole('button', { name: 'Tentar outra resposta' }));

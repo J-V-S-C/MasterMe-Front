@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { Window } from 'happy-dom'
-import { LandingPage } from '../../components/landing-page'
+import { LandingPage } from '../../components/marketing/landing-page'
 
 const originalFetch = globalThis.fetch
 const originalEventSource = globalThis.EventSource
 
 const chooseLanguage = (root: Element, label: string, option: string, hidden = false) => {
   const controls = within(root as HTMLElement)
-  fireEvent.click(controls.getByRole('combobox', { name: label, hidden }))
-  fireEvent.click(controls.getByRole('option', { name: option, hidden }))
+  const select = controls.getByRole('combobox', { name: label, hidden }) as HTMLSelectElement
+  const choice = within(select).getByRole('option', { name: option, hidden }) as HTMLOptionElement
+  fireEvent.change(select, { target: { value: choice.value } })
 }
 
 beforeEach(() => {
@@ -58,17 +59,17 @@ describe('public landing page', () => {
     const menu = () => within(view.container.querySelector('header details')!)
 
     chooseLanguage(view.container.querySelector('footer')!, 'Idioma', 'EN')
-    expect(menu().getByRole('combobox', { name: 'Language', hidden: true }).textContent).toContain('EN')
+    expect((menu().getByRole('combobox', { name: 'Language', hidden: true }) as HTMLSelectElement).value).toBe('en-US')
     expect(document.documentElement.lang).toBe('en-US')
     expect(window.localStorage.getItem('masterme:locale')).toBe('en-US')
 
     cleanup()
     const restored = render(<LandingPage />)
-    await waitFor(() => expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Language' }).textContent).toContain('EN'))
+    await waitFor(() => expect((within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Language' }) as HTMLSelectElement).value).toBe('en-US'))
     expect(document.documentElement.lang).toBe('en-US')
 
     chooseLanguage(restored.container.querySelector('header details')!, 'Language', 'PT', true)
-    expect(within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' }).textContent).toContain('PT')
+    expect((within(restored.container.querySelector('footer')!).getByRole('combobox', { name: 'Idioma' }) as HTMLSelectElement).value).toBe('pt-BR')
     expect(window.localStorage.getItem('masterme:locale')).toBe('pt-BR')
     expect(document.documentElement.lang).toBe('pt-BR')
   })

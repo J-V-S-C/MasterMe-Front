@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { PracticeWorkspace } from '../../../components/practice-workspace'
-import { PageShell } from '../../../components/page-shell'
+import { PracticeWorkspace } from '../../../components/practice/practice-workspace'
+import { PageShell } from '../../../components/shell/page-shell'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = { title: 'Projeto de prática' }

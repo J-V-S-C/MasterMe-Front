@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { loginHrefFor, planLoginHref, safeInternalDestination } from '../../lib/auth-redirect'
-import { isPublicPage } from '../../lib/public-routes'
+import { loginHrefFor, planLoginHref, safeInternalDestination } from '../../lib/auth/auth-redirect'
+import { isPublicPage } from '../../lib/auth/public-routes'
 
 describe('internal authentication redirects', () => {
   test('preserves only known destinations and plans', () => {

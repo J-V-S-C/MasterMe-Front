@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { cleanup, render } from '@testing-library/react';
 import { Window } from 'happy-dom';
-import { ProjectView, resolveAutomaticFocusMode } from '../../components/practice-workspace';
-import { I18nProvider } from '../../lib/i18n';
+import { ProjectView, resolveAutomaticFocusMode } from '../../components/practice/practice-workspace';
+import { I18nProvider } from '../../lib/localization/i18n';
 
 beforeEach(() => { const window = new Window(); Object.assign(globalThis, { window, document: window.document, navigator: window.navigator }); });
 afterEach(() => cleanup());

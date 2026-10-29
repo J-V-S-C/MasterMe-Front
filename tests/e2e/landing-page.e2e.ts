@@ -29,7 +29,7 @@ for (const viewport of viewports) {
     const footerTabs = page.getByRole('navigation', { name: 'Navegação do rodapé' })
     if (viewport.width <= 760) await expect(headerTabs).toBeHidden()
     else await expect(headerTabs).toBeVisible()
-    for (const tab of ['Estudar', 'Tarefas', 'Analisar', 'Criar']) {
+    for (const tab of ['Estudar', 'Tarefas', 'Praticar']) {
       if (viewport.width > 760) await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
       await expect(footerTabs.getByRole('link', { name: tab })).toBeVisible()
     }

@@ -4,6 +4,16 @@ MasterMe web interface built with Next.js, React and TypeScript. The production 
 
 Before changing the interface or its components, read [`skills/front-skill.md`](skills/front-skill.md) and [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md). Update the design system when a durable visual decision changes.
 
+## Component organization
+
+- `components/ui/` contains shared controls and loading states. Reuse `SelectField`, `ActionButton`, `LoadingSkeleton`, and `WorkspaceHeading` before adding another version.
+- `components/study/`, `tasks/`, `practice/`, `billing/`, and `marketing/` contain feature components and their CSS modules.
+- `components/shell/` contains shared navigation and page framing; `components/providers/` contains app wide context and observability providers.
+- `lib/` groups API, authentication, billing, localization, observability, server, and study logic by responsibility. Presentation icons live with the shared UI components.
+- `app/` keeps Next.js routes and route specific files. Shared styles live in `styles/`; `app/themes.css` remains the single shared palette required by `agents.md`.
+
+Keep a control with its feature when its behavior is specific to that workflow. Use the native HTML control inside a shared wrapper when browser behavior already covers keyboard and selection semantics; `SelectField` uses a native `<select>`.
+
 ## Access
 
 - Application: <https://masterme-frontend.joaovictorcortabitart.workers.dev>
@@ -26,6 +36,8 @@ bun test
 bun run build
 BACKEND_URL=https://masterme-api.duckdns.org bun run build:vinext
 ```
+
+Playwright writes screenshots, traces, and its `.last-run.json` marker to `test-results/`. This is generated, ignored output for inspecting test failures; it is not application source and can be removed locally after inspection.
 
 Install the versioned pre-commit hook once per clone with `git config --local core.hooksPath .githooks`. It runs `scripts/ci-local.sh` before every commit: validation, dependency audit, and the built Next.js smoke test. Stage all changes before committing; a failed gate aborts the commit.
 

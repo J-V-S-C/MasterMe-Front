@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '../../../../lib/supabase-server'
-import { safeInternalDestination } from '../../../../lib/auth-redirect'
-import { canonicalAppOrigin } from '../../../../lib/canonical-origin'
+import { createSupabaseServerClient } from '../../../../lib/auth/supabase-server'
+import { safeInternalDestination } from '../../../../lib/auth/auth-redirect'
+import { canonicalAppOrigin } from '../../../../lib/server/canonical-origin'
 
 export async function POST(request: Request) {
   if (Number(request.headers.get('content-length') ?? 0) > 4_096) return NextResponse.json({ code: 'AUTH_REQUEST_TOO_LARGE' }, { status: 413 })

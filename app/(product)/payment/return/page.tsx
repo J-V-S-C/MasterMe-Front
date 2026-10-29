@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { PageShell } from '../../../../components/page-shell'
-import { PaymentReturn } from '../../../../components/payment-return'
+import { PageShell } from '../../../../components/shell/page-shell'
+import { PaymentReturn } from '../../../../components/billing/payment-return'
 
 export const metadata: Metadata = { title: 'Pagamento' }
 

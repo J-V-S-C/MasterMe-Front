@@ -1,0 +1,16 @@
+.depth { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--line-faint); background: var(--deep); }
+.depth header h2 { margin: 0; font: 600 23px/1.25 var(--font-editorial); }
+.depth header p { margin: 5px 0 0; color: var(--muted); line-height: 1.5; }
+.answer { display: grid; gap: 8px; font-weight: 600; }
+.answer textarea { width: 100%; padding: 14px; resize: vertical; border: 1px solid var(--line); background: var(--low); color: var(--text); font: inherit; line-height: 1.5; }
+.answer textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.independent { margin: 0; color: var(--muted); font-size: var(--font-label); line-height: 1.45; }
+.review { display: grid; gap: 3px; margin: 12px 0; padding: 12px 14px; border-left: 3px solid var(--blue); background: var(--accent-soft); font-size: var(--font-label); line-height: 1.45; }
+.review strong { color: var(--text); }
+.assisted { color: var(--muted); font-size: var(--font-label); line-height: 1.45; }
+.feedback { display: grid; gap: 10px; padding: 18px; border-left: 3px solid var(--blue); background: var(--low); }
+.feedback:focus { outline: 2px solid var(--blue); outline-offset: 2px; }
+.feedback>span { font-weight: 700; }
+.feedback p,.feedback blockquote { margin: 0; line-height: 1.5; }
+.feedback blockquote { padding-left: 12px; border-left: 2px solid var(--line); color: var(--muted); }
+.error { color: var(--amber); margin: 0; }

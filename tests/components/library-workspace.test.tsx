@@ -2,8 +2,8 @@ import { afterEach, beforeEach, expect, test, spyOn } from 'bun:test';
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { Window } from 'happy-dom';
 import { api, type StudySuggestion, type StudyTask } from '../../lib/api';
-import { LibraryWorkspace, SuggestionEditor } from '../../components/library-workspace';
-import { I18nProvider } from '../../lib/i18n';
+import { LibraryWorkspace, SuggestionEditor } from '../../components/tasks/library-workspace';
+import { I18nProvider } from '../../lib/localization/i18n';
 
 const suggestion: StudySuggestion = {
   id: 'suggestion', title: 'Retomar a causa', reason: 'A explicação ficou incompleta.',
@@ -36,7 +36,7 @@ test('shows a justified next action and applies the selected time budget', async
   const restore = mockWorkspace();
   todayMock.mockResolvedValue({ availableMinutes: 30, actions: [{ id: 'review:one', kind: 'REVIEW', title: 'Atomicity', reason: 'DUE_REVIEW', estimatedMinutes: 10, href: '/study?material=book&concept=atomicity&review=one' }] });
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  expect(await view.findByRole('heading', { name: 'O que estudar hoje' })).toBeTruthy();
+  expect(await view.findByRole('heading', { name: 'Uma forma de continuar' })).toBeTruthy();
   const start = await view.findByRole('link', { name: 'Começar' });
   expect(start.getAttribute('href')).toContain('review=one');
   expect(view.getByText(/Uma revisão está disponível/)).toBeTruthy();
@@ -86,15 +86,13 @@ test('keeps a selected material and concept after adding a task', async () => {
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
   await view.findByRole('heading', { name: 'Tarefas' });
   fireEvent.click(view.getByRole('tab', { name: /Detalhes/ }));
-  fireEvent.click(view.getByRole('combobox', { name: /Material/i }));
-  fireEvent.click(view.getByRole('option', { name: 'Databases' }));
+  fireEvent.change(view.getByRole('combobox', { name: /Material/i }), { target: { value: 'material' } });
   await waitFor(() => expect(view.getByRole('combobox', { name: /Conceito/i }).hasAttribute('disabled')).toBe(false));
-  fireEvent.click(view.getByRole('combobox', { name: /Conceito/i }));
-  fireEvent.click(view.getByRole('option', { name: 'Indexes' }));
+  fireEvent.change(view.getByRole('combobox', { name: /Conceito/i }), { target: { value: 'concept' } });
   fireEvent.input(view.getByLabelText('Tarefa'), { target: { value: 'Review indexes' } });
   fireEvent.click(view.getByRole('button', { name: 'Adicionar tarefa' }));
   await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ materialId: 'material', conceptId: 'concept' })));
-  expect(view.getByRole('combobox', { name: 'Conceito' }).textContent).toContain('Indexes');
+  expect((view.getByRole('combobox', { name: 'Conceito' }) as HTMLSelectElement).value).toBe('concept');
   materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); reviews.mockRestore(); concepts.mockRestore(); create.mockRestore();
 });
 

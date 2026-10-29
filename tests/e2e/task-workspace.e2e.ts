@@ -45,6 +45,7 @@ for (const width of [390, 768, 1440]) {
     }
     expect(await page.locator('html').evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(width);
 
+    await page.getByRole('button', { name: 'Amanhã' }).click();
     await page.getByRole('tab', { name: /Detalhes/ }).click();
     await page.getByRole('textbox', { name: 'Horário' }).fill('14:37');
     await expect(page.getByRole('tab', { name: /Detalhes/ })).toContainText('14:37');
