@@ -4,12 +4,12 @@ import { Component, useCallback, useEffect, useMemo, useRef, useState, type Reac
 import { useSearchParams } from "next/navigation";
 import Link from 'next/link';
 import { ApiError, api, uploadMaterial, type AnswerAssistance, type DueReview, type EditorialUnit, type KnowledgeNode, type Material, type MaterialKind, type MaterialSummary, type StudySession } from "../../lib/api";
+import { MAX_MATERIAL_TITLE_LENGTH, MAX_PASTED_MATERIAL_LENGTH, MAX_STUDY_ANSWER_LENGTH, MIN_EXPLANATION_LENGTH } from '../../lib/validation/input-limits';
 import { type ExtractionProgress } from "../../lib/study/extraction-progress";
 import { useMaterialExtraction } from "../../lib/study/use-material-extraction";
 import { Icon } from "../ui/icons";
 import { LoadingSkeleton } from "../ui/loading-skeleton";
 import { SelectField } from "../ui/select-field";
-import { OutlineEditor } from './outline-editor';
 import { ActionButton } from "../ui/action-button";
 import { PdfBookViewer } from "./pdf-book-viewer";
 import { getActiveMaterialId, saveActiveMaterialId } from "../../lib/study/active-material";
@@ -17,11 +17,13 @@ import { studyState } from "../../lib/study/study-state";
 import { useI18n } from "../../lib/localization/i18n";
 import { useRealtimeRefresh } from "../providers/realtime-provider";
 import { useBilling } from "../providers/billing-provider";
-import { knowledgeStatusKey } from "../../lib/study/knowledge-status";
+import { ConceptBrowser } from "./concept-browser";
 import { StudyDepth } from "./study-depth";
 import { LearningAnalysis } from './learning-analysis';
 
-const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
+const message = (error: unknown, fallback: string) => error instanceof ApiError && error.status >= 500
+  ? `${error.message}${error.code ? ` · ${error.code}` : ''}${error.requestId ? ` · ID ${error.requestId}` : ''}`
+  : error instanceof Error ? error.message : fallback;
 const hiddenLocaleNoticesKey = 'masterme:hidden-locale-notices';
 const extractionStageKeys = {
   QUEUED: ['extractionQueuedTitle', 'extractionQueuedDescription'],
@@ -57,6 +59,7 @@ export function LiveStudy() {
   const [materialId, setMaterialId] = useState("");
   const [material, setMaterial] = useState<Material | null>(null);
   const [outline, setOutline] = useState<EditorialUnit[]>([]);
+  const [extractionPreview, setExtractionPreview] = useState<{ plannedTopics: number; estimatedCredits: number } | null>(null);
   const [materialUnavailable, setMaterialUnavailable] = useState(false);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [conceptId, setConceptId] = useState("");
@@ -162,10 +165,23 @@ export function LiveStudy() {
     return () => { active = false; };
   }, [materialId, loadNodes]);
 
+  useEffect(() => {
+    if (!materialId || material?.id !== materialId) return;
+    let active = true;
+    setExtractionPreview(null);
+    void api.extractionPreview(materialId).then((preview) => { if (active) setExtractionPreview(preview); }).catch(() => {});
+    return () => { active = false; };
+  }, [materialId, material?.id, material?.materialKind]);
+
   const selected = nodes.find((node) => node.concept.id === conceptId);
   const words = useMemo(() => answer.trim() ? answer.trim().split(/\s+/).length : 0, [answer]);
   const hasConcepts = nodes.length > 0;
-  const refreshSelectedMaterial = useCallback(() => loadNodes(materialId), [loadNodes, materialId]);
+  const refreshSelectedMaterial = useCallback(async () => {
+    const [detail, units] = await Promise.all([api.material(materialId), api.outline(materialId)]);
+    setMaterial(detail);
+    setOutline(units);
+    await loadNodes(materialId);
+  }, [loadNodes, materialId]);
   const extraction = useMaterialExtraction(materialId, refreshSelectedMaterial);
   const extractionActive = extraction.progress.status === "PENDING" || extraction.progress.status === "PROCESSING";
 
@@ -240,7 +256,7 @@ export function LiveStudy() {
       setHistory(savedSessions);
       const restored = savedSessions[0];
       if (restored) {
-        if (!restored.attempts.length && selected.question.text !== restored.question.text) {
+        if (!restored.attempts.length && (!selected.question || selected.question.text !== restored.question.text)) {
           await begin();
           return;
         }
@@ -322,6 +338,16 @@ export function LiveStudy() {
     void refreshBilling()
   });
 
+  let extractionStatus = locale === 'pt-BR' ? 'Nenhum conceito extraído' : 'No concepts extracted';
+  if (hasConcepts) extractionStatus = locale === 'pt-BR' ? `${nodes.length} conceito${nodes.length === 1 ? '' : 's'} disponível${nodes.length === 1 ? '' : 'is'}` : `${nodes.length} concept${nodes.length === 1 ? '' : 's'} available`;
+  if (extraction.progress.status === 'FAILED') extractionStatus = locale === 'pt-BR' ? 'Extração não concluída' : 'Extraction incomplete';
+  if (extractionActive) extractionStatus = locale === 'pt-BR' ? 'Extração em andamento' : 'Extraction in progress';
+
+  let extractAction = t('extractContext');
+  if (hasConcepts) extractAction = locale === 'pt-BR' ? 'Refazer extração' : 'Extract again';
+  if (extraction.progress.status === 'FAILED') extractAction = locale === 'pt-BR' ? 'Tentar extrair novamente' : 'Retry extraction';
+  if (extraction.enqueueing) extractAction = t('extractingQueue');
+
   if (loading) return <LoadingSkeleton />;
   if (error && !materials.length) return <section className="empty-state"><h1>{t('studyBackendUnavailable')}</h1><p>{error}</p></section>;
   if (materialUnavailable || (requestedMaterialId && !materials.some(({ id }) => id === requestedMaterialId))) return <section className="empty-state" role="alert"><h1>{locale === 'pt-BR' ? 'Referência indisponível' : 'Reference unavailable'}</h1><p>{locale === 'pt-BR' ? 'O material desta tarefa não está mais disponível. Escolha outra fonte na biblioteca.' : 'The material for this task is no longer available. Choose another source in the library.'}</p><Link href="/library">{locale === 'pt-BR' ? 'Abrir biblioteca' : 'Open library'}</Link></section>;
@@ -350,21 +376,26 @@ export function LiveStudy() {
             }).catch((cause: unknown) => setError(message(cause, locale === 'pt-BR' ? 'Não foi possível atualizar o tipo de material.' : 'Could not update the material type.')));
           }}
         />}
-        {loadingNodes || extraction.checking ? <p className="toolbar-note">{t('checkingMaterial')}</p> : hasConcepts ? <div className="study-concept-control"><SelectField label={t('concept')} icon="idea" value={conceptId} options={nodes.map((node) => ({ value: node.concept.id, label: `${node.concept.name} — ${t(knowledgeStatusKey(node.status))}` }))} onValueChange={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={repeat} disabled={!selected || loadingSession}>{t('repeatConcept')}</ActionButton>}</div> : extractionActive || extraction.progress.status === "FAILED" ? <p className="toolbar-note">{t('extractionFollow')}</p> : <div className="extract-callout"><div><strong>{t('extractionCalloutTitle')}</strong><span>{t('extractionCalloutDescription')}</span></div><ActionButton variant="primary" onClick={() => void extract()} disabled={extraction.enqueueing}>{extraction.enqueueing ? t('extractingQueue') : t('extractContext')}</ActionButton></div>}
       </div>
+      {material && <div className="study-extract-row">
+        <div className="study-extract-status" role="status"><Icon name={extraction.progress.status === 'FAILED' ? 'warning' : hasConcepts ? 'check' : 'idea'} /><span>{extractionStatus}</span></div>
+        <div className="study-extract-action">
+          {!extractionActive && <span>{extractionPreview ? locale === 'pt-BR' ? `${extractionPreview.plannedTopics ? `${extractionPreview.plannedTopics} tópicos · ` : ''}~${extractionPreview.estimatedCredits} créditos de IA` : `${extractionPreview.plannedTopics ? `${extractionPreview.plannedTopics} topics · ` : ''}~${extractionPreview.estimatedCredits} AI credits` : locale === 'pt-BR' ? 'Usa créditos de IA' : 'Uses AI credits'}</span>}
+          {extractionActive ? <ActionButton variant="secondary" size="small" onClick={() => void extraction.cancelExtraction()} disabled={extraction.cancelling}>{extraction.cancelling ? t('extractionCancelling') : t('extractionCancel')}</ActionButton> : <ActionButton variant={hasConcepts ? 'secondary' : 'primary'} size="small" onClick={() => void extract()} disabled={extraction.enqueueing || extraction.checking || loadingNodes}>{extractAction}</ActionButton>}
+        </div>
+      </div>}
     </section>
     {selected && selected.concept.generatedLocale !== locale && hiddenLocaleNotices !== null && !hiddenLocaleNotices.includes(`${selected.concept.id}:${locale}`) && <div className="localize-notice"><section className="localize-callout"><Icon name="warning" /><div><strong>{t('localizeTitle')}</strong><span>{t('localizeDescription')}</span></div><ActionButton variant="secondary" disabled={localizing} onClick={() => void localize()}>{localizing ? t('localizing') : t('localizeAction')}</ActionButton></section><ActionButton variant="ghost" size="small" className="localize-hide" onClick={() => hideLocaleNotice(`${selected.concept.id}:${locale}`)}><Icon name="eyeOff" />{locale === 'pt-BR' ? 'Ocultar aviso' : 'Hide notice'}</ActionButton></div>}
     <details className="material-creator">
       <summary><span><Icon name="document" />{t('addMaterial')}</span><small>Texto, PDF, Markdown ou TXT <Icon name="chevron" /></small></summary>
       <MaterialForm title={title} content={content} creating={creating} uploadProgress={uploadProgress} onTitleChange={setTitle} onContentChange={setContent} onSubmit={createMaterial} onUpload={uploadFile} error="" compact />
     </details>
-    {material?.materialKind === 'BOOK' && <OutlineEditor materialId={material.id} content={material.content} outline={outline} onSaved={setOutline} />}
     </section>
     {dueReviews.length > 0 && <section className="study-due-reviews" aria-labelledby="study-due-title"><div><span className="eyebrow">{locale === 'pt-BR' ? 'Retomada' : 'Recall'}</span><strong id="study-due-title">{locale === 'pt-BR' ? `${dueReviews.length} revisão${dueReviews.length === 1 ? '' : 'ões'} disponível${dueReviews.length === 1 ? '' : 'is'}` : `${dueReviews.length} review${dueReviews.length === 1 ? '' : 's'} due`}</strong><small>{locale === 'pt-BR' ? 'Sugestões até você começar. A conclusão de uma tarefa não altera as evidências.' : 'Suggestions until you start. Completing a task does not change evidence.'}</small></div><div>{dueReviews.slice(0, 3).map((review) => <Link key={review.id} href={`/study?material=${review.materialId}&concept=${review.conceptId}&review=${review.id}`}>{review.conceptName}<small>{review.materialTitle}</small></Link>)}</div></section>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    {hasConcepts && (extractionActive || extraction.progress.status === 'FAILED') && <section className="extraction-partial" aria-live="polite"><div><strong>{locale === 'pt-BR' ? 'Capítulos prontos para estudar' : 'Chapters ready to study'}</strong><p>{extraction.progress.status === 'FAILED' ? extraction.progress.error || (locale === 'pt-BR' ? 'Um capítulo falhou. Os anteriores continuam disponíveis.' : 'A chapter failed. Earlier chapters remain available.') : `${extraction.progress.completedChunks ?? 0}/${extraction.progress.totalChunks ?? '…'} ${locale === 'pt-BR' ? 'capítulos processados. Os concluídos já estão disponíveis.' : 'chapters processed. Completed ones are available now.'}`}</p></div>{extraction.progress.status === 'FAILED' ? <ActionButton variant="secondary" disabled={extraction.enqueueing} onClick={() => void extract()}>{locale === 'pt-BR' ? 'Tentar capítulo novamente' : 'Retry chapter'}</ActionButton> : <ActionButton variant="secondary" disabled={extraction.cancelling} onClick={() => void extraction.cancelExtraction()}>{t('extractionCancel')}</ActionButton>}</section>}
+    {hasConcepts && (extractionActive || extraction.progress.status === 'FAILED') && <section className="extraction-partial" aria-live="polite"><div><strong>{extractionActive ? locale === 'pt-BR' ? 'Nova extração em andamento' : 'New extraction in progress' : locale === 'pt-BR' ? 'Extração interrompida' : 'Extraction stopped'}</strong><p>{extraction.progress.status === 'FAILED' ? extraction.progress.error || (locale === 'pt-BR' ? 'Tente extrair novamente no cartão do material.' : 'Retry extraction in the material card.') : locale === 'pt-BR' ? 'Você pode continuar estudando os conceitos atuais até a nova lista ficar pronta.' : 'You can keep studying the current concepts until the new list is ready.'}</p></div></section>}
     <div className="study-work-layout">
-      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} retrying={extraction.enqueueing} cancelling={extraction.cancelling} onRetry={extract} onCancel={extraction.cancelExtraction} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{session?.conceptId === conceptId ? <SessionView session={session} history={history} material={material} outline={outline} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={(assistance) => void submit(assistance)} error={error} reviewId={requestedReviewId ?? undefined} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <p className="study-loading" role="status">{loadingSession ? t('loadingQuestion') : error || t('studyBeginError')}</p> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
+      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{hasConcepts && <div className="study-question-controls"><ConceptBrowser key={materialId} nodes={nodes} selectedId={conceptId} onSelect={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={repeat} disabled={!selected || loadingSession}>{t('repeatConcept')}</ActionButton>}</div>}{session?.conceptId === conceptId ? <SessionView session={session} history={history} material={material} outline={outline} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={(assistance) => void submit(assistance)} error={error} reviewId={requestedReviewId ?? undefined} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <p className="study-loading" role="status">{loadingSession ? t('loadingQuestion') : error || t('studyBeginError')}</p> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
     </div>
     </>}
   </>;
@@ -398,8 +429,9 @@ export function SessionView({ session, history = [], material, outline = [], ans
   ];
   const currentActivity = activityOptions.find((option) => option.value === level) ?? activityOptions[0]!;
   const activityPicker = <details className="study-activity-picker" ref={activityPickerRef}>
-    <summary><span>{locale === 'pt-BR' ? 'Atividade de estudo' : 'Study activity'}</span><strong>{currentActivity.label}</strong><small>{currentActivity.description}</small><Icon name="chevron" /></summary>
-    <div className="study-activity-options">{activityOptions.map((option) => <button type="button" key={option.value} onClick={() => { setLevel(option.value); if (option.value === 'CHALLENGE' && session.edgeCaseStatus === 'NOT_REQUESTED') void onRequestEdgeCase(); if (activityPickerRef.current) activityPickerRef.current.open = false; }}><strong>{option.label}</strong><small>{option.description}</small>{option.value === level && <><Icon name="check" /><span className="sr-only">{locale === 'pt-BR' ? 'Atividade atual' : 'Current activity'}</span></>}</button>)}</div>
+    <summary><span className="study-activity-heading">{locale === 'pt-BR' ? 'Escolha uma atividade' : 'Choose an activity'} <small>{locale === 'pt-BR' ? `${activityOptions.length} tipos disponíveis` : `${activityOptions.length} types available`}</small></span><strong>{currentActivity.label}</strong><small>{currentActivity.description}</small><span className="study-activity-action">{locale === 'pt-BR' ? 'Trocar atividade' : 'Change activity'} <Icon name="chevron" /></span></summary>
+    <p className="study-activity-help">{locale === 'pt-BR' ? 'Você pode alternar entre os tipos. Cada resposta fica salva na própria atividade.' : 'You can switch between types. Each answer is saved with its own activity.'}</p>
+    <div className="study-activity-options">{activityOptions.map((option) => <button type="button" aria-pressed={option.value === level} key={option.value} onClick={() => { setLevel(option.value); if (option.value === 'CHALLENGE' && session.edgeCaseStatus === 'NOT_REQUESTED') void onRequestEdgeCase(); if (activityPickerRef.current) activityPickerRef.current.open = false; }}><strong>{option.label}</strong><small>{option.description}</small>{option.value === level && <><Icon name="check" /><span className="sr-only">{locale === 'pt-BR' ? 'Atividade atual' : 'Current activity'}</span></>}</button>)}</div>
   </details>;
   const questionTools = selectedNode && <div className="study-question-tools">
     <ActionButton variant="secondary" className="concept-help-toggle" aria-expanded={helpOpen} aria-controls={`concept-help-${session.id}`} onClick={() => setHelpOpen((open) => { if (!open) setHelpOpened(true); return !open; })}><Icon name="idea" />{helpOpen ? t('hideConceptHelp') : t('showConceptHelp')}</ActionButton>
@@ -417,8 +449,8 @@ export function SessionView({ session, history = [], material, outline = [], ans
       {edgeActive && session.edgeCaseChallenge && <p className="edge-scenario">{session.edgeCaseChallenge.scenario}</p>}
       {explanationView && <p className="tip"><Icon name="idea" /><span>{edgeActive ? t('testLimits') : t('explainMechanism')} {t('minimumAnswer')}</span></p>}
     </section>}
-    {explanationView && (!completed || edgeActive ? <section className="answer-card"><header><h2>{edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')}</h2><p>{words} {t('words')}</p></header><textarea aria-label={edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')} value={answer} onChange={(event) => onAnswerChange(event.target.value)} rows={8} placeholder={t('answerPlaceholder')} /><footer><span>{t('groundedDiagnostic')}</span><div className="answer-actions"><ActionButton variant="primary" disabled={answer.trim().length < 20 || submitting} onClick={() => onSubmit(assistance)}><Icon name="sparkles" />{submitting ? t('evaluating') : t('validateAnswer')}</ActionButton>{error && <ActionButton variant="secondary" onClick={() => onRetry(assistance)}>{t('retry')}</ActionButton>}</div></footer></section> : <section className="completion-card"><Icon name="sparkles" /><div><span>{level === 'CHALLENGE' ? t('edgeChallenge') : t('explanationComplete')}</span><h2>{level === 'CHALLENGE' ? session.edgeCaseStatus === 'PASSED' ? t('edgePassed') : t('prepareEdge') : t('explanationPassed')}</h2><p>{t('edgeOptional')}</p></div>{session.edgeCaseStatus === "NOT_REQUESTED" && <ActionButton variant="secondary" disabled={submitting} onClick={() => { setLevel('CHALLENGE'); void onRequestEdgeCase(); }}>{submitting ? t('preparing') : t('prepareEdge')}</ActionButton>}</section>)}
-    {selectedNode && !explanationView && <StudyDepth key={`${selectedNode.concept.id}:${level}`} node={selectedNode} activity={level} reviewId={reviewId} questionTools={questionTools} activityPicker={activityPicker} conceptHelpOpened={helpOpened} sourceOpened={sourceOpened} />}
+    {explanationView && (!completed || edgeActive ? <section className="answer-card"><header><h2>{edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')}</h2><p>{words} {t('words')}</p></header><textarea aria-label={edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')} value={answer} maxLength={MAX_STUDY_ANSWER_LENGTH} onChange={(event) => onAnswerChange(event.target.value)} rows={8} placeholder={t('answerPlaceholder')} /><footer><span>{t('groundedDiagnostic')}</span><div className="answer-actions"><ActionButton variant="primary" disabled={answer.trim().length < MIN_EXPLANATION_LENGTH || submitting} onClick={() => onSubmit(assistance)}><Icon name="sparkles" />{submitting ? t('evaluating') : t('validateAnswer')}</ActionButton>{error && <ActionButton variant="secondary" onClick={() => onRetry(assistance)}>{t('retry')}</ActionButton>}</div></footer></section> : <section className="completion-card"><Icon name="sparkles" /><div><span>{level === 'CHALLENGE' ? t('edgeChallenge') : t('explanationComplete')}</span><h2>{level === 'CHALLENGE' ? session.edgeCaseStatus === 'PASSED' ? t('edgePassed') : t('prepareEdge') : t('explanationPassed')}</h2><p>{t('edgeOptional')}</p></div>{session.edgeCaseStatus === "NOT_REQUESTED" && <ActionButton variant="secondary" disabled={submitting} onClick={() => { setLevel('CHALLENGE'); void onRequestEdgeCase(); }}>{submitting ? t('preparing') : t('prepareEdge')}</ActionButton>}</section>)}
+    {selectedNode && !explanationView && <StudyDepth key={`${selectedNode.concept.id}:${level}:${session?.id ?? ''}`} node={selectedNode} activity={level} reviewId={reviewId} questionVariant={reviewId ? 1 : session?.question.bundleVariant ?? 0} questionTools={questionTools} activityPicker={activityPicker} conceptHelpOpened={helpOpened} sourceOpened={sourceOpened} />}
     </div>
     {error && level === 'CHALLENGE' && <p role="alert">{error}</p>}
     {latest && <section id="study-diagnostic" className="diagnostic-card concise" tabIndex={-1}><header><h2>{t('diagnostic')}</h2><small className={latest.evaluation.status.toLowerCase()}>{statusLabel}</small></header><div className="diagnostic-points"><article><strong>{t('correctPoint')}</strong><p>{latest.evaluation.strength ?? latest.evaluation.feedback}</p></article>{latest.evaluation.status !== 'PASSED' && <article><strong>{t('missingPoint')}</strong><p>{latest.evaluation.gap ?? latest.evaluation.logicalBreak ?? latest.evaluation.missingPremises[0] ?? latest.evaluation.feedback}</p></article>}<article><strong>{t('nextStep')}</strong>{selectedNode && <span className="next-step-concept">{t('concept')}: {selectedNode.concept.name}</span>}<p>{latest.evaluation.nextAction ?? latest.evaluation.feedback}</p></article></div>{session.edgeCaseStatus !== "NOT_REQUESTED" && <div className="edge-case-status"><Icon name="warning" /><div><span>{t('edgeChallenge')}</span><p>{session.edgeCaseChallenge?.question}</p></div></div>}</section>}
@@ -432,7 +464,7 @@ function SourceDisclosure({ material, outline, node, onOpen }: { material?: Mate
   const [open, setOpen] = useState(openRequested);
   const offset = node.concept.sourceOffset ?? material?.content.indexOf(node.concept.sourceExcerpt) ?? 0;
   const unit = outline.find((item) => item.startOffset <= offset && offset < item.endOffset);
-  const sourceAvailable = Boolean(material && offset >= 0 && material.content.slice(offset, offset + node.concept.sourceExcerpt.length) === node.concept.sourceExcerpt);
+  const sourceAvailable = Boolean(material && (material.sourceType === 'PDF' || offset >= 0 && material.content.slice(offset, offset + node.concept.sourceExcerpt.length) === node.concept.sourceExcerpt));
   return <details className="source-disclosure" open={open} onToggle={(event) => { setOpen(event.currentTarget.open); if (event.currentTarget.open) onOpen?.(); }}><summary><Icon name="book" /><span>{t('readSource')}</span><Icon name="chevron" /></summary>{open && (sourceAvailable && material ? material.sourceType === 'PDF' ? <PdfBookViewer materialId={material.id} title={material.title} excerpt={node.concept.sourceExcerpt} sourceOffset={offset} contentLength={material.content.length} outlinePage={unit?.pageNumber ?? undefined} /> : <SourceReader material={material} outline={outline} node={node} /> : <p role="status">{material ? material.locale === 'pt-BR' ? 'Trecho de origem indisponível nesta versão do material.' : 'Source passage unavailable in this version of the material.' : t('checkingMaterial')}</p>)}</details>;
 }
 
@@ -467,7 +499,7 @@ function SourceReader({ material, outline, node }: { material?: Material | null;
   })}</div>{end < unitEnd && <span className="source-reader-ellipsis" aria-hidden="true">…</span>}{(windowStart > unitStart || windowEnd < unitEnd) && <ActionButton variant="secondary" onClick={() => setExpanded((value) => !value)}>{expanded ? t('showLessSource') : t('showFullSection')}</ActionButton>}</article>;
 }
 
-function ExtractionProgressCard({ progress, connectionLost, retrying, cancelling, onRetry, onCancel }: { progress: ExtractionProgress; connectionLost: boolean; retrying: boolean; cancelling: boolean; onRetry: () => Promise<void>; onCancel: () => Promise<void> }) {
+function ExtractionProgressCard({ progress, connectionLost }: { progress: ExtractionProgress; connectionLost: boolean }) {
   const { t } = useI18n();
   const failed = progress.status === "FAILED";
   const [titleKey, descriptionKey] = extractionStageKeys[progress.stage];
@@ -477,7 +509,7 @@ function ExtractionProgressCard({ progress, connectionLost, retrying, cancelling
     { key: 'PREPARING', label: t('extractionPreparingStage') }, { key: 'EXTRACTING', label: t('extractionExtractingStage') }, { key: 'REDUCING', label: t('extractionReducingStage') },
   ] as const;
   const currentStage = Math.max(0, stages.findIndex(({ key }) => key === progress.stage));
-  return <section className={`extraction-progress ${failed ? "failed" : "active"}`} aria-live="polite"><div className="processing-symbol"><Icon name={failed ? "warning" : "brain"} /><i /></div><div className="progress-copy"><span className="eyebrow">{t('extractionHeading')}</span><h2>{failed ? t('extractionFailed') : title}</h2><p>{failed ? failureMessage : t(descriptionKey)}</p></div>{!failed && <><ol className="extraction-stages" aria-label={t('extractionStages')}>{stages.map((stage, index) => <li key={stage.key} className={index < currentStage ? 'done' : index === currentStage ? 'current' : ''}><i aria-hidden="true" /><span>{stage.label}</span></li>)}</ol><div className="progress-track indeterminate" role="progressbar" aria-label={`${title}. ${t('extractionInProgress')}`}><i /></div><p className="progress-note">{t('extractionWhileWaiting')}</p>{connectionLost && <p className="connection-note">{t('extractionConnectionLost')}</p>}<ActionButton variant="secondary" onClick={() => void onCancel()} disabled={cancelling}>{cancelling ? t('extractionCancelling') : t('extractionCancel')}</ActionButton></>}{failed && <ActionButton variant="primary" onClick={() => void onRetry()} disabled={retrying}>{retrying ? t('extractionRetryingAction') : t('extractionRetry')}</ActionButton>}</section>;
+  return <section className={`extraction-progress ${failed ? "failed" : "active"}`} aria-live="polite"><div className="processing-symbol"><Icon name={failed ? "warning" : "brain"} /><i /></div><div className="progress-copy"><span className="eyebrow">{t('extractionHeading')}</span><h2>{failed ? t('extractionFailed') : title}</h2><p>{failed ? failureMessage : t(descriptionKey)}</p></div>{!failed && <><ol className="extraction-stages" aria-label={t('extractionStages')}>{stages.map((stage, index) => <li key={stage.key} className={index < currentStage ? 'done' : index === currentStage ? 'current' : ''}><i aria-hidden="true" /><span>{stage.label}</span></li>)}</ol><div className="progress-track indeterminate" role="progressbar" aria-label={`${title}. ${t('extractionInProgress')}`}><i /></div><p className="progress-note">{t('extractionWhileWaiting')}</p>{connectionLost && <p className="connection-note">{t('extractionConnectionLost')}</p>}</>}</section>;
 }
 
 export function MaterialForm({ title, content, creating, uploadProgress, onTitleChange, onContentChange, onSubmit, onUpload, error, compact = false }: { title: string; content: string; creating: boolean; uploadProgress: number | null; error: string; compact?: boolean; onTitleChange: (value: string) => void; onContentChange: (value: string) => void; onSubmit: () => void; onUpload: (file: File, title: string, materialKind?: MaterialKind) => Promise<void> }) {
@@ -488,8 +520,8 @@ export function MaterialForm({ title, content, creating, uploadProgress, onTitle
   return <section className={`material-form ${compact ? "compact-form" : ""}`}>
     <div><span className="eyebrow">{t('studyBase')}</span><h1>{compact ? t('addMaterial') : t('startWithMaterial')}</h1><p>{t('materialFormDescription')}</p></div>
     <div className="material-mode" role="group" aria-label={t('addMaterial')}><button type="button" className={mode === 'text' ? 'selected' : ''} onClick={() => setMode('text')}>{t('pasteText')}</button><button type="button" className={mode === 'file' ? 'selected' : ''} onClick={() => setMode('file')}>{t('uploadFile')}</button></div>
-    <label className="title-field">{t('title')}{mode === 'file' && <small>{t('optionalFilename')}</small>}<input value={title} maxLength={160} onChange={(event) => onTitleChange(event.target.value)} placeholder={t('titlePlaceholder')} /></label>
-    {mode === 'text' ? <label>{t('content')}<textarea value={content} onChange={(event) => onContentChange(event.target.value)} placeholder={t('contentPlaceholder')} rows={8} /></label> : <label>{t('file')}<input type="file" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><small>{t('fileHelp')}</small></label>}
+    <label className="title-field">{t('title')}{mode === 'file' && <small>{t('optionalFilename')}</small>}<input value={title} maxLength={MAX_MATERIAL_TITLE_LENGTH} onChange={(event) => onTitleChange(event.target.value)} placeholder={t('titlePlaceholder')} /></label>
+    {mode === 'text' ? <label>{t('content')}<textarea value={content} maxLength={MAX_PASTED_MATERIAL_LENGTH} onChange={(event) => onContentChange(event.target.value)} placeholder={t('contentPlaceholder')} rows={8} /></label> : <label>{t('file')}<input type="file" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><small>{t('fileHelp')}</small></label>}
     {mode === 'file' && <SelectField label={locale === 'pt-BR' ? 'Tipo de material' : 'Material type'} value={materialKind} options={[{ value: '', label: locale === 'pt-BR' ? 'Detectar pela estrutura' : 'Detect from structure' }, { value: 'BOOK', label: locale === 'pt-BR' ? 'Livro' : 'Book' }, { value: 'ARTICLE', label: locale === 'pt-BR' ? 'Artigo' : 'Article' }, { value: 'TEXT', label: locale === 'pt-BR' ? 'Texto' : 'Text' }]} onValueChange={(value) => { if (value === '' || value === 'BOOK' || value === 'ARTICLE' || value === 'TEXT') setMaterialKind(value); }} />}
     {uploadProgress !== null && <div className="upload-progress" role="status">{uploadProgress < 100 ? `${t('uploadSending')}: ${uploadProgress}%` : t('uploadReceived')}<progress value={uploadProgress} max={100} /></div>}
     {error && <p className="form-error" role="alert">{error}</p>}

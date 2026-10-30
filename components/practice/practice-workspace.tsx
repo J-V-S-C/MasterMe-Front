@@ -43,6 +43,7 @@ export function PracticeWorkspace() {
   const [drillConceptId, setDrillConceptId] = useState('');
   const [drillPreview, setDrillPreview] = useState<FocusedDrillPreview | null>(null);
   const [drillError, setDrillError] = useState('');
+  const [preparingDrill, setPreparingDrill] = useState(false);
   const [practiceMode, setPracticeMode] = useState<'DRILL' | 'PROJECT'>('DRILL');
   const [projects, setProjects] = useState<PracticeProject[]>([]);
   const [project, setProject] = useState<PracticeProject | null>(null);
@@ -101,13 +102,21 @@ export function PracticeWorkspace() {
   const recommendedDrillId = gapEvidence.find((event) => nodes.some((node) => node.concept.id === event.concept_id))?.concept_id ?? nodes[0]?.concept.id ?? '';
   const selectedDrill = nodes.find((node) => node.concept.id === (drillConceptId || recommendedDrillId));
   useEffect(() => {
-    if (!materialId || !selectedDrill || practiceMode !== 'DRILL') return;
-    let active = true;
-    setDrillPreview(null); setDrillError('');
-    void api.focusedDrill(materialId, selectedDrill.concept.id).then((value) => { if (active) setDrillPreview(value); })
-      .catch((cause: unknown) => { if (active) setDrillError(errorMessage(cause, locale === 'pt-BR' ? 'Não foi possível preparar o exercício.' : 'Could not prepare the drill.')); });
-    return () => { active = false; };
-  }, [materialId, selectedDrill?.concept.id, practiceMode, locale]);
+    setDrillPreview(null);
+    setDrillError('');
+  }, [materialId, selectedDrill?.concept.id]);
+  const prepareFocusedDrill = async () => {
+    if (!materialId || !selectedDrill || preparingDrill) return;
+    const requestedConcept = selectedDrill.concept.id;
+    setPreparingDrill(true); setDrillError('');
+    try {
+      const value = await api.focusedDrill(materialId, requestedConcept);
+      setDrillPreview(value);
+      void refreshBilling();
+    } catch (cause: unknown) {
+      setDrillError(errorMessage(cause, locale === 'pt-BR' ? 'Não foi possível preparar o exercício.' : 'Could not prepare the drill.'));
+    } finally { setPreparingDrill(false); }
+  };
   const automaticMode = resolveAutomaticFocusMode(confidences, performance);
   const selectedMode: PracticeFocusMode = focusChoice === 'MANUAL' ? 'MANUAL' : automaticMode;
   const conceptIds = focusChoice === 'MANUAL' ? selectedIds : undefined;
@@ -169,16 +178,17 @@ export function PracticeWorkspace() {
   return <>
     <WorkspaceHeading className="practice-hero" eyebrow={t('practiceKicker')} title={t('practiceTitle')} description={t('practiceDescription')} aside={<SelectField label={t('material')} icon="document" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} />} />
     {error && <p className="form-error practice-error" role="alert">{error}</p>}
-    {loadingMaterial ? <LoadingSkeleton variant="practice" /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/study?material=${materialId}`}>{t('openMaterial')}</Link></section> : <>
+    {loadingMaterial ? <LoadingSkeleton variant="practice" contentOnly /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/study?material=${materialId}`}>{t('openMaterial')}</Link></section> : <>
       <div className="practice-mode" role="group" aria-label={locale === 'pt-BR' ? 'Modo de prática' : 'Practice mode'}>
         <ActionButton variant={practiceMode === 'DRILL' ? 'primary' : 'secondary'} aria-pressed={practiceMode === 'DRILL'} onClick={() => setPracticeMode('DRILL')}>{locale === 'pt-BR' ? 'Exercício focado' : 'Focused drill'}</ActionButton>
         <ActionButton variant={practiceMode === 'PROJECT' ? 'primary' : 'secondary'} aria-pressed={practiceMode === 'PROJECT'} onClick={() => setPracticeMode('PROJECT')}>{locale === 'pt-BR' ? 'Projeto' : 'Project'}</ActionButton>
       </div>
       {practiceMode === 'DRILL' && selectedDrill ? <section className="practice-drill" aria-labelledby="practice-drill-title">
-        <div className="practice-drill-intro"><div><span>{locale === 'pt-BR' ? 'PRÁTICA FOCADA · CERCA DE 10 MIN' : 'FOCUSED PRACTICE · ABOUT 10 MIN'}</span><h2 id="practice-drill-title">{selectedDrill.concept.name}</h2><p>{drillPreview?.observedGap || (locale === 'pt-BR' ? 'Experimente aplicar esta ideia em uma situação concreta.' : 'Apply this idea in a concrete situation.')}</p>{drillPreview && <small>{locale === 'pt-BR' ? 'Critério' : 'Criterion'}: {drillPreview.criteria.join('; ')}</small>}</div>
+        <div className="practice-drill-intro"><div><span>{locale === 'pt-BR' ? 'PRÁTICA FOCADA · CERCA DE 10 MIN' : 'FOCUSED PRACTICE · ABOUT 10 MIN'}</span><h2 id="practice-drill-title">{selectedDrill.concept.name}</h2><p>{drillPreview?.conceptId === selectedDrill.concept.id && drillPreview.observedGap || (locale === 'pt-BR' ? 'Experimente aplicar esta ideia em uma situação concreta.' : 'Apply this idea in a concrete situation.')}</p>{drillPreview?.conceptId === selectedDrill.concept.id && <small>{locale === 'pt-BR' ? 'Critério' : 'Criterion'}: {drillPreview.criteria.join('; ')}</small>}</div>
           <SelectField label={locale === 'pt-BR' ? 'Habilidade' : 'Skill'} value={selectedDrill.concept.id} options={nodes.map((node) => ({ value: node.concept.id, label: node.concept.name }))} onValueChange={setDrillConceptId} />
         </div>
-        {drillError ? <p role="alert" className="form-error">{drillError}</p> : drillPreview ? <StudyDepth key={`${selectedDrill.concept.id}:${drillPreview.questionVariant}`} node={selectedDrill} activity="APPLICATION" drill={drillPreview} /> : <p role="status">{locale === 'pt-BR' ? 'Preparando exercício…' : 'Preparing drill…'}</p>}
+        {drillError && <p role="alert" className="form-error">{drillError}</p>}
+        {drillPreview?.conceptId === selectedDrill.concept.id ? <StudyDepth key={`${selectedDrill.concept.id}:${drillPreview.questionVariant}`} node={selectedDrill} activity="APPLICATION" drill={drillPreview} /> : <ActionButton variant="primary" disabled={preparingDrill} onClick={() => void prepareFocusedDrill()}>{preparingDrill ? (locale === 'pt-BR' ? 'Preparando exercício…' : 'Preparing drill…') : (locale === 'pt-BR' ? 'Gerar perguntas · 1 uso de IA' : 'Generate questions · 1 AI use')}</ActionButton>}
         <Link className="app-button secondary" href={`/study?material=${materialId}&concept=${selectedDrill.concept.id}&source=1`}>{locale === 'pt-BR' ? 'Abrir fonte no livro' : 'Open source in Study'}</Link>
       </section> : null}
       {practiceMode === 'PROJECT' && <div className="practice-layout">

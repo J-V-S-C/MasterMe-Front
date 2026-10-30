@@ -31,6 +31,17 @@ afterEach(() => {
 })
 
 describe('public landing page', () => {
+  test('presents the current Study, Tasks, and Practice product', () => {
+    const view = render(<LandingPage />)
+    const navigation = within(view.getByRole('navigation', { name: 'Seções da página' }))
+    expect(navigation.getAllByRole('link').map((link) => link.textContent)).toEqual(['Estudar', 'Tarefas', 'Praticar'])
+    expect(view.getByRole('figure', { name: 'Exemplo de pergunta e feedback do estudo' })).toBeTruthy()
+    expect(view.getByRole('heading', { name: 'Encontre a resposta anterior e a lacuna que ficou.' })).toBeTruthy()
+    expect(view.getByRole('figure', { name: 'Exercício focado' })).toBeTruthy()
+    expect(view.getByText('Projeto opcional')).toBeTruthy()
+    expect(view.queryByText('Veja como os assuntos se ligam')).toBeNull()
+  })
+
   test('mobile menu closes after navigating to a section', () => {
     const view = render(<LandingPage />)
     const menu = view.container.querySelector<HTMLDetailsElement>('header details')!

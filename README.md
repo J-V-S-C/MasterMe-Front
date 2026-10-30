@@ -1,6 +1,24 @@
 # MasterMe — Frontend
 
-MasterMe web interface built with Next.js, React and TypeScript. The production version is adapted with Vinext and runs on Cloudflare Workers.
+MasterMe helps self-taught learners turn technical reading into understanding and a concrete study plan. A learner adds a source, reads its original passages and extracted concepts, explains ideas in their own words, sees where their reasoning needs work, and chooses what to revisit or practice next. Study actions are independent: a map link or an unfinished question does not block the learner.
+
+This repository is the web interface, built with Next.js, React, and TypeScript. The production version is adapted with Vinext and runs on Cloudflare Workers. See the [project overview](../README.md) for the full learner journey and the [backend README](../backend/README.md) for the API catalogue and architecture.
+
+## Browser routes and interaction
+
+| Route | What it contains |
+| --- | --- |
+| `/` | Public product introduction. |
+| `/login` | Sign in and account creation through Supabase Auth. |
+| `/study` | Source import, reading, concepts, questions, feedback, and saved attempts. |
+| `/library` | Materials, shelves, goals, plans, tasks, board, calendar, and Today suggestions. |
+| `/practice` | Gap preview, drills, and Practice Projects. |
+| `/knowledge-map` | Existing concept-map experience while its useful actions move into the main journey. |
+| `/payment/return` | Checkout reconciliation when paid plans are enabled. |
+
+Sign in, add a text or supported file in Study, wait for extraction, then choose a concept from the visible list above the question. The current concept is marked, and long lists scroll within the chooser. Library organizes the next actions; Practice uses selected concepts or observed gaps. The interface supports `pt-BR` and `en-US`, light and dark themes, keyboard access, and reduced motion. AI attempts use internal credits shown in the header; the API supplies the authoritative balance.
+
+The Next.js `/api/[...path]` route is a server-side proxy to the Express API. `/api/events` relays authenticated progress events; auth routes handle the browser session. The API validates tokens, ownership, and credit reservations. The frontend does not grant those permissions itself.
 
 Before changing the interface or its components, read [`skills/front-skill.md`](skills/front-skill.md) and [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md). Update the design system when a durable visual decision changes.
 
@@ -24,9 +42,13 @@ Calls to `/api/*` made to the frontend domain are forwarded to the OCI API. The 
 ## Local development
 
 ```bash
+cp .env.example .env.local
+# Set BACKEND_URL, PUBLIC_APP_URL, and your Supabase URL and publishable key in .env.local.
 bun install
 bun run dev
 ```
+
+Run these commands from `frontend/` after starting the backend API and worker. The app opens at `http://localhost:3000`; `BACKEND_URL` should point to the local API at `http://localhost:3333`. A Gemini key and database are required for a full upload-to-feedback journey, as described in the [backend local setup](../backend/README.md#local-development).
 
 Full validation for the owner or commit automation (the coding agent does not run it unless explicitly asked):
 

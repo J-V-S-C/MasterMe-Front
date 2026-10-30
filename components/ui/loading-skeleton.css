@@ -1,12 +1,57 @@
-@keyframes skeleton-shimmer{to{transform:translateX(100%)}}
-@keyframes skeleton-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.skeleton-layout{display:grid;gap:14px;min-height:480px;animation:skeleton-enter .2s ease-out}
-.skeleton-block,.skeleton-line{position:relative;overflow:hidden;background:var(--card);border-radius:8px}
-.skeleton-block::after,.skeleton-line::after{position:absolute;inset:0;content:'';transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--shimmer),transparent);animation:skeleton-shimmer 1.3s infinite}
-.skeleton-hero{display:grid;gap:9px;padding:12px 0 18px;border-bottom:1px solid var(--line-faint)}
-.skeleton-line{height:12px}.skeleton-line.short{width:150px}.skeleton-line.title{width:min(420px,70%);height:34px}
-.skeleton-toolbar{display:flex;gap:12px;padding:14px;border-radius:9px;background:var(--low)}.skeleton-line.control{width:240px;height:40px;background:var(--deep)}
-.skeleton-content{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px}.skeleton-content.practice{grid-template-columns:minmax(0,7fr) minmax(320px,5fr)}.skeleton-panel{height:390px}
-.skeleton-content.record{grid-template-columns:minmax(0,1fr)}.skeleton-content.record .skeleton-panel{height:320px}
-@media(max-width:980px){.skeleton-content,.skeleton-content.practice{grid-template-columns:1fr}.skeleton-panel{height:280px}}
-@media(max-width:620px){.skeleton-layout{min-height:380px}.skeleton-toolbar{flex-direction:column}.skeleton-line.control{width:100%}.skeleton-line.title{width:85%;height:28px}}
+@keyframes skeleton-shimmer { to { transform: translateX(100%); } }
+
+.skeleton-layout { display: grid; align-content: start; gap: 14px; width: 100%; min-width: 0; max-width: 1440px; margin: 0 auto; padding: 22px 0 48px; }
+.skeleton-status { color: var(--muted); font-size: 14px; line-height: 1.4; }
+.skeleton-line,.skeleton-input,.skeleton-study-nav span,.skeleton-practice-modes span { position: relative; display: block; max-width: 100%; overflow: hidden; background: var(--line-faint); border-radius: 5px; }
+.skeleton-line { height: 14px; }
+.skeleton-input { height: 48px; background: var(--card); border: 1px solid var(--line-faint); border-radius: 8px; }
+.skeleton-line::after,.skeleton-input::after,.skeleton-study-nav span::after,.skeleton-practice-modes span::after { position: absolute; inset: 0; content: ''; transform: translateX(-100%); background: linear-gradient(90deg,transparent,var(--shimmer),transparent); animation: skeleton-shimmer 1.8s ease-in-out infinite; }
+
+.skeleton-study,.skeleton-practice,.skeleton-record { display: grid; min-width: 0; }
+.skeleton-study { gap: 20px; }
+.skeleton-study-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; max-width: 720px; }
+.skeleton-study-nav span { height: 68px; border: 1px solid var(--line-faint); background: var(--low); border-radius: 10px; }
+.skeleton-study-material { display: grid; gap: 12px; padding: 18px; background: var(--low); border-radius: 11px; }
+.skeleton-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.skeleton-fields>div { display: grid; gap: 8px; }
+.skeleton-disclosure { display: flex; justify-content: space-between; gap: 20px; padding: 18px 4px 2px; border-top: 1px solid var(--line-faint); }
+.skeleton-study-work { display: grid; gap: 16px; max-width: 1050px; }
+.skeleton-study-activity,.skeleton-study-question,.skeleton-answer { display: grid; align-content: start; gap: 13px; min-width: 0; padding: 20px; background: var(--low); border: 1px solid var(--line-faint); border-radius: 11px; }
+.skeleton-study-activity { gap: 10px; }
+.skeleton-study-question { min-height: 184px; background: var(--card); }
+.skeleton-question-actions { display: flex; gap: 12px; margin-top: 18px; }
+.skeleton-answer { min-height: 166px; background: var(--deep); }
+
+.skeleton-practice { gap: 22px; }
+.skeleton-practice-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line-faint); }
+.skeleton-practice-heading>div:first-child { display: grid; gap: 12px; flex: 1; max-width: 620px; }
+.skeleton-practice-heading>.skeleton-input { width: 280px; flex: none; }
+.skeleton-practice-modes { display: flex; gap: 8px; }
+.skeleton-practice-modes span { width: 160px; height: 42px; background: var(--card); border: 1px solid var(--line-faint); border-radius: 7px; }
+.skeleton-practice-modes span:last-child { width: 100px; }
+.skeleton-practice-intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; min-height: 150px; padding: 20px; border: 1px solid var(--line-faint); border-radius: 11px; background: var(--low); }
+.skeleton-practice-intro>div:first-child { display: grid; gap: 12px; flex: 1; max-width: 590px; }
+.skeleton-practice-intro>.skeleton-input { width: 210px; flex: none; }
+.skeleton-practice-question { display: grid; align-content: start; gap: 13px; min-height: 230px; padding: 22px; border: 1px solid var(--line-faint); border-radius: 11px; background: var(--low); }
+.skeleton-practice-question .skeleton-answer { min-height: 96px; margin-top: 8px; background: var(--card); }
+
+.skeleton-record { gap: 20px; max-width: 1440px; }
+.skeleton-record-heading { display: grid; gap: 10px; padding: 14px 0 20px; border-bottom: 1px solid var(--line); }
+.skeleton-record-stats { display: flex; gap: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--line-faint); }
+.skeleton-record-stats>span { display: flex; align-items: baseline; gap: 8px; }
+.skeleton-record-chapter { display: grid; gap: 9px; padding: 5px 0; }
+.skeleton-record-row { display: grid; gap: 14px; min-height: 150px; padding: 20px; border: 1px solid var(--line); background: var(--card); }
+.skeleton-record-row>div { display: grid; gap: 9px; }
+
+.skeleton-content-only { padding-top: 8px; }
+.page-main .skeleton-layout.skeleton-content-only { min-height: 0; }
+@media (max-width: 700px) {
+  .skeleton-layout { padding-top: 16px; }
+  .skeleton-study-nav span { height: 58px; }
+  .skeleton-fields { grid-template-columns: 1fr; }
+  .skeleton-practice-heading,.skeleton-practice-intro { align-items: stretch; flex-direction: column; }
+  .skeleton-practice-heading>.skeleton-input,.skeleton-practice-intro>.skeleton-input { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line::after,.skeleton-input::after,.skeleton-study-nav span::after,.skeleton-practice-modes span::after { animation: none; opacity: 0; }
+}

@@ -31,7 +31,8 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => { void load() }, [load])
-  const value = useMemo<BillingContextValue>(() => ({ balance, loading, unavailable, refresh: () => load(true) }), [balance, loading, unavailable, load])
+  const refresh = useCallback(() => load(true), [load])
+  const value = useMemo<BillingContextValue>(() => ({ balance, loading, unavailable, refresh }), [balance, loading, unavailable, refresh])
   return <BillingContext.Provider value={value}>{children}</BillingContext.Provider>
 }
 

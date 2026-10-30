@@ -129,6 +129,7 @@ export function LearningAnalysis({ selectedMaterialId, embedded = false }: { sel
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [materialContent, setMaterialContent] = useState('');
   const [taskState, setTaskState] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -140,16 +141,21 @@ export function LearningAnalysis({ selectedMaterialId, embedded = false }: { sel
     if (!materialId) return;
     setLoading(true); setError('');
     try {
-      const [nextOutline, nextSessions, nextEvidence, nextTasks, nextReviews] = await Promise.all([
-        api.outline(materialId), api.materialSessions(materialId), api.evidence(materialId), api.tasks(), api.dueReviews(),
+      const [nextOutline, nextSessions, nextEvidence, nextTasks, nextReviews, nextMaterial] = await Promise.all([
+        api.outline(materialId), api.materialSessions(materialId), api.evidence(materialId), api.tasks(), api.dueReviews(), api.material(materialId),
       ]);
-      setOutline(nextOutline); setConcepts(nextSessions.concepts); setActiveConceptIds(nextSessions.activeConceptIds); setSessions(nextSessions.sessions); setEvidence(nextEvidence); setTasks(nextTasks); setReviews(nextReviews);
+      setOutline(nextOutline); setConcepts(nextSessions.concepts); setActiveConceptIds(nextSessions.activeConceptIds); setSessions(nextSessions.sessions); setEvidence(nextEvidence); setTasks(nextTasks); setReviews(nextReviews); setMaterialContent(nextMaterial.content);
     } catch { setError(t.loadError); }
     finally { setLoading(false); }
   }, [materialId, t.loadError]);
   useEffect(() => { void load(); }, [load]);
 
-  const records = useMemo(() => recordsFor(concepts, sessions, evidence), [concepts, sessions, evidence]);
+  const records = useMemo(() => recordsFor(concepts, sessions, evidence).map((row) => {
+    if (!row.source || !materialContent) return row;
+    if (row.offset !== null && materialContent.slice(row.offset, row.offset + row.source.length) === row.source) return row;
+    const offset = materialContent.indexOf(row.source);
+    return { ...row, offset: offset >= 0 && materialContent.indexOf(row.source, offset + 1) < 0 ? offset : null };
+  }), [concepts, sessions, evidence, materialContent]);
   const unresolved = unresolvedRecords(records);
   const repeated = recurringDifficulties(records);
   const chapterUnits = outline.filter((unit) => unit.title && unit.provenance !== 'UNSTRUCTURED');
@@ -181,7 +187,7 @@ export function LearningAnalysis({ selectedMaterialId, embedded = false }: { sel
   return <div className={styles.analysis}>
     <header className={styles.header}><div>{embedded ? <h2>{t.title}</h2> : <h1>{t.title}</h1>}<p>{t.intro}</p></div>{!embedded && <SelectField label={t.material} icon="book" value={materialId} options={materials.map((item) => ({ value: item.id, label: item.title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} />}</header>
       {error && <p role="alert" className={styles.error}>{error}</p>}
-      {loading ? <LoadingSkeleton variant="record" /> : <>
+      {loading ? <LoadingSkeleton variant="record" contentOnly /> : <>
         <div className={styles.stats}><p><strong>{records.length}</strong><span>{t.attempts}</span></p>{unresolved.length > 0 && <p data-kind="gap"><strong>{unresolved.length}</strong><span>{t.unresolved}</span></p>}{records.some((row) => row.assisted) && <p data-kind="assisted"><strong>{records.filter((row) => row.assisted).length}</strong><span>{t.assisted}</span></p>}</div>
         {reviews.filter((review) => review.materialId === materialId).length > 0 && <section className={styles.dueReviews} aria-labelledby="analysis-due-title"><header><span className={styles.eyebrow}>{t.due}</span><h2 id="analysis-due-title">{t.due}</h2><p>{t.dueHint}</p></header><div>{reviews.filter((review) => review.materialId === materialId).map((review) => <Link key={review.id} href={`/study?material=${review.materialId}&concept=${review.conceptId}&review=${review.id}`}><span>{review.conceptName}</span><small>{new Date(review.dueAt).toLocaleDateString(locale)} · {review.lastDiagnosis ?? t.reviewNow}</small></Link>)}</div></section>}
         {records.length === 0 && <p className={styles.emptyNote}>{t.noEvidence}</p>}

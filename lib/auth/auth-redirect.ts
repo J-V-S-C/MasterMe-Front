@@ -14,6 +14,13 @@ const allowedDestinations = new Set([
 ])
 const allowedPlans = new Set<string>(PLAN_IDS)
 const internalOrigin = 'https://masterme.internal'
+const safeIdentifier = /^[A-Za-z0-9_-]{1,128}$/
+const allowedQueryKeys: Record<string, readonly string[]> = {
+  '/study': ['material', 'concept', 'unit', 'review', 'record', 'source', 'plan'],
+  '/practice': ['material', 'concept', 'project'],
+  '/knowledge-map': ['material'],
+  '/library': [],
+}
 
 export function safeInternalDestination(candidate: string | null | undefined): string {
   if (!candidate) return defaultDestination
@@ -35,16 +42,15 @@ export function safeInternalDestination(candidate: string | null | undefined): s
       return `${parsed.pathname}?${query}`
     }
 
-    const keys = [...parsed.searchParams.keys()]
-    if (keys.some((key) => key !== 'plan')) return defaultDestination
-
-    const plans = parsed.searchParams.getAll('plan')
-    if (plans.length === 0) return parsed.pathname
-    if (plans.length !== 1) return defaultDestination
-    const [plan] = plans
-    if (!allowedPlans.has(plan)) return defaultDestination
-
-    return `${parsed.pathname}?plan=${plan}`
+    if (parsed.search.length > 512) return defaultDestination
+    const permitted = allowedQueryKeys[parsed.pathname] ?? []
+    const query = new URLSearchParams()
+    for (const [key, value] of parsed.searchParams) {
+      if (!permitted.includes(key) || query.has(key)) return defaultDestination
+      if (key === 'plan' ? !allowedPlans.has(value) : key === 'record' || key === 'source' ? value !== '1' : !safeIdentifier.test(value)) return defaultDestination
+      query.set(key, value)
+    }
+    return query.size ? `${parsed.pathname}?${query}` : parsed.pathname
   } catch {
     return defaultDestination
   }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { api, type FocusedDrillPreview, type KnowledgeNode, type LearningEvidence } from '../../lib/api';
+import { MAX_QUESTION_VARIANT, MAX_STUDY_ANSWER_LENGTH, MIN_EXPLANATION_LENGTH } from '../../lib/validation/input-limits';
 import { useI18n } from '../../lib/localization/i18n';
 import { ActionButton } from '../ui/action-button';
 import styles from './study-depth.module.css';
@@ -37,7 +38,7 @@ const copy = {
 
 type DepthActivity = 'REASONING' | 'APPLICATION' | 'RETENTION';
 
-export function StudyDepth({ node, activity, reviewId, drill, questionTools, activityPicker, conceptHelpOpened = false, sourceOpened = false }: { node: KnowledgeNode; activity: DepthActivity; reviewId?: string; drill?: FocusedDrillPreview; questionTools?: ReactNode; activityPicker?: ReactNode; conceptHelpOpened?: boolean; sourceOpened?: boolean }) {
+export function StudyDepth({ node, activity, reviewId, drill, questionVariant: initialQuestionVariant, questionTools, activityPicker, conceptHelpOpened = false, sourceOpened = false }: { node: KnowledgeNode; activity: DepthActivity; reviewId?: string; drill?: FocusedDrillPreview; questionVariant?: number; questionTools?: ReactNode; activityPicker?: ReactNode; conceptHelpOpened?: boolean; sourceOpened?: boolean }) {
   const { locale } = useI18n();
   const { refresh: refreshBilling } = useBilling();
   const t = copy[locale];
@@ -46,7 +47,7 @@ export function StudyDepth({ node, activity, reviewId, drill, questionTools, act
   const [error, setError] = useState('');
   const [result, setResult] = useState<LearningEvidence | null>(null);
   const [previousEvidenceId, setPreviousEvidenceId] = useState<string | undefined>(drill?.previousEvidenceId ?? undefined);
-  const [questionVariant, setQuestionVariant] = useState(drill?.questionVariant ?? (reviewId ? 1 : 0));
+  const [questionVariant, setQuestionVariant] = useState(drill?.questionVariant ?? initialQuestionVariant ?? (reviewId ? 1 : 0));
   const [prompts, setPrompts] = useState<{ reasoning: string; application: string; retention: string } | null>(null);
   const requestId = useRef('');
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -54,9 +55,9 @@ export function StudyDepth({ node, activity, reviewId, drill, questionTools, act
     if (drill && questionVariant === drill.questionVariant) return;
     let active = true;
     setPrompts(null); setError('');
-    void api.activityPrompts(node.concept.id, questionVariant).then((value) => { if (active) setPrompts(value); }).catch(() => { if (active) setError(t.error); });
+    void api.activityPrompts(node.concept.id, questionVariant).then((value) => { if (active) { setPrompts(value); void refreshBilling(); } }).catch(() => { if (active) setError(t.error); });
     return () => { active = false; };
-  }, [node.concept.id, questionVariant, drill, t.error]);
+  }, [node.concept.id, questionVariant, drill, t.error, refreshBilling]);
   const prompt = drill && questionVariant === drill.questionVariant ? drill.prompt : prompts ? activity === 'REASONING' ? prompts.reasoning : activity === 'APPLICATION' ? prompts.application : prompts.retention : '';
   const resetAttempt = () => {
     setResult(null);
@@ -64,7 +65,7 @@ export function StudyDepth({ node, activity, reviewId, drill, questionTools, act
     requestId.current = crypto.randomUUID();
   };
   const submit = async () => {
-    if (busy || answer.trim().length < 20 || !prompt) return;
+    if (busy || answer.trim().length < MIN_EXPLANATION_LENGTH || !prompt) return;
     if (!requestId.current) requestId.current = crypto.randomUUID();
     setBusy(true); setError('');
     try {
@@ -100,8 +101,8 @@ export function StudyDepth({ node, activity, reviewId, drill, questionTools, act
     <section className={`answer-card ${styles.depth}`} aria-labelledby="study-depth-title">
     <header><h2 id="study-depth-title">{t.answer}</h2><p>{t.note}</p></header>
     <p className={styles.independent}>{previousEvidenceId ? t.previous : t.independent}</p>
-    <label className={styles.answer}><span className="sr-only">{t.answer}</span><textarea rows={8} disabled={busy || result !== null} minLength={20} maxLength={20000} value={answer} onInput={(event) => setAnswer(event.currentTarget.value)} /></label>
-    <ActionButton variant="primary" disabled={busy || !prompt || answer.trim().length < 20 || result !== null} onClick={() => void submit()}>{busy ? t.waiting : t.submit}</ActionButton>
+    <label className={styles.answer}><span className="sr-only">{t.answer}</span><textarea rows={8} disabled={busy || result !== null} minLength={MIN_EXPLANATION_LENGTH} maxLength={MAX_STUDY_ANSWER_LENGTH} value={answer} onInput={(event) => setAnswer(event.currentTarget.value)} /></label>
+    <ActionButton variant="primary" disabled={busy || !prompt || answer.trim().length < MIN_EXPLANATION_LENGTH || result !== null} onClick={() => void submit()}>{busy ? t.waiting : t.submit}</ActionButton>
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {result && <div ref={feedbackRef} className={styles.feedback} tabIndex={-1}>
       <span>{t.feedback} · {t.status}: {result.status}</span>
@@ -113,7 +114,7 @@ export function StudyDepth({ node, activity, reviewId, drill, questionTools, act
       {!result.strength && !result.gap && !result.next_action && <p>{result.diagnosis}</p>}
       {result.assisted && <p className={styles.assisted}>{t.assisted}</p>}
       {(result.status === 'INCOMPLETE' || result.status === 'LOGICAL_BREAK') && <Link className="app-button secondary" href={`/practice?material=${node.concept.materialId}&concept=${node.concept.id}`}>{locale === 'pt-BR' ? 'Praticar esta lacuna' : 'Practice this gap'}</Link>}
-      <ActionButton variant="secondary" onClick={() => { setPreviousEvidenceId(result.id); setQuestionVariant((current) => reviewId ? current === 1 ? 2 : 1 : (current + 1) % 3); resetAttempt(); }}>{t.next}</ActionButton>
+      <ActionButton variant="secondary" onClick={() => { setPreviousEvidenceId(result.id); setQuestionVariant((current) => reviewId ? current === 1 ? MAX_QUESTION_VARIANT : 1 : (current + 1) % (MAX_QUESTION_VARIANT + 1)); resetAttempt(); }}>{t.next}</ActionButton>
     </div>}
   </section></>;
 }

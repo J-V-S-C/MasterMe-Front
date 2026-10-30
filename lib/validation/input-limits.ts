@@ -1,0 +1,7 @@
+export const MAX_MATERIAL_TITLE_LENGTH = 160;
+export const MAX_PASTED_MATERIAL_LENGTH = 500_000;
+export const MIN_EXPLANATION_LENGTH = 20;
+export const MAX_STUDY_ANSWER_LENGTH = 20_000;
+export const MAX_UPLOAD_MIB = 20;
+export const MAX_UPLOAD_BYTES = MAX_UPLOAD_MIB * 1024 * 1024;
+export const MAX_QUESTION_VARIANT = 2;
