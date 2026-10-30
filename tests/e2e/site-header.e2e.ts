@@ -28,7 +28,7 @@ for (const width of [320, 390, 768, 1440]) {
       await expect(menu).toBeHidden()
       await expect(nav).toBeVisible()
       const links = await nav.getByRole('link').all()
-      expect(links).toHaveLength(4)
+      expect(links).toHaveLength(3)
       const bounds = await Promise.all(links.map((link) => link.boundingBox()))
       expect(bounds.every((box) => box && box.y === bounds[0]?.y)).toBe(true)
     }

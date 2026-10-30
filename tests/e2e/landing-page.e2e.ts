@@ -13,7 +13,7 @@ const expectedDevelopmentConsoleErrors = [
 ]
 
 for (const viewport of viewports) {
-  test(`landing keeps all four tabs visible without overflow on ${viewport.name}`, async ({ page }) => {
+  test(`landing navigation fits ${viewport.name}`, async ({ page }) => {
     const unexpectedConsoleErrors: string[] = []
     page.on('console', (message) => {
       if (message.type() !== 'error') return
@@ -23,12 +23,15 @@ for (const viewport of viewports) {
     await page.setViewportSize(viewport)
     await page.goto('/')
 
-    await expect(page.getByRole('heading', { level: 1, name: /Organize o que estudar/ })).toBeVisible()
-    await expect(page.getByRole('figure', { name: 'Exemplo de mapa de conhecimento e diagnóstico' })).toBeVisible()
-    const headerTabs = page.getByRole('navigation', { name: 'Seções da página' })
+    await expect(page.getByRole('heading', { level: 1, name: /Estude a partir do que você lê/ })).toBeVisible()
+    await expect(page.getByRole('figure', { name: 'Exemplo de pergunta e feedback do estudo' })).toBeVisible()
+    await expect(page.getByRole('figure', { name: 'Exercício focado' })).toBeVisible()
+    const headerTabs = page.locator('header nav[aria-label="Seções da página"]')
     const footerTabs = page.getByRole('navigation', { name: 'Navegação do rodapé' })
-    for (const tab of ['Estudar', 'Tarefas', 'Analisar', 'Criar']) {
-      await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
+    if (viewport.width <= 760) await expect(headerTabs).toBeHidden()
+    else await expect(headerTabs).toBeVisible()
+    for (const tab of ['Estudar', 'Tarefas', 'Praticar']) {
+      if (viewport.width > 760) await expect(headerTabs.getByRole('link', { name: tab })).toBeVisible()
       await expect(footerTabs.getByRole('link', { name: tab })).toBeVisible()
     }
     await expect(page.locator('footer').getByRole('link', { name: 'Planos' })).toBeVisible()
@@ -47,6 +50,25 @@ for (const viewport of viewports) {
     expect(unexpectedConsoleErrors).toEqual([])
   })
 }
+
+test('landing task preview keeps the chosen hour and duration on the board', async ({ page }) => {
+  await page.goto('/')
+  const preview = page.getByRole('figure', { name: 'EXEMPLO INTERATIVO' })
+  await preview.getByRole('button', { name: '24 de outubro 2026' }).click()
+  await preview.getByRole('tab', { name: 'Tempo' }).click()
+  const hour = preview.getByRole('slider', { name: 'Horário' })
+  await hour.focus()
+  await hour.press('Home')
+  await hour.press('ArrowRight')
+  await hour.press('ArrowRight')
+  await expect(hour).toHaveValue('10')
+  await preview.getByRole('button', { name: '90 min' }).click()
+  await preview.getByRole('button', { name: 'Ver no quadro' }).click()
+  await expect(preview.getByRole('tab', { name: 'Quadro' })).toHaveAttribute('aria-selected', 'true')
+  await expect(preview.getByRole('tabpanel').getByText('24 out · 10:00 · 90 min')).toBeVisible()
+  await preview.getByRole('button', { name: 'Em andamento' }).click()
+  await expect(preview.getByRole('button', { name: 'Em andamento' })).toHaveAttribute('aria-pressed', 'true')
+})
 
 test('legacy paths redirect to English routes and preserve payment references', async ({ request }) => {
   const routes = [

@@ -1,11 +1,13 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ActionButton } from '../../components/action-button'
-import { Icon } from '../../lib/icons'
-import { I18nProvider, useI18n } from '../../lib/i18n'
-import { safeInternalDestination } from '../../lib/auth-redirect'
+import { ActionButton } from '../../components/ui/action-button'
+import { Icon, type IconName } from '../../components/ui/icons'
+import { ThemeToggle } from '../../components/shell/theme-toggle'
+import { SelectField } from '../../components/ui/select-field'
+import { BrandLink } from '../../components/shell/brand-link'
+import { I18nProvider, useI18n } from '../../lib/localization/i18n'
+import { safeInternalDestination } from '../../lib/auth/auth-redirect'
 
 type PasswordFieldProps = {
   label: string
@@ -17,6 +19,12 @@ type PasswordFieldProps = {
   confirmationField?: boolean
 }
 
+const authAreas = [
+  { label: 'navStudy', description: 'authAreaStudy', icon: 'book' },
+  { label: 'navLibrary', description: 'authAreaTasks', icon: 'library' },
+  { label: 'navPractice', description: 'authAreaCreate', icon: 'sparkles' },
+] as const satisfies readonly { label: string; description: string; icon: IconName }[]
+
 function PasswordField({ label, value, onChange, visible, onToggle, creating, confirmationField = false }: PasswordFieldProps) {
   const { t } = useI18n()
   return <label><span>{label}</span><span className="password-control"><input type={visible ? 'text' : 'password'} minLength={creating ? 8 : undefined} autoComplete={confirmationField || creating ? 'new-password' : 'current-password'} required value={value} onChange={(event) => onChange(event.target.value)} placeholder={creating ? t('passwordPlaceholder') : t('currentPasswordPlaceholder')} /><button className="password-toggle" type="button" onClick={onToggle} aria-label={`${visible ? t('hide') : t('show')} ${label.toLowerCase()}`} title={visible ? t('hide') : t('show')}><Icon name={visible ? 'eyeOff' : 'eye'} /></button></span>{creating && !confirmationField && <small>{t('passwordHint')}</small>}</label>
@@ -27,8 +35,7 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const { t } = useI18n()
-  const router = useRouter()
+  const { t, locale, setLocale } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -56,6 +63,9 @@ function LoginContent() {
   }, [t])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [selectedArea, setSelectedArea] = useState<(typeof authAreas)[number]['label']>('navStudy')
+  const [areaTouched, setAreaTouched] = useState(false)
+  const area = authAreas.find((entry) => entry.label === selectedArea) ?? authAreas[0]
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -71,12 +81,47 @@ function LoginContent() {
         setCreating(false); setPassword(''); setConfirmation('')
         return
       }
-      router.replace(destination); router.refresh()
+      window.location.assign(destination)
     } catch (cause) { setError(cause instanceof Error ? cause.message : t('authLoginFailed')) }
     finally { setLoading(false) }
   }
 
   const setMode = (create: boolean) => { setCreating(create); setPassword(''); setConfirmation(''); setError(''); setNotice('') }
-
-  return <main className="auth-page"><section className="auth-shell"><aside className="auth-intro"><span className="brand-mark"><i>M</i></span><span className="eyebrow">{t('authEyebrow')}</span><h1>{t('authTitle')}</h1><p>{t('authDescription')}</p><ul><li><i>01</i><span>{t('authStepUpload')}</span></li><li><i>02</i><span>{t('authStepMap')}</span></li><li><i>03</i><span>{t('authStepTest')}</span></li></ul></aside><section className="auth-card"><header><h2>{creating ? t('createAccount') : t('welcomeBack')}</h2><p>{creating ? t('createDescription') : t('loginDescription')}</p></header><div className="auth-tabs" role="tablist" aria-label={t('login')}><button type="button" role="tab" aria-selected={!creating} className={!creating ? 'selected' : ''} onClick={() => setMode(false)}>{t('login')}</button><button type="button" role="tab" aria-selected={creating} className={creating ? 'selected' : ''} onClick={() => setMode(true)}>{t('signup')}</button></div><form onSubmit={submit}><label><span>{t('email')}</span><input type="email" inputMode="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><PasswordField label={t('password')} value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((current) => !current)} creating={creating} />{creating && <PasswordField label={t('confirmPassword')} value={confirmation} onChange={setConfirmation} visible={showConfirmation} onToggle={() => setShowConfirmation((current) => !current)} creating={creating} confirmationField />}{(error || callbackError) && <p className="auth-feedback error" role="alert">{error || callbackError}</p>}{notice && <p className="auth-feedback success" role="status">{notice}</p>}<ActionButton className="auth-submit" variant="primary" type="submit" disabled={loading}>{loading ? t('waiting') : creating ? t('createMyAccount') : t('login')}</ActionButton></form><footer>{t('privateLibrary')}</footer></section></section></main>
+  return <main className="auth-page">
+    <section className="auth-shell">
+      <aside className="auth-intro">
+        <BrandLink href="/" label="MasterMe" className="auth-identity" />
+        <div className="auth-intro-copy"><span className="eyebrow">{t('authEyebrow')}</span><h1>{t('authTitle')}</h1><p>{t('authAccessDescription')}</p></div>
+        <section className="auth-workspace-preview" aria-label={t('authExploreAreas')}>
+          <h2>{t('authExploreAreas')}</h2>
+          <div className="auth-area-picker">
+            {authAreas.map((entry) => <button type="button" aria-pressed={selectedArea === entry.label} key={entry.label} onClick={() => { setSelectedArea(entry.label); setAreaTouched(true) }}><Icon name={entry.icon} />{t(entry.label)}</button>)}
+          </div>
+          <div className="auth-area-detail" data-interacted={areaTouched} key={area.label}>
+            <p>{t(area.description)}</p>
+          </div>
+        </section>
+        <div className="auth-preferences">
+          <SelectField icon={null} label={t('language')} value={locale} options={[{ value: 'pt-BR', label: 'Português' }, { value: 'en-US', label: 'English' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
+          <ThemeToggle lightLabel={t('lightTheme')} darkLabel={t('darkTheme')} />
+        </div>
+      </aside>
+      <section className="auth-card">
+        <header><h2>{creating ? t('createAccount') : t('welcomeBack')}</h2><p>{creating ? t('createDescription') : t('loginDescription')}</p></header>
+        <div className="auth-tabs" role="tablist" aria-label={t('login')}>
+          <button type="button" role="tab" aria-selected={!creating} className={!creating ? 'selected' : ''} onClick={() => setMode(false)}>{t('login')}</button>
+          <button type="button" role="tab" aria-selected={creating} className={creating ? 'selected' : ''} onClick={() => setMode(true)}>{t('signup')}</button>
+        </div>
+        <form onSubmit={submit}>
+          <label><span>{t('email')}</span><input type="email" inputMode="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>
+          <PasswordField label={t('password')} value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((current) => !current)} creating={creating} />
+          {creating && <PasswordField label={t('confirmPassword')} value={confirmation} onChange={setConfirmation} visible={showConfirmation} onToggle={() => setShowConfirmation((current) => !current)} creating={creating} confirmationField />}
+          {(error || callbackError) && <p className="auth-feedback error" role="alert">{error || callbackError}</p>}
+          {notice && <p className="auth-feedback success" role="status">{notice}</p>}
+          <ActionButton className="auth-submit" variant="primary" type="submit" disabled={loading}>{loading ? t('waiting') : creating ? t('createMyAccount') : t('login')}</ActionButton>
+        </form>
+        <footer>{t('privateLibrary')}</footer>
+      </section>
+    </section>
+  </main>
 }
