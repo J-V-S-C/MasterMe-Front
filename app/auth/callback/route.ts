@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '../../../lib/supabase-server'
-import { safeInternalDestination } from '../../../lib/auth-redirect'
-import { canonicalAppOrigin } from '../../../lib/canonical-origin'
+import { createSupabaseServerClient } from '../../../lib/auth/supabase-server'
+import { safeInternalDestination } from '../../../lib/auth/auth-redirect'
+import { canonicalAppOrigin } from '../../../lib/server/canonical-origin'
 
 export async function GET(request: Request) {
   const url = new URL(request.url)

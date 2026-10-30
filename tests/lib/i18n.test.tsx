@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Window } from 'happy-dom'
-import { I18nProvider, useI18n } from '../../lib/i18n'
+import { I18nProvider, useI18n } from '../../lib/localization/i18n'
 
 function LocaleControl() {
   const { locale, setLocale } = useI18n()

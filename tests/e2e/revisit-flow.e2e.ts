@@ -19,7 +19,7 @@ test('revisit acceptance survives a network failure and a stale second tab', asy
     if (path === '/api/events' || path === '/api/observability') return route.fulfill({ status: 204 });
     if (path === '/api/materials') return route.fulfill({ json: { data: [{ id: 'material-a', title: 'Mechanisms', locale: 'en-US', createdAt: '2026-10-18T09:00:00Z' }] } });
     if (path === '/api/learning/materials/material-a/outline' || path === '/api/materials/material-a/knowledge-map' || path === '/api/learning/materials/material-a/relations') return route.fulfill({ json: { data: [] } });
-    if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/availability') return route.fulfill({ json: { data: [] } });
+    if (path === '/api/learning/shelves' || path === '/api/learning/cards' || path === '/api/learning/goals' || path === '/api/learning/plans' || path === '/api/learning/availability' || path === '/api/learning/reviews/due') return route.fulfill({ json: { data: [] } });
     if (path === '/api/learning/tasks') return route.fulfill({ json: { data: status === 'ACCEPTED' ? [task] : [] } });
     if (path === '/api/learning/suggestions') return route.fulfill({ json: { data: [{
       id: 'suggestion-one', title: 'Revisit the cause', reason: 'The explanation was incomplete.', status,
@@ -40,19 +40,19 @@ test('revisit acceptance survives a network failure and a stale second tab', asy
   const second = await context.newPage();
   await Promise.all([first.goto('/library'), second.goto('/library')]);
   await Promise.all([
-    first.getByRole('button', { name: 'Mesa do Dia' }).click(),
-    second.getByRole('button', { name: 'Mesa do Dia' }).click(),
+    first.getByRole('tab', { name: /Sugestões/ }).click(),
+    second.getByRole('tab', { name: /Sugestões/ }).click(),
   ]);
   await expect(first.getByText('The explanation was incomplete.')).toBeVisible();
   await expect(second.getByText('The explanation was incomplete.')).toBeVisible();
-  await first.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(first.getByText('Não foi possível concluir. Tente novamente.')).toBeVisible();
-  await first.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(first.getByText('Nenhuma sugestão pendente.')).toBeVisible();
-  await second.getByRole('button', { name: 'Adicionar ao roteiro' }).click();
-  await expect(second.getByText('Nenhuma sugestão pendente.')).toBeVisible();
+  await first.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(first.getByText('Temporary outage')).toBeVisible();
+  await first.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(first.getByRole('tab', { name: /Sugestões/ })).toHaveCount(0);
+  await second.getByRole('tabpanel', { name: /Sugestões/ }).getByRole('button', { name: 'Adicionar tarefa' }).click();
+  await expect(second.getByRole('tab', { name: /Sugestões/ })).toHaveCount(0);
   expect(createdTasks).toBe(1);
-  await first.getByRole('button', { name: 'Calendário' }).click();
+  await first.getByRole('tab', { name: /Quadro/ }).click();
   await expect(first.getByText('Revisit the cause').first()).toBeVisible();
 });
 

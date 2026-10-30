@@ -1,4 +1,4 @@
-import { LandingPage } from '../components/landing-page'
+import { LandingPage } from '../components/marketing/landing-page'
 
 export default function HomePage() {
   return <LandingPage />

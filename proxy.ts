@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isPublicPage } from './lib/public-routes'
+import { isPublicPage } from './lib/auth/public-routes'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

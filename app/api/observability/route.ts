@@ -1,4 +1,4 @@
-import { parseClientTelemetry } from '../../../lib/client-observability'
+import { parseClientTelemetry } from '../../../lib/observability/client-observability'
 
 export const dynamic = 'force-dynamic'
 

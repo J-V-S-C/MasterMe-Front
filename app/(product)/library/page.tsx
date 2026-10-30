@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { PageShell } from '../../../components/page-shell';
-import { LibraryWorkspace } from '../../../components/library-workspace';
+import { PageShell } from '../../../components/shell/page-shell';
+import { LibraryWorkspace } from '../../../components/tasks/library-workspace';
 
 export const metadata: Metadata = { title: 'Tarefas de estudo' };
 

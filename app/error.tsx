@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import styles from './status.module.css'
-import { reportClientError } from '../lib/client-observability'
+import { reportClientError } from '../lib/observability/client-observability'
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {

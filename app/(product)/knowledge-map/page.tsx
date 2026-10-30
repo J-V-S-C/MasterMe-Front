@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import { KnowledgeMap } from '../../../components/knowledge-map'
-import { PageShell } from '../../../components/page-shell'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Mapa do conhecimento' }
+export const metadata: Metadata = { title: 'Study history' }
 
-export default function KnowledgeMapPage() {
-  return <PageShell active="map"><main id="main-content" className="page-main map-page" tabIndex={-1}><KnowledgeMap /></main></PageShell>
+export default async function KnowledgeMapPage({ searchParams }: { searchParams: Promise<{ material?: string }> }) {
+  const { material } = await searchParams
+  redirect(`/study?record=1${material ? `&material=${encodeURIComponent(material)}` : ''}`)
 }

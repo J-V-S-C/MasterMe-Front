@@ -23,7 +23,7 @@ for (const width of [390, 768, 1440]) {
         return route.fulfill({ json: { data: [{ ...task, title: savedTitle, status: savedStatus }] } });
       }
       if (path === '/api/learning/tasks') return route.fulfill({ json: { data: [{ ...task, title: savedTitle, status: savedStatus }] } });
-      if (path === '/api/materials' || path === '/api/learning/suggestions') return route.fulfill({ json: { data: [] } });
+      if (path === '/api/materials' || path === '/api/learning/suggestions' || path === '/api/learning/reviews/due') return route.fulfill({ json: { data: [] } });
       if (path === '/api/events' || path === '/api/observability') return route.fulfill({ status: 204 });
       if (path === '/api/billing/me') return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
       return route.fulfill({ status: 404, json: { message: 'Unexpected test request' } });
@@ -45,6 +45,7 @@ for (const width of [390, 768, 1440]) {
     }
     expect(await page.locator('html').evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(width);
 
+    await page.getByRole('button', { name: 'Amanhã' }).click();
     await page.getByRole('tab', { name: /Detalhes/ }).click();
     await page.getByRole('textbox', { name: 'Horário' }).fill('14:37');
     await expect(page.getByRole('tab', { name: /Detalhes/ })).toContainText('14:37');
@@ -78,7 +79,7 @@ test('temporary session failure offers a retry without navigating to login', asy
     if (path === '/api/auth/session') return available
       ? route.fulfill({ json: { data: { id: 'student' } } })
       : route.fulfill({ status: 503, json: { code: 'AUTH_UNAVAILABLE' } });
-    if (path === '/api/materials' || path === '/api/learning/tasks' || path === '/api/learning/suggestions') return route.fulfill({ json: { data: [] } });
+    if (path === '/api/materials' || path === '/api/learning/tasks' || path === '/api/learning/suggestions' || path === '/api/learning/reviews/due') return route.fulfill({ json: { data: [] } });
     if (path === '/api/events' || path === '/api/observability') return route.fulfill({ status: 204 });
     return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
   });

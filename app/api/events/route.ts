@@ -1,4 +1,4 @@
-import { accessTokenForProxy } from '../../../lib/supabase-server'
+import { accessTokenForProxy } from '../../../lib/auth/supabase-server'
 
 export const dynamic = 'force-dynamic'
 

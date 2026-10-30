@@ -53,16 +53,24 @@ A screen may be sparse when there is little to show, but it should never feel un
 
 ## One product, distinct work
 
-The four destinations belong to the same environment, but each has a different intellectual job. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination.
+Shared controls should give the three destinations a familiar feel. The select field uses the browser's native selection behavior with the product's label, spacing, and focus treatment. Reuse the shared button and loading state components so controls stay consistent across routes.
+
+The three primary destinations are Study, Tasks, and Practice. Shared navigation and control behavior should make the system familiar. The main work area should express what is special about that destination. Saved assessments and recurring gaps are available within Study; old Analyze links lead there.
+
+The public landing page should demonstrate these same three destinations with clearly marked examples. Lead with the original source and the question it supports, show feedback and saved gaps within Study, let visitors try a local task preview, and present the focused exercise before the optional project. Do not show retired navigation or imply that a project solution is evaluated in the app.
 
 ### Study: examine an idea
 
 The center of Study is the student's source, a question, their explanation, and a grounded response. It should feel focused and private enough for an imperfect first attempt. The answer area deserves space and calm. The diagnosis should separate what the student established from what remains uncertain. A recommendation should name the concept and explain why it follows.
 
+Questions and the saved history with gaps are two visible choices at the top of Study. Keep both choices available in the same position so students can find their earlier answers and return to the current question without searching for a secondary action.
+
 Keep the question readable on its own. Offer a short, source-grounded concept explanation behind an explicit control beside the question, with a separate control for reading the original source. Open a new question with the explanation closed so the student chooses when to use help.
 For uploaded PDFs, show the original pages in a book reader that uses the available Study width, with little space around the page and clear page controls. Clicking the left or right edge of a page turns it; the labeled controls and arrow keys remain available. Mark the studied passage only when it can be matched to text on a page; otherwise say that its location is uncertain and let the student browse. Do not repeat the selected PDF passage as raw text below the page. Source disclosure, page navigation, and other secondary actions need a visible control surface, readable label, and clear focus state; they should never resemble unstyled text. For text and Markdown, keep readable prose with its editorial section and page when known, and mark the selected passage within that prose instead of duplicating it above. Selecting a concept opens its question directly. Keep saved explanations accessible and make a new attempt after approval an explicit confirmed choice that preserves the original result.
 
 Put the material and concept controls before the question without repeating the selected material in a large page banner. After an answer is evaluated, bring the diagnosis into view and move keyboard focus to it so the student can read the result without searching below the answer.
+
+Show the available concepts as visible, selectable choices above the question. Mark the current concept clearly. Keep the list scrollable for long materials, and keep every concept reachable regardless of status or map relationship. Concept selection is a primary Study action, so it must not be hidden behind a small disclosure or require sequential navigation.
 
 When there is no material, the act of adding one is the main event. A concise introduction can orient the student, but it should not compete with the form or repeat its instructions.
 
@@ -72,17 +80,21 @@ Tasks turns attention into a plan. Dates, times, durations, priorities, and stat
 
 The task itself should carry the student's words and timing. Avoid repeating status in every card when its location already says it. Avoid expanding controls so far that the plan disappears below the fold.
 
-### Analyze: reveal structure
+### Learning record within Study: reveal structure
 
-Analyze makes concepts, relationships, evidence, and gaps visible. Its visual language can be richer because a map can carry real information. Connections should explain how ideas relate, not simply make the page appear sophisticated. The student must be able to inspect a connection and understand its basis. The map should be navigable, with a readable alternative when it becomes dense.
+The learning record makes attempts, feedback, and remaining gaps visible in the order of the source. Use color to distinguish outcomes and concise previews to support scanning; keep full answers and source evidence available on request.
 
-An empty Analyze screen can preview the *kind* of structure that will appear: source material yielding concepts, relationships, and diagnosis. That preview must be labeled as an explanation of the process, never mistaken for the student's actual map. Meaningful connections matter more than a decorative row of shapes.
+Lead with the student's saved questions, answers, feedback, and source passages in the material's editorial order. Group repeated gaps as tentative difficulties and keep the supporting attempts visible. A review action creates a task only when the student chooses it.
 
-### Create: apply understanding
+An empty learning record should point back to the first question without suggesting that evidence or a diagnosis already exists.
 
-Create turns a chosen difficulty into a small, actionable project. Its central decision is focus: what concept is worth applying now, and why? The student should understand the proposed focus before asking for a generated result. The result should read like a usable brief, with a goal, deliverables, constraints, and a first step.
+### Practice: apply understanding
 
-An empty Create screen can show the structure of that brief. It should look and read differently from Analyze's relationship map. The preview explains what a project will contain, without pretending that a project has already been generated.
+Practice turns a chosen difficulty into a short exercise with a criterion, an attempt, and feedback. An optional project can combine concepts. The student should understand the proposed focus before starting either activity; a project result should read like a usable brief, with a goal, deliverables, constraints, and a first step.
+
+Preparing a focused exercise that can spend an AI credit starts from an explicit, labeled action. Selecting a concept alone does not generate its practice question.
+
+An empty Practice screen can show the structure of a project brief. The preview explains what a project will contain, without pretending that a project has already been generated.
 
 ## States are part of the work
 
@@ -110,6 +122,8 @@ Meaning must survive changes in device, theme, language, and input method. A sel
 Responsive design should preserve the relationship between work surfaces. On a wide screen, related tools can sit together; on a narrow screen, stack them in the order a student needs them. Do not preserve an impressive composition by making the actual work cramped or forcing unnecessary scrolling.
 
 The visual system should remain readable for long sessions. Contrast, type size, line length, and spacing serve comprehension before style. The current implementation expresses these choices through code; this document defines why they matter.
+
+Product text must never render below 14px, including metadata, status labels, and controls on small screens. Every button and button-like disclosure needs an intentional visible surface, a readable label, and a clear focus state. Shared button styles are the starting point for actions; a custom control must meet the same standard.
 
 ## Using this document
 

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-const sourceDirectories = ['app', 'components', 'lib']
+const sourceDirectories = ['app', 'components', 'lib', 'styles']
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.svg'])
 const literalColor = /#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla)\s*\(/gi
 const namedColor = /(?:^|[;{])\s*(?:color|background|background-color|border-color|fill|stroke)\s*:\s*(?:white|black|red|green|blue)\b/gi

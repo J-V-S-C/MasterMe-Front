@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Window } from 'happy-dom'
-import { CheckoutExperience } from '../../components/checkout-experience'
-import { I18nProvider } from '../../lib/i18n'
+import { CheckoutExperience } from '../../components/billing/checkout-experience'
+import { I18nProvider } from '../../lib/localization/i18n'
 import { invalidateApiCache } from '../../lib/api'
 
 const originalFetch = globalThis.fetch

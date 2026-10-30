@@ -1,13 +1,13 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
-import { ActionButton } from '../../components/action-button'
-import { Icon, type IconName } from '../../lib/icons'
-import { ThemeToggle } from '../../components/theme-toggle'
-import { StyledSelect } from '../../components/styled-select'
-import { BrandLink } from '../../components/brand-link'
-import { I18nProvider, useI18n } from '../../lib/i18n'
-import { safeInternalDestination } from '../../lib/auth-redirect'
+import { ActionButton } from '../../components/ui/action-button'
+import { Icon, type IconName } from '../../components/ui/icons'
+import { ThemeToggle } from '../../components/shell/theme-toggle'
+import { SelectField } from '../../components/ui/select-field'
+import { BrandLink } from '../../components/shell/brand-link'
+import { I18nProvider, useI18n } from '../../lib/localization/i18n'
+import { safeInternalDestination } from '../../lib/auth/auth-redirect'
 
 type PasswordFieldProps = {
   label: string
@@ -22,7 +22,6 @@ type PasswordFieldProps = {
 const authAreas = [
   { label: 'navStudy', description: 'authAreaStudy', icon: 'book' },
   { label: 'navLibrary', description: 'authAreaTasks', icon: 'library' },
-  { label: 'navMap', description: 'authAreaAnalyze', icon: 'brain' },
   { label: 'navPractice', description: 'authAreaCreate', icon: 'sparkles' },
 ] as const satisfies readonly { label: string; description: string; icon: IconName }[]
 
@@ -103,7 +102,7 @@ function LoginContent() {
           </div>
         </section>
         <div className="auth-preferences">
-          <StyledSelect dropUp icon={null} label={t('language')} value={locale} options={[{ value: 'pt-BR', label: 'Português' }, { value: 'en-US', label: 'English' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
+          <SelectField icon={null} label={t('language')} value={locale} options={[{ value: 'pt-BR', label: 'Português' }, { value: 'en-US', label: 'English' }]} onValueChange={(value) => setLocale(value === 'en-US' ? 'en-US' : 'pt-BR')} />
           <ThemeToggle lightLabel={t('lightTheme')} darkLabel={t('darkTheme')} />
         </div>
       </aside>

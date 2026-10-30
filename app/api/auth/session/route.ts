@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { authenticatedSession } from '../../../../lib/supabase-server'
+import { authenticatedSession } from '../../../../lib/auth/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
