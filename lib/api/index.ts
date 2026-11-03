@@ -328,6 +328,7 @@ export type StudySuggestion = {
   learning_evidence: {
     id: string;
     material_id: string;
+    concept_id: string | null;
     prompt: string;
     diagnosis: string;
     source_excerpt: string;
@@ -345,6 +346,7 @@ export type LearningEvidence = {
   task_id?: string | null;
   review_id?: string | null;
   previous_evidence_id: string | null;
+  attempt_context?: 'STUDY' | 'REVIEW' | 'DRILL' | null;
   activity_type:
     | 'COMPREHENSION'
     | 'REASONING'
@@ -727,10 +729,12 @@ export const api = {
     ),
   evidence: (materialId: string) =>
     call<LearningEvidence[]>(`/learning/materials/${materialId}/evidence`),
-  focusedDrill: (materialId: string, conceptId?: string) =>
+  focusedDrill: (materialId: string, conceptId: string, locale: SupportedLocale) =>
     call<FocusedDrillPreview>(
-      `/learning/materials/${materialId}/drill${conceptId ? `?conceptId=${encodeURIComponent(conceptId)}` : ''}`, 'POST',
+      `/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`, 'POST',
     ),
+  savedFocusedDrill: (materialId: string, conceptId: string, locale: SupportedLocale) =>
+    call<FocusedDrillPreview | null>(`/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`),
   dueReviews: () => call<DueReview[]>('/learning/reviews/due'),
   reviewReminder: (
     id: string,
@@ -761,6 +765,7 @@ export const api = {
     reviewId?: string;
     questionVariant?: number;
     attemptContext?: 'STUDY' | 'DRILL';
+    promptLocale?: SupportedLocale;
     activityType: LearningEvidence['activity_type'];
     answer: string;
     assisted: boolean;
@@ -848,11 +853,12 @@ export const api = {
     materialId: string,
     focusMode: PracticeFocusMode,
     conceptIds?: string[],
+    excludedConceptIds?: string[],
   ) =>
     call<PracticeFocusPreview>(
       `/materials/${materialId}/practice-focus`,
       'POST',
-      conceptIds === undefined ? { focusMode } : { focusMode, conceptIds },
+      { focusMode, ...(conceptIds === undefined ? {} : { conceptIds }), ...(excludedConceptIds?.length ? { excludedConceptIds } : {}) },
     ),
   generatePracticeProject: (
     materialId: string,
@@ -862,6 +868,7 @@ export const api = {
       difficulty: 'FOUNDATION' | 'INTERMEDIATE' | 'ADVANCED';
       size: 'SMALL' | 'MEDIUM';
     },
+    excludedConceptIds?: string[],
   ) =>
     call<PracticeProject>(
       `/materials/${materialId}/practice-projects`,
@@ -869,6 +876,7 @@ export const api = {
       {
         focusMode,
         ...(conceptIds === undefined ? {} : { conceptIds }),
+        ...(excludedConceptIds?.length ? { excludedConceptIds } : {}),
         ...preferences,
       },
     ),

@@ -6,6 +6,7 @@ import { api, type FocusedDrillPreview, type KnowledgeNode, type LearningEvidenc
 import { MAX_QUESTION_VARIANT, MAX_STUDY_ANSWER_LENGTH, MIN_EXPLANATION_LENGTH } from '../../lib/validation/input-limits';
 import { useI18n } from '../../lib/localization/i18n';
 import { ActionButton } from '../ui/action-button';
+import { InfoNote } from '../ui/info-note';
 import styles from './study-depth.module.css';
 import { useBilling } from '../providers/billing-provider';
 
@@ -38,31 +39,62 @@ const copy = {
 
 type DepthActivity = 'REASONING' | 'APPLICATION' | 'RETENTION';
 
-export function StudyDepth({ node, activity, reviewId, drill, questionVariant: initialQuestionVariant, questionTools, activityPicker, conceptHelpOpened = false, sourceOpened = false }: { node: KnowledgeNode; activity: DepthActivity; reviewId?: string; drill?: FocusedDrillPreview; questionVariant?: number; questionTools?: ReactNode; activityPicker?: ReactNode; conceptHelpOpened?: boolean; sourceOpened?: boolean }) {
+export function StudyDepth({ node, activity, reviewId, drill, savedEvidence, questionVariant: initialQuestionVariant, questionTools, activityPicker, conceptHelpOpened = false, sourceOpened = false }: { node: KnowledgeNode; activity: DepthActivity; reviewId?: string; drill?: FocusedDrillPreview; savedEvidence?: LearningEvidence; questionVariant?: number; questionTools?: ReactNode; activityPicker?: ReactNode; conceptHelpOpened?: boolean; sourceOpened?: boolean }) {
   const { locale } = useI18n();
   const { refresh: refreshBilling } = useBilling();
   const t = copy[locale];
-  const [answer, setAnswer] = useState('');
+  const [activeDrill, setActiveDrill] = useState(drill);
+  const [answer, setAnswer] = useState(savedEvidence?.answer ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<LearningEvidence | null>(null);
+  const [result, setResult] = useState<LearningEvidence | null>(savedEvidence ?? null);
+  const [plannedTaskId, setPlannedTaskId] = useState<string | null>(null);
+  const [planning, setPlanning] = useState(false);
   const [previousEvidenceId, setPreviousEvidenceId] = useState<string | undefined>(drill?.previousEvidenceId ?? undefined);
   const [questionVariant, setQuestionVariant] = useState(drill?.questionVariant ?? initialQuestionVariant ?? (reviewId ? 1 : 0));
   const [prompts, setPrompts] = useState<{ reasoning: string; application: string; retention: string } | null>(null);
   const requestId = useRef('');
   const feedbackRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (drill && questionVariant === drill.questionVariant) return;
+    if (activeDrill) return;
     let active = true;
     setPrompts(null); setError('');
     void api.activityPrompts(node.concept.id, questionVariant).then((value) => { if (active) { setPrompts(value); void refreshBilling(); } }).catch(() => { if (active) setError(t.error); });
     return () => { active = false; };
-  }, [node.concept.id, questionVariant, drill, t.error, refreshBilling]);
-  const prompt = drill && questionVariant === drill.questionVariant ? drill.prompt : prompts ? activity === 'REASONING' ? prompts.reasoning : activity === 'APPLICATION' ? prompts.application : prompts.retention : '';
+  }, [node.concept.id, questionVariant, activeDrill, t.error, refreshBilling]);
+  const prompt = activeDrill ? activeDrill.prompt : prompts ? activity === 'REASONING' ? prompts.reasoning : activity === 'APPLICATION' ? prompts.application : prompts.retention : '';
   const resetAttempt = () => {
     setResult(null);
     setAnswer('');
     requestId.current = crypto.randomUUID();
+  };
+  const nextAttempt = async () => {
+    if (activeDrill) {
+      setBusy(true); setError('');
+      try {
+        const next = await api.focusedDrill(node.concept.materialId, node.concept.id, locale);
+        setActiveDrill(next);
+        setQuestionVariant(next.questionVariant);
+        setPreviousEvidenceId(result?.id ?? next.previousEvidenceId ?? undefined);
+        resetAttempt();
+        void refreshBilling();
+      } catch (cause) { setError(cause instanceof Error ? cause.message : t.error); }
+      finally { setBusy(false); }
+      return;
+    }
+    setPreviousEvidenceId(result?.id);
+    setQuestionVariant((current) => reviewId ? current === 1 ? MAX_QUESTION_VARIANT : 1 : (current + 1) % (MAX_QUESTION_VARIANT + 1));
+    resetAttempt();
+  };
+  const planFollowUp = async () => {
+    if (!result || planning) return;
+    setPlanning(true); setError('');
+    try {
+      const existing = (await api.tasks()).find((task) => task.material_id === node.concept.materialId && task.concept_id === node.concept.id && task.activity_type === 'PRACTICE' && task.status !== 'DONE' && task.status !== 'REMOVED');
+      const task = existing ?? await api.createTask({ title: `${locale === 'pt-BR' ? 'Praticar' : 'Practice'} ${node.concept.name}`, activityType: 'PRACTICE', materialId: node.concept.materialId, conceptId: node.concept.id, durationMinutes: 10, reason: result.gap ?? result.next_action ?? result.diagnosis });
+      setPlannedTaskId(task.id);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t.error); }
+    finally { setPlanning(false); }
   };
   const submit = async () => {
     if (busy || answer.trim().length < MIN_EXPLANATION_LENGTH || !prompt) return;
@@ -74,7 +106,8 @@ export function StudyDepth({ node, activity, reviewId, drill, questionVariant: i
         questionVariant,
         conceptId: node.concept.id,
         reviewId,
-        attemptContext: drill ? 'DRILL' : 'STUDY',
+        attemptContext: activeDrill ? 'DRILL' : 'STUDY',
+        promptLocale: activeDrill?.locale,
         activityType: activity,
         answer: answer.trim(),
         assisted: conceptHelpOpened || sourceOpened,
@@ -100,7 +133,7 @@ export function StudyDepth({ node, activity, reviewId, drill, questionVariant: i
     </section>
     <section className={`answer-card ${styles.depth}`} aria-labelledby="study-depth-title">
     <header><h2 id="study-depth-title">{t.answer}</h2><p>{t.note}</p></header>
-    <p className={styles.independent}>{previousEvidenceId ? t.previous : t.independent}</p>
+    <InfoNote>{previousEvidenceId ? t.previous : t.independent}</InfoNote>
     <label className={styles.answer}><span className="sr-only">{t.answer}</span><textarea rows={8} disabled={busy || result !== null} minLength={MIN_EXPLANATION_LENGTH} maxLength={MAX_STUDY_ANSWER_LENGTH} value={answer} onInput={(event) => setAnswer(event.currentTarget.value)} /></label>
     <ActionButton variant="primary" disabled={busy || !prompt || answer.trim().length < MIN_EXPLANATION_LENGTH || result !== null} onClick={() => void submit()}>{busy ? t.waiting : t.submit}</ActionButton>
     {error && <p role="alert" className={styles.error}>{error}</p>}
@@ -114,7 +147,8 @@ export function StudyDepth({ node, activity, reviewId, drill, questionVariant: i
       {!result.strength && !result.gap && !result.next_action && <p>{result.diagnosis}</p>}
       {result.assisted && <p className={styles.assisted}>{t.assisted}</p>}
       {(result.status === 'INCOMPLETE' || result.status === 'LOGICAL_BREAK') && <Link className="app-button secondary" href={`/practice?material=${node.concept.materialId}&concept=${node.concept.id}`}>{locale === 'pt-BR' ? 'Praticar esta lacuna' : 'Practice this gap'}</Link>}
-      <ActionButton variant="secondary" onClick={() => { setPreviousEvidenceId(result.id); setQuestionVariant((current) => reviewId ? current === 1 ? MAX_QUESTION_VARIANT : 1 : (current + 1) % (MAX_QUESTION_VARIANT + 1)); resetAttempt(); }}>{t.next}</ActionButton>
+      {(result.status === 'INCOMPLETE' || result.status === 'LOGICAL_BREAK') && (plannedTaskId ? <Link className="app-button secondary" href="/library">{locale === 'pt-BR' ? 'Ver tarefa' : 'View task'}</Link> : <ActionButton variant="secondary" disabled={planning} onClick={() => void planFollowUp()}>{planning ? locale === 'pt-BR' ? 'Adicionando…' : 'Adding…' : locale === 'pt-BR' ? 'Adicionar às Tarefas' : 'Add to Tasks'}</ActionButton>)}
+      <ActionButton variant="secondary" disabled={busy} onClick={() => void nextAttempt()}>{t.next}</ActionButton>
     </div>}
   </section></>;
 }

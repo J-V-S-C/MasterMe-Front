@@ -8,7 +8,7 @@ import { I18nProvider } from '../../lib/localization/i18n';
 const suggestion: StudySuggestion = {
   id: 'suggestion', title: 'Retomar a causa', reason: 'A explicação ficou incompleta.',
   status: 'PENDING', task_id: null,
-  learning_evidence: { id: 'evidence', material_id: 'material', prompt: 'Explique a causa.', diagnosis: 'A causa não foi explicada.', source_excerpt: 'A causa aparece aqui.', activity_type: 'COMPREHENSION', status: 'INCOMPLETE', created_at: '2026-10-19T00:00:00Z' },
+  learning_evidence: { id: 'evidence', material_id: 'material', concept_id: null, prompt: 'Explique a causa.', diagnosis: 'A causa não foi explicada.', source_excerpt: 'A causa aparece aqui.', activity_type: 'COMPREHENSION', status: 'INCOMPLETE', created_at: '2026-10-19T00:00:00Z' },
 };
 
 let todayMock: ReturnType<typeof spyOn>;
@@ -32,16 +32,12 @@ function mockWorkspace(rows: StudyTask[] = []) {
   return () => { materials.mockRestore(); tasks.mockRestore(); suggestions.mockRestore(); reviews.mockRestore(); };
 }
 
-test('shows a justified next action and applies the selected time budget', async () => {
+test('opens Tasks without the generic Today suggestion', async () => {
   const restore = mockWorkspace();
-  todayMock.mockResolvedValue({ availableMinutes: 30, actions: [{ id: 'review:one', kind: 'REVIEW', title: 'Atomicity', reason: 'DUE_REVIEW', estimatedMinutes: 10, href: '/study?material=book&concept=atomicity&review=one' }] });
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
-  expect(await view.findByRole('heading', { name: 'Uma forma de continuar' })).toBeTruthy();
-  const start = await view.findByRole('link', { name: 'Começar' });
-  expect(start.getAttribute('href')).toContain('review=one');
-  expect(view.getByText(/Uma revisão está disponível/)).toBeTruthy();
-  fireEvent.change(view.getByLabelText('Tempo disponível'), { target: { value: '10' } });
-  await waitFor(() => expect(todayMock).toHaveBeenCalledWith(expect.any(String), expect.any(String), 10));
+  expect(await view.findByRole('heading', { name: 'Tarefas' })).toBeTruthy();
+  expect(view.queryByRole('heading', { name: 'Uma forma de continuar' })).toBeNull();
+  expect(todayMock).not.toHaveBeenCalled();
   restore();
 });
 
@@ -136,6 +132,7 @@ test('edits a task in its own form without submitting a new task', async () => {
   const view = render(<I18nProvider><LibraryWorkspace /></I18nProvider>);
   fireEvent.click(await view.findByRole('tab', { name: /Quadro/ }));
   const card = view.container.querySelector('#task-1') as HTMLElement;
+  fireEvent.click(within(card).getByLabelText('Mais opções da tarefa'));
   fireEvent.click(within(card).getByRole('button', { name: 'Editar' }));
   const editForm = (await view.findByRole('button', { name: 'Salvar' })).closest('form');
   expect(editForm).toBeTruthy();
