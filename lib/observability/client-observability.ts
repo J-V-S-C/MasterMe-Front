@@ -83,6 +83,9 @@ function currentRoute(): string | null {
 
 const SAMPLE_KEY = 'masterme:observability-sample'
 function sampledSession(): boolean {
+  // The local Next.js server has no Cloudflare rate-limit binding, so its
+  // telemetry endpoint intentionally returns 503. Do not send dev beacons.
+  if (process.env.NODE_ENV === 'development') return false
   if (typeof window === 'undefined' || configuredWindow !== window) return false
   try {
     let seed = window.sessionStorage.getItem(SAMPLE_KEY)

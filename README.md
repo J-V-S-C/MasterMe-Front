@@ -171,6 +171,8 @@ In the free release, `NEXT_PUBLIC_PAYMENTS_ENABLED` is `false` in the build: the
 
 The frontend collects only experience signals and stable error classes: page views, LCP, INP, CLS, FCP, TTFB and API result. It uses an ephemeral cohort of 10% per session; the seed is in the `sessionStorage` and is not sent. Do not collect full URL, query, email, user/material/request ID, response, error message, stack, cookie or token. No session replay, fingerprinting or marketing analytics.
 
+The local Next.js development server does not send client telemetry because it has no Cloudflare rate-limit binding. This avoids expected `POST /api/observability 503` entries in the development log. Production collection still requires the binding below.
+
 `POST /api/observability` limits body to 2 KiB and requires the Cloudflare Rate Limiting binding, with 30 events/minute per origin at each location. No binding or failure answers `503`; validates allowlisted fields, ignores cookies/headers received and fills the build on the server. Configure `OBSERVABILITY_INGEST_URL` HTTPS, `OBSERVABILITY_ALLOWED_ORIGINS` with exact origins and `OBSERVABILITY_INGEST_TOKEN` Worker secret, without `NEXT_PUBLIC_`. Destination outside the allowlist and redirect are refused. Without a URL, valid events receive `202` and are discarded; this also shuts off export immediately. Deploy verifies that the token does not appear in the artifact when configured.
 
 Initial objectives in 28-day window per route/build: LCP p75 ≤ 2.5 s, INP p75 ≤ 200 ms, CLS p75 ≤ 0.1; client errors and API 5xx observed below 1% of the same cohort. Compare regressions between builds before reacting. Do not increase collection or enable arbitrary payloads during incidents.
