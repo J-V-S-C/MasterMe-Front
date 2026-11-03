@@ -78,7 +78,7 @@ When there is no material, the act of adding one is the main event. A concise in
 
 Tasks turns attention into a plan. Dates, times, durations, priorities, and status should be easy to scan and change. The calendar and board are two views of the same intentions; changes in one should make sense in the other. Movement should feel physical enough to understand, while remaining available through keyboard and form controls.
 
-The task itself should carry the student's words and timing. Avoid repeating status in every card when its location already says it. Avoid expanding controls so far that the plan disappears below the fold.
+The task itself should carry the student's words and timing. Avoid repeating status in every card when its location already says it. Avoid expanding controls so far that the plan disappears below the fold. Keep Open as the visible card action and place Edit and Remove in a compact, accessible menu. Board movement help belongs in a discoverable disclosure. The separate Today suggestion panel is retired; links from feedback and practice should open the exact task context.
 
 ### Learning record within Study: reveal structure
 
@@ -90,7 +90,7 @@ An empty learning record should point back to the first question without suggest
 
 ### Practice: apply understanding
 
-Practice turns a chosen difficulty into a short exercise with a criterion, an attempt, and feedback. An optional project can combine concepts. The student should understand the proposed focus before starting either activity; a project result should read like a usable brief, with a goal, deliverables, constraints, and a first step.
+Practice turns a chosen difficulty into a short exercise with a concrete situation, an attempt, and feedback. An optional self-directed project idea can combine concepts. The focused question and feedback follow the interface language while the original source passage remains available unchanged. Lead with the scenario; do not show a generic criterion list or a time promise above it. A project brief should make its goal, suggested outcome, constraints, and first step readable without suggesting a submission or grade in MasterMe. Keep saved projects available after navigation.
 
 Preparing a focused exercise that can spend an AI credit starts from an explicit, labeled action. Selecting a concept alone does not generate its practice question.
 

@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { api, type Concept, type DueReview, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask, type TodayPlan } from '../../lib/api';
+import { api, type Concept, type DueReview, type MaterialSummary, type StudyPlan, type StudySuggestion, type StudyTask } from '../../lib/api';
 import { useI18n } from '../../lib/localization/i18n';
+import { getHiddenConceptIds } from '../../lib/study/hidden-concepts';
 import { useRealtimeRefresh } from '../providers/realtime-provider';
 import { SelectField } from '../ui/select-field';
 import { ActionButton } from '../ui/action-button';
@@ -161,9 +162,6 @@ export function LibraryWorkspace() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [suggestions, setSuggestions] = useState<StudySuggestion[]>([]);
   const [reviews, setReviews] = useState<DueReview[]>([]);
-  const [todayPlan, setTodayPlan] = useState<TodayPlan | null>(null);
-  const [todayError, setTodayError] = useState(false);
-  const [sessionMinutes, setSessionMinutes] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => dayKey(nextTaskStart([], new Date())));
@@ -179,18 +177,17 @@ export function LibraryWorkspace() {
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    setTodayError(false);
-    const [materialRows, taskRows, suggestionRows, reviewRows, recommended] = await Promise.all([
+    const [materialRows, taskRows, suggestionRows, reviewRows] = await Promise.all([
       api.materials(), api.tasks(), api.suggestions(), api.dueReviews(),
-      api.today(dayKey(new Date()), Intl.DateTimeFormat().resolvedOptions().timeZone, sessionMinutes ?? undefined).catch(() => { setTodayError(true); return null; }),
     ]);
-    setMaterials(materialRows); setTasks(taskRows); setSuggestions(suggestionRows); setReviews(reviewRows);
-    setTodayPlan(recommended);
+    setMaterials(materialRows); setTasks(taskRows);
+    setSuggestions(suggestionRows.filter((suggestion) => !suggestion.learning_evidence.concept_id || !getHiddenConceptIds(suggestion.learning_evidence.material_id).includes(suggestion.learning_evidence.concept_id)));
+    setReviews(reviewRows.filter((review) => !getHiddenConceptIds(review.materialId).includes(review.conceptId)));
     if (!scheduleTouched.current) {
       const suggested = nextTaskStart(taskRows, new Date());
       setSelectedDate(dayKey(suggested)); setTime(localClock(suggested));
     }
-  }, [sessionMinutes]);
+  }, []);
   useEffect(() => { void refresh().catch(() => setError(t.failed)); }, [refresh, t.failed]);
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 30_000); return () => window.clearInterval(timer); }, []);
   useRealtimeRefresh(() => { void refresh().catch(() => {}); });
@@ -293,26 +290,6 @@ export function LibraryWorkspace() {
   return <div className={styles.workspace}>
     {error && <p role="alert" className={styles.error}>{error}</p>}
 
-    <section className={styles.todayPanel} aria-labelledby="today-title">
-      <div className={styles.todayHead}>
-        <div><span>{locale === 'pt-BR' ? 'SUGESTÃO PARA HOJE' : 'SUGGESTED FOR TODAY'}</span><h2 id="today-title">{locale === 'pt-BR' ? 'Uma forma de continuar' : 'A way to continue'}</h2><p className={styles.todayIntro}>{locale === 'pt-BR' ? 'Escolha quanto tempo tem; esta sugestão abre o próximo trecho do material.' : 'Choose your available time; this suggestion opens the next part of your material.'}</p></div>
-        <SelectField label={locale === 'pt-BR' ? 'Tempo disponível' : 'Available time'} icon={null} value={String(sessionMinutes ?? todayPlan?.availableMinutes ?? 30)} onValueChange={(value) => setSessionMinutes(Number(value))} options={[
-          ...(todayPlan && ![10, 20, 30, 45, 60, 90].includes(todayPlan.availableMinutes) ? [{ value: String(todayPlan.availableMinutes), label: `${todayPlan.availableMinutes} min` }] : []),
-          ...[10, 20, 30, 45, 60, 90].map((minutes) => ({ value: String(minutes), label: `${minutes} min` })),
-        ]} />
-      </div>
-      {todayPlan?.actions.length ? <ol className={styles.todayActions}>{todayPlan.actions.map((action) => <li key={action.id}>
-        <div><strong>{action.title}</strong><p>{({
-          SCHEDULED: locale === 'pt-BR' ? 'Você agendou esta atividade para hoje.' : 'You scheduled this activity for today.',
-          DUE_REVIEW: locale === 'pt-BR' ? 'Uma revisão está disponível para retomar sem consultar a resposta.' : 'A review is due for an independent recall attempt.',
-          OPEN_GAP: locale === 'pt-BR' ? 'Uma tentativa anterior deixou uma lacuna para trabalhar.' : 'An earlier attempt left a gap to work on.',
-          CONTINUE_BOOK: locale === 'pt-BR' ? 'Continue a leitura na ordem do livro.' : 'Continue in the book’s chapter order.',
-          CONTINUE_MATERIAL: locale === 'pt-BR' ? 'Continue o material de onde parou.' : 'Continue the material where you stopped.',
-        })[action.reason]} · {action.estimatedMinutes} min</p></div>
-        <Link href={action.href}>{locale === 'pt-BR' ? 'Começar' : 'Start'}</Link>
-      </li>)}</ol> : <p className={styles.todayEmpty} role={todayError ? 'alert' : undefined}>{todayError ? locale === 'pt-BR' ? 'Não foi possível carregar as sugestões. Suas tarefas abaixo continuam disponíveis.' : 'Could not load suggestions. Your tasks below are still available.' : todayPlan ? locale === 'pt-BR' ? 'Nenhuma atividade cabe no tempo escolhido. Ajuste o tempo ou escolha uma tarefa abaixo.' : 'No activity fits the selected time. Adjust it or choose a task below.' : locale === 'pt-BR' ? 'Preparando sugestões…' : 'Preparing suggestions…'}</p>}
-    </section>
-
     <section className={styles.composer} aria-labelledby="composer-title">
       <header className={styles.composerHead}>
         <h1 id="composer-title">{t.title}</h1>
@@ -355,7 +332,7 @@ export function LibraryWorkspace() {
           </div>}
 
           {activeTab === 'board' && <div id="workspace-panel-board" role="tabpanel" aria-labelledby="workspace-tab-board" className={`${styles.composerPanel} ${styles.boardPanel}`}>
-            <p className={styles.boardHint}>{t.boardHint}</p>
+            <details className={styles.boardHelp}><summary>{locale === 'pt-BR' ? 'Como mover cartões' : 'How to move cards'}</summary><p>{t.boardHint}</p></details>
             <TaskBoard tasks={boardTasks} labels={statusLabels(locale)} onMove={(next) => void persistBoard(next)} renderCard={(task) => <TaskCard task={task} materials={materials} locale={locale} busy={busy} operate={operate} onSave={saveEditedTask} suggestedStart={suggestedStart} now={now} />} />
           </div>}
 
@@ -492,9 +469,8 @@ function TaskCard({ task, materials, locale, busy, operate, onSave, suggestedSta
     {task.description && <p className={styles.cardDescription}>{task.description}</p>}
     <div className={styles.cardMeta}>{material && <span>{material.title}</span>}{task.concepts && <span>{task.concepts.name}</span>}</div>
     <div className={styles.cardActions}>
-      {task.project_id && task.material_id ? <Link className={styles.cardAction} href={`/practice?material=${task.material_id}&project=${task.project_id}`}>{locale === 'pt-BR' ? 'Abrir projeto' : 'Open project'}</Link> : task.concept_id && task.material_id && <Link className={styles.cardAction} href={`${task.activity_type === 'PRACTICE' ? '/practice' : '/study'}?material=${task.material_id}&concept=${task.concept_id}${task.review_id && task.activity_type !== 'PRACTICE' ? `&review=${task.review_id}` : ''}`}>{task.activity_type === 'PRACTICE' ? locale === 'pt-BR' ? 'Praticar' : 'Practice' : t.study}</Link>}
-      <button ref={editButtonRef} className={styles.cardAction} type="button" onClick={() => { reset(); setDialogMode(window.matchMedia?.('(min-width: 768px)').matches ?? false); setEditing(true); }}>{t.edit}</button>
-      <button className={styles.cardAction} type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{t.remove}</button>
+      {task.project_id && task.material_id ? <Link className={styles.cardAction} href={`/practice?material=${task.material_id}&project=${task.project_id}`}>{locale === 'pt-BR' ? 'Abrir projeto' : 'Open project'}</Link> : task.concept_id && task.material_id ? <Link className={styles.cardAction} href={`${task.activity_type === 'PRACTICE' ? '/practice' : '/study'}?material=${task.material_id}&concept=${task.concept_id}${task.review_id && task.activity_type !== 'PRACTICE' ? `&review=${task.review_id}` : ''}`}>{task.activity_type === 'PRACTICE' ? locale === 'pt-BR' ? 'Praticar' : 'Practice' : t.study}</Link> : task.material_id && <Link className={styles.cardAction} href={`/study?material=${task.material_id}`}>{locale === 'pt-BR' ? 'Abrir material' : 'Open material'}</Link>}
+      <details className={styles.cardMenu}><summary aria-label={locale === 'pt-BR' ? 'Mais opções da tarefa' : 'More task options'}><span aria-hidden="true">⋯</span></summary><div><button ref={editButtonRef} type="button" onClick={() => { reset(); setDialogMode(window.matchMedia?.('(min-width: 768px)').matches ?? false); setEditing(true); }}>{t.edit}</button><button type="button" disabled={busy} onClick={() => void operate(() => api.updateTask(task.id, { status: 'REMOVED' }))}>{t.remove}</button></div></details>
     </div>
   </div>;
   return <>
