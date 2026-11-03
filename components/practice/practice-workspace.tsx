@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type ConceptConfidence, type ConceptPerformance, type FocusedDrillPreview, type KnowledgeNode, type LearningEvidence, type MaterialSummary, type PracticeFocusMode, type PracticeFocusPreview, type PracticeProject } from '../../lib/api';
 import { getActiveMaterialId, saveActiveMaterialId } from '../../lib/study/active-material';
+import { setConceptHidden, useHiddenConceptIds } from '../../lib/study/hidden-concepts';
 import { Icon } from '../ui/icons';
 import { useI18n } from '../../lib/localization/i18n';
 import { LoadingSkeleton } from '../ui/loading-skeleton';
@@ -14,6 +15,7 @@ import { WorkspaceHeading } from '../ui/workspace-heading';
 import { useRealtimeRefresh } from '../providers/realtime-provider';
 import { useBilling } from '../providers/billing-provider';
 import { StudyDepth } from '../study/study-depth';
+import { InfoNote } from '../ui/info-note';
 
 type FocusChoice = 'AUTOMATIC' | 'MANUAL';
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
@@ -36,6 +38,7 @@ export function PracticeWorkspace() {
   const { refresh: refreshBilling } = useBilling();
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [materialId, setMaterialId] = useState('');
+  const hiddenConceptIds = useHiddenConceptIds(materialId);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [confidences, setConfidences] = useState<ConceptConfidence[]>([]);
   const [performance, setPerformance] = useState<ConceptPerformance[]>([]);
@@ -43,7 +46,9 @@ export function PracticeWorkspace() {
   const [drillConceptId, setDrillConceptId] = useState('');
   const [drillPreview, setDrillPreview] = useState<FocusedDrillPreview | null>(null);
   const [drillError, setDrillError] = useState('');
+  const [drillSourceOpened, setDrillSourceOpened] = useState(false);
   const [preparingDrill, setPreparingDrill] = useState(false);
+  const [loadingSavedDrill, setLoadingSavedDrill] = useState(false);
   const [practiceMode, setPracticeMode] = useState<'DRILL' | 'PROJECT'>('DRILL');
   const [projects, setProjects] = useState<PracticeProject[]>([]);
   const [project, setProject] = useState<PracticeProject | null>(null);
@@ -61,25 +66,39 @@ export function PracticeWorkspace() {
   const [projectTaskId, setProjectTaskId] = useState<string | null>(null);
   const [savingConfidence, setSavingConfidence] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const materialLoadRequest = useRef(0);
 
   useEffect(() => {
     api.materials().then((items) => { setMaterials(items); setMaterialId(items.find(({ id }) => id === requestedMaterialId)?.id || getActiveMaterialId(items.map(({ id }) => id)) || items[0]?.id || ''); })
       .catch((cause: unknown) => setError(errorMessage(cause, t('materialsLoadError')))).finally(() => setLoading(false));
   }, [t, requestedMaterialId]);
+  useEffect(() => { if (materialId) saveActiveMaterialId(materialId); }, [materialId]);
+  useEffect(() => {
+    if (requestedMaterialId || !materials.length) return;
+    const sync = () => {
+      const saved = getActiveMaterialId(materials.map(({ id }) => id));
+      if (saved) setMaterialId((current) => current === saved ? current : saved);
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, [materials, requestedMaterialId]);
 
   const loadMaterial = useCallback(async (id: string, reset = true) => {
+    const requestId = ++materialLoadRequest.current;
     if (reset) setLoadingMaterial(true);
     setError('');
-    if (reset) { setProject(null); setSelectedIds([]); setPreview(null); setEvidence([]); setDrillConceptId(''); setDrillPreview(null); setProjectTaskId(null); }
+    if (reset) { setNodes([]); setProjects([]); setProject(null); setSelectedIds([]); setPreview(null); setEvidence([]); setDrillConceptId(''); setDrillPreview(null); setProjectTaskId(null); }
     try {
       const [context, attempts] = await Promise.all([api.practiceContext(id), api.evidence(id).catch(() => [])]);
+      if (requestId !== materialLoadRequest.current) return;
       setNodes(context.knowledgeMap); setConfidences(context.confidences); setPerformance(context.performance); setProjects(context.projects);
       const linkedProject = context.projects.find((item) => item.id === requestedProjectId);
       if (linkedProject) { setProject(linkedProject); setPracticeMode('PROJECT'); }
+      else if (reset) setProject(context.projects[0] ?? null);
       setEvidence(attempts);
       setDrillConceptId((current) => context.knowledgeMap.some((node) => node.concept.id === requestedConceptId) ? requestedConceptId! : context.knowledgeMap.some((node) => node.concept.id === current) ? current : '');
-    } catch (cause: unknown) { setError(errorMessage(cause, t('practiceDataError'))); }
-    finally { if (reset) setLoadingMaterial(false); }
+    } catch (cause: unknown) { if (requestId === materialLoadRequest.current) setError(errorMessage(cause, t('practiceDataError'))); }
+    finally { if (requestId === materialLoadRequest.current) setLoadingMaterial(false); }
   }, [t, requestedConceptId, requestedProjectId]);
   useEffect(() => { if (materialId) void loadMaterial(materialId); }, [materialId, loadMaterial]);
 
@@ -92,6 +111,8 @@ export function PracticeWorkspace() {
 
   const confidenceByConcept = useMemo(() => new Map(confidences.map((item) => [item.conceptId, item.value])), [confidences]);
   const performanceByConcept = useMemo(() => new Map(performance.map((item) => [item.conceptId, item])), [performance]);
+  const activeHiddenNodes = nodes.filter((node) => hiddenConceptIds.includes(node.concept.id));
+  const visibleNodes = nodes.filter((node) => !hiddenConceptIds.includes(node.concept.id));
   const gapEvidence = useMemo(() => {
     const latestByConcept = new Map<string, LearningEvidence>();
     for (const event of [...evidence].sort((a, b) => b.created_at.localeCompare(a.created_at))) {
@@ -99,18 +120,30 @@ export function PracticeWorkspace() {
     }
     return [...latestByConcept.values()].filter((event) => event.status === 'INCOMPLETE' || event.status === 'LOGICAL_BREAK');
   }, [evidence]);
-  const recommendedDrillId = gapEvidence.find((event) => nodes.some((node) => node.concept.id === event.concept_id))?.concept_id ?? nodes[0]?.concept.id ?? '';
-  const selectedDrill = nodes.find((node) => node.concept.id === (drillConceptId || recommendedDrillId));
+  const recommendedDrillId = gapEvidence.find((event) => visibleNodes.some((node) => node.concept.id === event.concept_id))?.concept_id ?? visibleNodes[0]?.concept.id ?? '';
+  const selectedDrill = visibleNodes.find((node) => node.concept.id === (drillConceptId || recommendedDrillId)) ?? visibleNodes[0];
+  const savedDrillEvidence = drillPreview ? evidence.find((item) => item.concept_id === drillPreview.conceptId && item.activity_type === 'APPLICATION' && item.attempt_context === 'DRILL' && item.prompt === drillPreview.prompt) : undefined;
   useEffect(() => {
     setDrillPreview(null);
     setDrillError('');
-  }, [materialId, selectedDrill?.concept.id]);
+    setDrillSourceOpened(false);
+  }, [materialId, selectedDrill?.concept.id, locale]);
+  useEffect(() => {
+    if (!materialId || !selectedDrill) return;
+    let active = true;
+    setLoadingSavedDrill(true);
+    void api.savedFocusedDrill(materialId, selectedDrill.concept.id, locale)
+      .then((value) => { if (active) setDrillPreview(value); })
+      .catch((cause: unknown) => { if (active) setDrillError(errorMessage(cause, locale === 'pt-BR' ? 'Não foi possível carregar a pergunta salva.' : 'Could not load the saved question.')); })
+      .finally(() => { if (active) setLoadingSavedDrill(false); });
+    return () => { active = false; };
+  }, [materialId, selectedDrill?.concept.id, locale]);
   const prepareFocusedDrill = async () => {
     if (!materialId || !selectedDrill || preparingDrill) return;
     const requestedConcept = selectedDrill.concept.id;
     setPreparingDrill(true); setDrillError('');
     try {
-      const value = await api.focusedDrill(materialId, requestedConcept);
+      const value = await api.focusedDrill(materialId, requestedConcept, locale);
       setDrillPreview(value);
       void refreshBilling();
     } catch (cause: unknown) {
@@ -120,20 +153,21 @@ export function PracticeWorkspace() {
   const automaticMode = resolveAutomaticFocusMode(confidences, performance);
   const selectedMode: PracticeFocusMode = focusChoice === 'MANUAL' ? 'MANUAL' : automaticMode;
   const conceptIds = focusChoice === 'MANUAL' ? selectedIds : undefined;
+  const activePriorities = preview?.priorities ?? [];
   const automaticSummary = automaticMode === 'COMBINED' ? t('focusCombined') : automaticMode === 'CONFIDENCE' ? t('focusConfidence') : automaticMode === 'PERFORMANCE' ? t('focusPerformance') : t('focusOverview');
 
   useEffect(() => {
     if (!materialId || !nodes.length || (focusChoice === 'MANUAL' && !selectedIds.length)) { setPreview(null); setFocusMessage(''); return; }
     let active = true;
     setLoadingFocus(true); setFocusMessage('');
-    api.practiceFocus(materialId, selectedMode, conceptIds).then((result) => { if (active) setPreview(result); })
+    api.practiceFocus(materialId, selectedMode, conceptIds, activeHiddenNodes.map((node) => node.concept.id)).then((result) => { if (active) setPreview(result); })
       .catch((cause: unknown) => {
         if (!active) return;
         setPreview(null);
         setFocusMessage(cause instanceof ApiError && cause.status === 422 ? cause.message : errorMessage(cause, t('focusPreviewError')));
       }).finally(() => { if (active) setLoadingFocus(false); });
     return () => { active = false; };
-  }, [materialId, nodes.length, focusChoice, selectedMode, selectedIds, confidences, performance, t]);
+  }, [materialId, nodes.length, focusChoice, selectedMode, selectedIds, hiddenConceptIds, confidences, performance, t]);
 
   const setConfidence = async (conceptId: string, value: number | null) => {
     const previous = confidences;
@@ -151,10 +185,10 @@ export function PracticeWorkspace() {
 
   const toggleConcept = (id: string) => setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : current.length < 5 ? [...current, id] : current);
   const generate = async () => {
-    if (!preview?.priorities.length || generating) return;
+    if (!activePriorities.length || generating) return;
     setGenerating(true); setError('');
     try {
-      const generated = await api.generatePracticeProject(materialId, selectedMode, conceptIds, { difficulty, size: projectSize });
+      const generated = await api.generatePracticeProject(materialId, selectedMode, conceptIds, { difficulty, size: projectSize }, activeHiddenNodes.map((node) => node.concept.id));
       setProject(generated); setProjects((current) => [generated, ...current.filter(({ id }) => id !== generated.id)]);
       setProjectTaskId(null);
       void refreshBilling();
@@ -179,29 +213,30 @@ export function PracticeWorkspace() {
     <WorkspaceHeading className="practice-hero" eyebrow={t('practiceKicker')} title={t('practiceTitle')} description={t('practiceDescription')} aside={<SelectField label={t('material')} icon="document" value={materialId} options={materials.map(({ id, title }) => ({ value: id, label: title }))} onValueChange={(id) => { saveActiveMaterialId(id); setMaterialId(id); }} />} />
     {error && <p className="form-error practice-error" role="alert">{error}</p>}
     {loadingMaterial ? <LoadingSkeleton variant="practice" contentOnly /> : !nodes.length ? <section className="empty-state"><Icon name="brain" /><h1>{t('noConcepts')}</h1><p>{t('extractBeforePractice')}</p><Link className="exercise-link" href={`/study?material=${materialId}`}>{t('openMaterial')}</Link></section> : <>
+      {activeHiddenNodes.length > 0 && <details className="practice-hidden"><summary>{locale === 'pt-BR' ? `Conceitos ocultos (${activeHiddenNodes.length})` : `Hidden concepts (${activeHiddenNodes.length})`}</summary><div>{activeHiddenNodes.map((node) => <button type="button" key={node.concept.id} onClick={() => setConceptHidden(materialId, node.concept.id, false)}>{locale === 'pt-BR' ? 'Restaurar' : 'Restore'} {node.concept.name}</button>)}</div></details>}
       <div className="practice-mode" role="group" aria-label={locale === 'pt-BR' ? 'Modo de prática' : 'Practice mode'}>
         <ActionButton variant={practiceMode === 'DRILL' ? 'primary' : 'secondary'} aria-pressed={practiceMode === 'DRILL'} onClick={() => setPracticeMode('DRILL')}>{locale === 'pt-BR' ? 'Exercício focado' : 'Focused drill'}</ActionButton>
-        <ActionButton variant={practiceMode === 'PROJECT' ? 'primary' : 'secondary'} aria-pressed={practiceMode === 'PROJECT'} onClick={() => setPracticeMode('PROJECT')}>{locale === 'pt-BR' ? 'Projeto' : 'Project'}</ActionButton>
+        <ActionButton variant={practiceMode === 'PROJECT' ? 'primary' : 'secondary'} aria-pressed={practiceMode === 'PROJECT'} onClick={() => setPracticeMode('PROJECT')}>{locale === 'pt-BR' ? 'Ideia de projeto' : 'Project idea'}</ActionButton>
       </div>
       {practiceMode === 'DRILL' && selectedDrill ? <section className="practice-drill" aria-labelledby="practice-drill-title">
-        <div className="practice-drill-intro"><div><span>{locale === 'pt-BR' ? 'PRÁTICA FOCADA · CERCA DE 10 MIN' : 'FOCUSED PRACTICE · ABOUT 10 MIN'}</span><h2 id="practice-drill-title">{selectedDrill.concept.name}</h2><p>{drillPreview?.conceptId === selectedDrill.concept.id && drillPreview.observedGap || (locale === 'pt-BR' ? 'Experimente aplicar esta ideia em uma situação concreta.' : 'Apply this idea in a concrete situation.')}</p>{drillPreview?.conceptId === selectedDrill.concept.id && <small>{locale === 'pt-BR' ? 'Critério' : 'Criterion'}: {drillPreview.criteria.join('; ')}</small>}</div>
-          <SelectField label={locale === 'pt-BR' ? 'Habilidade' : 'Skill'} value={selectedDrill.concept.id} options={nodes.map((node) => ({ value: node.concept.id, label: node.concept.name }))} onValueChange={setDrillConceptId} />
+        <div className="practice-drill-intro"><div><span>{locale === 'pt-BR' ? 'PRÁTICA FOCADA' : 'FOCUSED PRACTICE'}</span><h2 id="practice-drill-title">{selectedDrill.concept.name}</h2></div>
+          <SelectField label={locale === 'pt-BR' ? 'Conceito' : 'Concept'} value={selectedDrill.concept.id} options={visibleNodes.map((node) => ({ value: node.concept.id, label: node.concept.name }))} onValueChange={setDrillConceptId} />
         </div>
+        {drillPreview?.conceptId === selectedDrill.concept.id && <details className="practice-source" onToggle={(event) => { if (event.currentTarget.open) setDrillSourceOpened(true); }}><summary>{locale === 'pt-BR' ? 'Consultar trecho do material' : 'Read the source passage'}</summary><blockquote>{drillPreview.sourceExcerpt}</blockquote></details>}
         {drillError && <p role="alert" className="form-error">{drillError}</p>}
-        {drillPreview?.conceptId === selectedDrill.concept.id ? <StudyDepth key={`${selectedDrill.concept.id}:${drillPreview.questionVariant}`} node={selectedDrill} activity="APPLICATION" drill={drillPreview} /> : <ActionButton variant="primary" disabled={preparingDrill} onClick={() => void prepareFocusedDrill()}>{preparingDrill ? (locale === 'pt-BR' ? 'Preparando exercício…' : 'Preparing drill…') : (locale === 'pt-BR' ? 'Gerar perguntas · 1 uso de IA' : 'Generate questions · 1 AI use')}</ActionButton>}
-        <Link className="app-button secondary" href={`/study?material=${materialId}&concept=${selectedDrill.concept.id}&source=1`}>{locale === 'pt-BR' ? 'Abrir fonte no livro' : 'Open source in Study'}</Link>
+        {drillPreview?.conceptId === selectedDrill.concept.id && drillPreview.locale === locale ? <StudyDepth key={`${selectedDrill.concept.id}:${locale}:${drillPreview.questionVariant}`} node={selectedDrill} activity="APPLICATION" drill={drillPreview} savedEvidence={savedDrillEvidence} sourceOpened={drillSourceOpened} /> : <ActionButton variant="primary" disabled={preparingDrill || loadingSavedDrill} onClick={() => void prepareFocusedDrill()}>{preparingDrill || loadingSavedDrill ? (locale === 'pt-BR' ? 'Preparando exercício…' : 'Preparing exercise…') : (locale === 'pt-BR' ? 'Preparar exercício · até 1 uso de IA' : 'Prepare exercise · up to 1 AI use')}</ActionButton>}
       </section> : null}
       {practiceMode === 'PROJECT' && <div className="practice-layout">
       <section className="practice-config">
         <header><span>1 · {t('defineFocus')}</span><h2>{t('prepareProject')}</h2><p>{t('noTechnicalStrategy')}</p></header>
         <div className="focus-choices"><button type="button" className={focusChoice === 'AUTOMATIC' ? 'selected' : ''} aria-pressed={focusChoice === 'AUTOMATIC'} onClick={() => { setFocusChoice('AUTOMATIC'); setSelectedIds([]); }}><Icon name="sparkles" /><span><strong>{t('chooseForMe')}</strong><small>{t('chooseForMeDescription')}</small></span><i><Icon name="check" /></i></button><button type="button" className={focusChoice === 'MANUAL' ? 'selected' : ''} aria-pressed={focusChoice === 'MANUAL'} onClick={() => setFocusChoice('MANUAL')}><Icon name="brain" /><span><strong>{t('letMeChoose')}</strong><small>{t('letMeChooseDescription')}</small></span><i><Icon name="check" /></i></button></div>
-        {focusChoice === 'AUTOMATIC' ? <section className="focus-explanation" aria-live="polite"><Icon name="idea" /><div><strong>{t('howFocusWorks')}</strong><p>{automaticSummary}</p></div></section> : <section className="concept-scope"><header><span>2 · {t('chooseConcepts')}</span><h2>{t('whatToPractice')}</h2><small>{selectedIds.length}/5 {t('selected')}</small></header><div>{nodes.map((node) => { const item = performanceByConcept.get(node.concept.id); return <label key={node.concept.id} className={selectedIds.includes(node.concept.id) ? 'selected' : ''}><input type="checkbox" checked={selectedIds.includes(node.concept.id)} disabled={!selectedIds.includes(node.concept.id) && selectedIds.length >= 5} onChange={() => toggleConcept(node.concept.id)} /><span><strong>{node.concept.name}</strong><small>{confidenceByConcept.has(node.concept.id) ? `${t('confidence')} ${confidenceByConcept.get(node.concept.id)}/5` : t('confidenceMissing')} · {item?.latestStatus ? `${t('latestAnswer')}: ${item.latestStatus}` : t('noEvaluatedAnswers')}</small></span></label>; })}</div></section>}
-        <section className={`focus-preview ${focusMessage ? 'warning' : ''}`} aria-live="polite"><header><span>2 · {t('focusPreview')}</span><strong>{loadingFocus ? t('calculatingFocus') : preview?.priorities.length ? t('conceptsToPractice') : t('focusNeedsInput')}</strong></header>{focusMessage && <p>{focusMessage}</p>}{preview?.priorities.map((item) => <div key={item.conceptId}><strong>{item.name}</strong><span>{item.reason}</span></div>)}</section>
+        {focusChoice === 'AUTOMATIC' ? <section className="focus-explanation" aria-live="polite"><Icon name="idea" /><div><strong>{t('howFocusWorks')}</strong><p>{automaticSummary}</p></div></section> : <section className="concept-scope"><header><span>2 · {t('chooseConcepts')}</span><h2>{t('whatToPractice')}</h2><small>{selectedIds.length}/5 {t('selected')}</small></header><div>{visibleNodes.map((node) => { const item = performanceByConcept.get(node.concept.id); return <label key={node.concept.id} className={selectedIds.includes(node.concept.id) ? 'selected' : ''}><input type="checkbox" checked={selectedIds.includes(node.concept.id)} disabled={!selectedIds.includes(node.concept.id) && selectedIds.length >= 5} onChange={() => toggleConcept(node.concept.id)} /><span><strong>{node.concept.name}</strong><small>{confidenceByConcept.has(node.concept.id) ? `${t('confidence')} ${confidenceByConcept.get(node.concept.id)}/5` : t('confidenceMissing')} · {item?.latestStatus ? `${t('latestAnswer')}: ${item.latestStatus}` : t('noEvaluatedAnswers')}</small></span></label>; })}</div></section>}
+        <section className={`focus-preview ${focusMessage ? 'warning' : ''}`} aria-live="polite"><header><span>2 · {t('focusPreview')}</span><strong>{loadingFocus ? t('calculatingFocus') : activePriorities.length ? t('conceptsToPractice') : t('focusNeedsInput')}</strong></header>{focusMessage && <p>{focusMessage}</p>}{activePriorities.map((item) => <div key={item.conceptId}><strong>{item.name}</strong><span>{item.reason}</span></div>)}</section>
         <div className="practice-options"><SelectField label={locale === 'pt-BR' ? 'Dificuldade' : 'Difficulty'} value={difficulty} options={locale === 'pt-BR' ? [{ value: 'FOUNDATION', label: 'Fundamentos' }, { value: 'INTERMEDIATE', label: 'Intermediário' }, { value: 'ADVANCED', label: 'Avançado' }] : [{ value: 'FOUNDATION', label: 'Foundation' }, { value: 'INTERMEDIATE', label: 'Intermediate' }, { value: 'ADVANCED', label: 'Advanced' }]} onValueChange={(value) => { if (value === 'FOUNDATION' || value === 'INTERMEDIATE' || value === 'ADVANCED') setDifficulty(value); }} /><SelectField label={locale === 'pt-BR' ? 'Tamanho do projeto' : 'Project size'} value={projectSize} options={locale === 'pt-BR' ? [{ value: 'SMALL', label: 'Pequeno' }, { value: 'MEDIUM', label: 'Médio' }] : [{ value: 'SMALL', label: 'Small' }, { value: 'MEDIUM', label: 'Medium' }]} onValueChange={(value) => { if (value === 'SMALL' || value === 'MEDIUM') setProjectSize(value); }} /></div>
         <details className="confidence-panel"><summary><span><b>{t('optional')}</b><strong>{t('adjustConfidence')}</strong><small>{t('confidenceHelp')}</small></span><Icon name="chevron" /></summary><div className="confidence-list">{nodes.map((node) => <div className="confidence-row" key={node.concept.id}><div><strong>{node.concept.name}</strong><small>{confidenceByConcept.has(node.concept.id) ? confidenceLabels[(confidenceByConcept.get(node.concept.id) ?? 1) - 1] : t('notInformed')}</small></div><div className="confidence-scale" aria-label={`${t('confidence')} ${node.concept.name}`}>{[1,2,3,4,5].map((value) => <button type="button" key={value} aria-label={`${value} / 5`} className={confidenceByConcept.get(node.concept.id) === value ? 'active' : ''} disabled={savingConfidence === node.concept.id} onClick={() => void setConfidence(node.concept.id, value)}>{value}</button>)}{confidenceByConcept.has(node.concept.id) && <button type="button" className="clear" onClick={() => void setConfidence(node.concept.id, null)}>{t('remove')}</button>}</div></div>)}</div></details>
-        <div className="generate-bar"><div><strong>{t('personalizedProject')}</strong><span>{preview?.priorities.length ? `${preview.priorities.length} ${t('activeGapsSelected')}` : focusMessage || t('selectFocusFirst')}</span></div><ActionButton variant="primary" disabled={!preview?.priorities.length || generating || loadingFocus} onClick={() => void generate()}><Icon name="sparkles" />{generating ? t('generatingProject') : t('generateProject')}</ActionButton></div>
+        <div className="generate-bar"><div><strong>{t('personalizedProject')}</strong><span>{activePriorities.length ? `${activePriorities.length} ${t('activeGapsSelected')}` : focusMessage || t('selectFocusFirst')}</span></div><ActionButton variant="primary" disabled={!activePriorities.length || generating || loadingFocus} onClick={() => void generate()}><Icon name="sparkles" />{generating ? t('generatingProject') : t('generateProject')}</ActionButton></div>
       </section>
-      <aside className="practice-result">{project ? <><ProjectView project={project} />{projectTaskId ? <Link className="app-button secondary" href="/library">{locale === 'pt-BR' ? 'Abrir em Tarefas' : 'Open in Tasks'}</Link> : <ActionButton variant="secondary" disabled={addingProjectTask} onClick={() => void addProjectToTasks()}>{addingProjectTask ? locale === 'pt-BR' ? 'Adicionando…' : 'Adding…' : locale === 'pt-BR' ? 'Adicionar às Tarefas' : 'Add to Tasks'}</ActionButton>}</> : <><div className="result-placeholder"><Icon name="idea" /><h2>{t('nextBuildHere')}</h2><p>{t('nextBuildDescription')}</p></div>{projects.length > 0 && <section className="project-history"><span>{t('previousProjects')}</span>{projects.map((item) => <button key={item.id} onClick={() => { setProject(item); setProjectTaskId(null); }}><strong>{item.title}</strong><small>{new Date(item.createdAt).toLocaleDateString(locale)}</small></button>)}</section>}</>}</aside>
+      <aside className="practice-result">{project ? <><ProjectView project={project} />{projectTaskId ? <Link className="app-button secondary" href="/library">{locale === 'pt-BR' ? 'Abrir em Tarefas' : 'Open in Tasks'}</Link> : <ActionButton variant="secondary" disabled={addingProjectTask} onClick={() => void addProjectToTasks()}>{addingProjectTask ? locale === 'pt-BR' ? 'Adicionando…' : 'Adding…' : locale === 'pt-BR' ? 'Adicionar às Tarefas' : 'Add to Tasks'}</ActionButton>}</> : <div className="result-placeholder"><Icon name="idea" /><h2>{t('nextBuildHere')}</h2><p>{t('nextBuildDescription')}</p></div>}{projects.length > 0 && <section className="project-history"><span>{t('previousProjects')}</span>{projects.map((item) => <button type="button" aria-current={item.id === project?.id ? 'true' : undefined} key={item.id} onClick={() => { setProject(item); setProjectTaskId(null); }}><strong>{item.title}</strong><small>{new Date(item.createdAt).toLocaleDateString(locale)}</small></button>)}</section>}</aside>
     </div>}
     </>}
   </>;
@@ -209,5 +244,5 @@ export function PracticeWorkspace() {
 
 export function ProjectView({ project }: { project: PracticeProject }) {
   const { t } = useI18n();
-  return <article className="project-card"><header><span>{t('practiceProject')}</span><h2>{project.title}</h2><p>{project.context}</p></header><section><h3>{t('goal')}</h3><p>{project.goal}</p></section><section><h3>{t('deliverables')}</h3><ul>{project.deliverables.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="first-step"><h3>{t('firstStep')}</h3><p>{project.firstStep}</p></section><details className="project-support"><summary>{t('constraintsAndFocus')}</summary><section><h3>{t('constraints')}</h3><ul>{project.constraints.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="project-priorities"><h3>{t('prioritizedConcepts')}</h3>{project.prioritizedConcepts.map((item) => <div key={item.conceptId}><strong>{item.name}</strong><span>{item.reason}</span></div>)}</section></details></article>;
+  return <article className="project-card"><header><span>{t('practiceProject')}</span><h2>{project.title}</h2><p>{project.context}</p></header><InfoNote>{t('nextBuildDescription')}</InfoNote><section><h3>{t('goal')}</h3><p>{project.goal}</p></section><section><h3>{t('deliverables')}</h3><ul>{project.deliverables.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="first-step"><h3>{t('firstStep')}</h3><p>{project.firstStep}</p></section><details className="project-support"><summary>{t('constraintsAndFocus')}</summary><section><h3>{t('constraints')}</h3><ul>{project.constraints.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="project-priorities"><h3>{t('prioritizedConcepts')}</h3>{project.prioritizedConcepts.map((item) => <div key={item.conceptId}><strong>{item.name}</strong><span>{item.reason}</span></div>)}</section></details></article>;
 }

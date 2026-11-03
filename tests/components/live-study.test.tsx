@@ -14,9 +14,9 @@ describe('study interface', () => {
   test('makes activity types discoverable and selectable', () => {
       const view = render(<I18nProvider><SessionView session={session} answer="" words={0} onAnswerChange={() => {}} onSubmit={() => {}} selectedNode={node} submitting={false} onRetry={() => {}} error="" onRequestEdgeCase={async () => {}} /></I18nProvider>);
       const selector = view.container.querySelector('details.study-activity-picker');
-      expect(selector?.textContent).toContain('Escolha uma atividade');
-      expect(selector?.textContent).toContain('Trocar atividade');
-      fireEvent.click(view.getByText('Trocar atividade'));
+      expect(selector?.textContent).toContain('Atividade');
+      expect(selector?.textContent).toContain('Alterar');
+      fireEvent.click(view.getByText('Alterar'));
       const challenge = view.getByRole('button', { name: /Desafiar/ });
       fireEvent.click(challenge);
       expect(selector?.querySelector('summary')?.textContent).toContain('Desafiar');

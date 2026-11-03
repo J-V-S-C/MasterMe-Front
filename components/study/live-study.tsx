@@ -13,6 +13,8 @@ import { SelectField } from "../ui/select-field";
 import { ActionButton } from "../ui/action-button";
 import { PdfBookViewer } from "./pdf-book-viewer";
 import { getActiveMaterialId, saveActiveMaterialId } from "../../lib/study/active-material";
+import { getHiddenConceptIds, setConceptHidden, useHiddenConceptIds } from '../../lib/study/hidden-concepts';
+import { InfoNote } from '../ui/info-note';
 import { studyState } from "../../lib/study/study-state";
 import { useI18n } from "../../lib/localization/i18n";
 import { useRealtimeRefresh } from "../providers/realtime-provider";
@@ -63,6 +65,7 @@ export function LiveStudy() {
   const [materialUnavailable, setMaterialUnavailable] = useState(false);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
   const [conceptId, setConceptId] = useState("");
+  const hiddenConceptIds = useHiddenConceptIds(materialId);
   const [session, setSession] = useState<StudySession | null>(null);
   const [history, setHistory] = useState<StudySession[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
@@ -110,12 +113,13 @@ export function LiveStudy() {
       setConceptId((current) => {
         const requestedNode = data.find((node) => node.concept.id === requestedConceptId);
         if (requestedNode) return requestedNode.concept.id;
+        const activeData = data.filter((node) => !getHiddenConceptIds(id).includes(node.concept.id));
         const requestedUnit = linkedUnits.find((unit) => unit.id === requestedUnitId);
-        const unitNode = requestedUnit && data.find((node) => node.concept.sourceOffset !== undefined && node.concept.sourceOffset >= requestedUnit.startOffset && node.concept.sourceOffset < requestedUnit.endOffset);
+        const unitNode = requestedUnit && activeData.find((node) => node.concept.sourceOffset !== undefined && node.concept.sourceOffset >= requestedUnit.startOffset && node.concept.sourceOffset < requestedUnit.endOffset);
         if (unitNode) return unitNode.concept.id;
-        const currentNode = data.find((node) => node.concept.id === current);
+        const currentNode = activeData.find((node) => node.concept.id === current);
         if (currentNode) return current;
-        return (data.find((node) => node.status === 'REVIEW') ?? data.find((node) => node.status === 'READY') ?? data[0])?.concept.id ?? "";
+        return (activeData.find((node) => node.status === 'REVIEW') ?? activeData.find((node) => node.status === 'READY') ?? activeData[0])?.concept.id ?? "";
       });
     } catch (cause: unknown) {
       if (requestId !== nodeLoadRequest.current || id !== currentMaterial.current) return;
@@ -126,7 +130,7 @@ export function LiveStudy() {
   }, [requestedConceptId, requestedUnitId]);
 
   useEffect(() => {
-    void api.dueReviews().then(setDueReviews).catch(() => {});
+    void api.dueReviews().then((reviews) => setDueReviews(reviews.filter((review) => !getHiddenConceptIds(review.materialId).includes(review.conceptId)))).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -141,6 +145,16 @@ export function LiveStudy() {
       .catch((cause: unknown) => setError(message(cause, translateRef.current('studyMaterialsLoadError'))))
       .finally(() => setLoading(false));
   }, [requestedMaterialId]);
+  useEffect(() => { if (materialId) saveActiveMaterialId(materialId); }, [materialId]);
+  useEffect(() => {
+    if (requestedMaterialId || !materials.length) return;
+    const sync = () => {
+      const saved = getActiveMaterialId(materials.map(({ id }) => id));
+      if (saved) setMaterialId((current) => current === saved ? current : saved);
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, [materials, requestedMaterialId]);
 
   useEffect(() => {
     if (!materialId) return;
@@ -311,6 +325,10 @@ export function LiveStudy() {
     setAnswer("");
     setError("");
   };
+  const hideConcept = (id: string, hidden: boolean) => {
+    setConceptHidden(materialId, id, hidden);
+    if (hidden && conceptId === id) changeConcept(nodes.find((node) => node.concept.id !== id && !hiddenConceptIds.includes(node.concept.id))?.concept.id ?? '');
+  };
   const changeAnswer = (value: string) => {
     setAnswer(value);
     if (session) studyState.saveDraft(session.id, value);
@@ -395,7 +413,7 @@ export function LiveStudy() {
     {error && <p className="form-error" role="alert">{error}</p>}
     {hasConcepts && (extractionActive || extraction.progress.status === 'FAILED') && <section className="extraction-partial" aria-live="polite"><div><strong>{extractionActive ? locale === 'pt-BR' ? 'Nova extração em andamento' : 'New extraction in progress' : locale === 'pt-BR' ? 'Extração interrompida' : 'Extraction stopped'}</strong><p>{extraction.progress.status === 'FAILED' ? extraction.progress.error || (locale === 'pt-BR' ? 'Tente extrair novamente no cartão do material.' : 'Retry extraction in the material card.') : locale === 'pt-BR' ? 'Você pode continuar estudando os conceitos atuais até a nova lista ficar pronta.' : 'You can keep studying the current concepts until the new list is ready.'}</p></div></section>}
     <div className="study-work-layout">
-      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{hasConcepts && <div className="study-question-controls"><ConceptBrowser key={materialId} nodes={nodes} selectedId={conceptId} onSelect={changeConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={repeat} disabled={!selected || loadingSession}>{t('repeatConcept')}</ActionButton>}</div>}{session?.conceptId === conceptId ? <SessionView session={session} history={history} material={material} outline={outline} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={(assistance) => void submit(assistance)} error={error} reviewId={requestedReviewId ?? undefined} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <p className="study-loading" role="status">{loadingSession ? t('loadingQuestion') : error || t('studyBeginError')}</p> : <section className="empty-state compact"><Icon name="brain" /><h1>{t('contextNotExtracted')}</h1><p>{t('contextNotExtractedDescription')}</p></section>}</section></div>}
+      {!hasConcepts && (extractionActive || extraction.progress.status === "FAILED") ? <ExtractionProgressCard progress={extraction.progress} connectionLost={extraction.connectionLost} /> : <div className={`workspace-grid study-only ${hasConcepts ? "concepts-ready" : ""}`}><section className="study-pane">{hasConcepts && <div className="study-question-controls"><ConceptBrowser key={materialId} nodes={nodes} hiddenIds={hiddenConceptIds} selectedId={conceptId} onSelect={changeConcept} onHide={hideConcept} />{session?.conceptId === conceptId && <ActionButton variant="secondary" onClick={repeat} disabled={!selected || loadingSession}>{t('repeatConcept')}</ActionButton>}</div>}{session?.conceptId === conceptId ? <SessionView session={session} history={history} material={material} outline={outline} answer={answer} words={words} onAnswerChange={changeAnswer} onSubmit={submit} selectedNode={selected} submitting={submitting} onRetry={(assistance) => void submit(assistance)} error={error} reviewId={requestedReviewId ?? undefined} onRequestEdgeCase={async () => { if (!session) return; setSubmitting(true); setError(""); try { const updated = await api.requestEdgeCase(session.id); setSession(updated); setNodes((current) => current.map((node) => node.concept.id === updated.conceptId ? { ...node, edgeCaseStatus: updated.edgeCaseStatus } : node)); void refreshBilling(); } catch (cause: unknown) { setError(message(cause, t('studyEdgeError'))); } finally { setSubmitting(false); } }} /> : hasConcepts && selected ? <p className="study-loading" role="status">{loadingSession ? t('loadingQuestion') : error || t('studyBeginError')}</p> : <section className="empty-state compact"><Icon name="brain" /><h1>{hasConcepts ? locale === 'pt-BR' ? 'Todos os conceitos estão ocultos' : 'All concepts are hidden' : t('contextNotExtracted')}</h1><p>{hasConcepts ? locale === 'pt-BR' ? 'Abra Ocultos acima para restaurar um conceito.' : 'Open Hidden above to restore a concept.' : t('contextNotExtractedDescription')}</p></section>}</section></div>}
     </div>
     </>}
   </>;
@@ -429,8 +447,7 @@ export function SessionView({ session, history = [], material, outline = [], ans
   ];
   const currentActivity = activityOptions.find((option) => option.value === level) ?? activityOptions[0]!;
   const activityPicker = <details className="study-activity-picker" ref={activityPickerRef}>
-    <summary><span className="study-activity-heading">{locale === 'pt-BR' ? 'Escolha uma atividade' : 'Choose an activity'} <small>{locale === 'pt-BR' ? `${activityOptions.length} tipos disponíveis` : `${activityOptions.length} types available`}</small></span><strong>{currentActivity.label}</strong><small>{currentActivity.description}</small><span className="study-activity-action">{locale === 'pt-BR' ? 'Trocar atividade' : 'Change activity'} <Icon name="chevron" /></span></summary>
-    <p className="study-activity-help">{locale === 'pt-BR' ? 'Você pode alternar entre os tipos. Cada resposta fica salva na própria atividade.' : 'You can switch between types. Each answer is saved with its own activity.'}</p>
+    <summary><span className="study-activity-heading">{locale === 'pt-BR' ? 'Atividade' : 'Activity'}</span><strong>{currentActivity.label}</strong><span className="study-activity-action">{locale === 'pt-BR' ? 'Alterar' : 'Change'} <Icon name="chevron" /></span></summary>
     <div className="study-activity-options">{activityOptions.map((option) => <button type="button" aria-pressed={option.value === level} key={option.value} onClick={() => { setLevel(option.value); if (option.value === 'CHALLENGE' && session.edgeCaseStatus === 'NOT_REQUESTED') void onRequestEdgeCase(); if (activityPickerRef.current) activityPickerRef.current.open = false; }}><strong>{option.label}</strong><small>{option.description}</small>{option.value === level && <><Icon name="check" /><span className="sr-only">{locale === 'pt-BR' ? 'Atividade atual' : 'Current activity'}</span></>}</button>)}</div>
   </details>;
   const questionTools = selectedNode && <div className="study-question-tools">
@@ -447,7 +464,7 @@ export function SessionView({ session, history = [], material, outline = [], ans
       {explanationView && <h2>{level === 'CHALLENGE' ? session.edgeCaseChallenge?.question ?? (submitting ? t('preparing') : t('prepareEdge')) : session.question.text}</h2>}
       {questionTools}
       {edgeActive && session.edgeCaseChallenge && <p className="edge-scenario">{session.edgeCaseChallenge.scenario}</p>}
-      {explanationView && <p className="tip"><Icon name="idea" /><span>{edgeActive ? t('testLimits') : t('explainMechanism')} {t('minimumAnswer')}</span></p>}
+      {explanationView && <InfoNote>{edgeActive ? t('testLimits') : t('explainMechanism')} {t('minimumAnswer')}</InfoNote>}
     </section>}
     {explanationView && (!completed || edgeActive ? <section className="answer-card"><header><h2>{edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')}</h2><p>{words} {t('words')}</p></header><textarea aria-label={edgeActive ? t('yourEdgeAnswer') : t('yourExplanation')} value={answer} maxLength={MAX_STUDY_ANSWER_LENGTH} onChange={(event) => onAnswerChange(event.target.value)} rows={8} placeholder={t('answerPlaceholder')} /><footer><span>{t('groundedDiagnostic')}</span><div className="answer-actions"><ActionButton variant="primary" disabled={answer.trim().length < MIN_EXPLANATION_LENGTH || submitting} onClick={() => onSubmit(assistance)}><Icon name="sparkles" />{submitting ? t('evaluating') : t('validateAnswer')}</ActionButton>{error && <ActionButton variant="secondary" onClick={() => onRetry(assistance)}>{t('retry')}</ActionButton>}</div></footer></section> : <section className="completion-card"><Icon name="sparkles" /><div><span>{level === 'CHALLENGE' ? t('edgeChallenge') : t('explanationComplete')}</span><h2>{level === 'CHALLENGE' ? session.edgeCaseStatus === 'PASSED' ? t('edgePassed') : t('prepareEdge') : t('explanationPassed')}</h2><p>{t('edgeOptional')}</p></div>{session.edgeCaseStatus === "NOT_REQUESTED" && <ActionButton variant="secondary" disabled={submitting} onClick={() => { setLevel('CHALLENGE'); void onRequestEdgeCase(); }}>{submitting ? t('preparing') : t('prepareEdge')}</ActionButton>}</section>)}
     {selectedNode && !explanationView && <StudyDepth key={`${selectedNode.concept.id}:${level}:${session?.id ?? ''}`} node={selectedNode} activity={level} reviewId={reviewId} questionVariant={reviewId ? 1 : session?.question.bundleVariant ?? 0} questionTools={questionTools} activityPicker={activityPicker} conceptHelpOpened={helpOpened} sourceOpened={sourceOpened} />}
