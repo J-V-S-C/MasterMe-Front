@@ -552,7 +552,9 @@ export function uploadMaterial(
       new Error('Selecione um arquivo PDF, Markdown ou TXT.'),
     );
   if (file.size > MAX_UPLOAD_BYTES)
-    return Promise.reject(new Error(`O arquivo deve ter no máximo ${MAX_UPLOAD_MIB} MiB.`));
+    return Promise.reject(
+      new Error(`O arquivo deve ter no máximo ${MAX_UPLOAD_MIB} MiB.`),
+    );
   const data = new FormData();
   data.append('file', new File([file], file.name, { type: mime }));
   if (title.trim()) data.append('title', title.trim());
@@ -729,12 +731,23 @@ export const api = {
     ),
   evidence: (materialId: string) =>
     call<LearningEvidence[]>(`/learning/materials/${materialId}/evidence`),
-  focusedDrill: (materialId: string, conceptId: string, locale: SupportedLocale) =>
+  focusedDrill: (
+    materialId: string,
+    conceptId: string,
+    locale: SupportedLocale,
+  ) =>
     call<FocusedDrillPreview>(
-      `/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`, 'POST',
+      `/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`,
+      'POST',
     ),
-  savedFocusedDrill: (materialId: string, conceptId: string, locale: SupportedLocale) =>
-    call<FocusedDrillPreview | null>(`/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`),
+  savedFocusedDrill: (
+    materialId: string,
+    conceptId: string,
+    locale: SupportedLocale,
+  ) =>
+    call<FocusedDrillPreview | null>(
+      `/learning/materials/${materialId}/drill?conceptId=${encodeURIComponent(conceptId)}&locale=${encodeURIComponent(locale)}`,
+    ),
   dueReviews: () => call<DueReview[]>('/learning/reviews/due'),
   reviewReminder: (
     id: string,
@@ -747,7 +760,8 @@ export const api = {
     ),
   activityPrompts: (conceptId: string, variant = 0) =>
     call<{ reasoning: string; application: string; retention: string }>(
-      `/learning/concepts/${conceptId}/activity-prompts?variant=${variant}`, 'POST',
+      `/learning/concepts/${conceptId}/activity-prompts?variant=${variant}`,
+      'POST',
     ),
   requestRevisit: (evidenceId: string) =>
     call<StudySuggestion>(`/learning/evidence/${evidenceId}/revisit`, 'POST'),
@@ -792,7 +806,11 @@ export const api = {
   extractConcepts: (materialId: string) =>
     call<ExtractionJob>(`/materials/${materialId}/extract`, 'POST'),
   extractionPreview: (materialId: string) =>
-    call<{ plannedTopics: number; estimatedCredits: number; repairsTextIndex: boolean }>(`/materials/${materialId}/extract/preview`),
+    call<{
+      plannedTopics: number;
+      estimatedCredits: number;
+      repairsTextIndex: boolean;
+    }>(`/materials/${materialId}/extract/preview`),
   cancelExtraction: (materialId: string) =>
     call<{ id: string; status: 'CANCELLED' }>(
       `/materials/${materialId}/extract`,
@@ -858,7 +876,11 @@ export const api = {
     call<PracticeFocusPreview>(
       `/materials/${materialId}/practice-focus`,
       'POST',
-      { focusMode, ...(conceptIds === undefined ? {} : { conceptIds }), ...(excludedConceptIds?.length ? { excludedConceptIds } : {}) },
+      {
+        focusMode,
+        ...(conceptIds === undefined ? {} : { conceptIds }),
+        ...(excludedConceptIds?.length ? { excludedConceptIds } : {}),
+      },
     ),
   generatePracticeProject: (
     materialId: string,
